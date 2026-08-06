@@ -1064,7 +1064,9 @@ html[data-variant="water-column"] :focus-visible {
   }
 
   html[data-variant="water-column"] .media-empty-state span {
-    display: none;
+    display: block;
+    max-width: 32ch;
+    font-size: 0.7rem;
   }
 
   html[data-variant="water-column"] #directions > h2 {
