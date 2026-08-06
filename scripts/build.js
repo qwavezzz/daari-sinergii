@@ -25,6 +25,11 @@ function build() {
     path.join(projectRoot, "src", "presentation-runtime.js"),
     path.join(assetsDirectory, "presentation-runtime.js"),
   );
+  fs.cpSync(
+    path.join(projectRoot, "src", "variants"),
+    path.join(assetsDirectory, "variants"),
+    { recursive: true },
+  );
 
   console.log(`Generated ${routes.length} routes in ${path.relative(projectRoot, outputRoot)}.`);
 }

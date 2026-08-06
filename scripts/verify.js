@@ -162,7 +162,11 @@ for (const route of routes) {
   for (const variant of presentationConfig.variants) {
     if (!html.includes(`value="${variant.id}"`)) fail(`${route.path}: missing variant control ${variant.id}.`);
     if (!html.includes(variant.name)) fail(`${route.path}: missing variant name ${variant.name}.`);
+    if (!html.includes(`/assets/variants/${variant.id}.css`)) fail(`${route.path}: missing variant stylesheet ${variant.id}.`);
+    if (!html.includes(`/assets/variants/${variant.id}.js`)) fail(`${route.path}: missing variant runtime ${variant.id}.`);
   }
+
+  if (!html.includes("data-reactor-field=")) fail(`${route.path}: missing neutral bounded-field hook.`);
 
   if (!html.includes("PLACEHOLDER — уточнить")) {
     fail(`${route.path}: no explicit factual placeholder found.`);
@@ -188,6 +192,13 @@ if (!fs.existsSync(runtimePath)) {
   fail("Presentation runtime asset is missing.");
 }
 
+for (const variant of presentationConfig.variants) {
+  for (const extension of ["css", "js"]) {
+    const assetPath = path.join(outputRoot, "assets", "variants", `${variant.id}.${extension}`);
+    if (!fs.existsSync(assetPath)) fail(`Variant asset is missing: ${variant.id}.${extension}.`);
+  }
+}
+
 const homePath = path.join(outputRoot, "index.html");
 if (fs.existsSync(homePath)) {
   const homepage = fs.readFileSync(homePath, "utf8");
@@ -196,6 +207,20 @@ if (fs.existsSync(homePath)) {
   }
   for (const label of Object.values(content.cta)) {
     if (!homepage.includes(label)) fail(`Homepage: missing shared CTA label “${label}”.`);
+  }
+  if (!/<video\b(?![^>]*\bcontrols\b)(?![^>]*\bsrc=)[^>]*><\/video>/.test(homepage)) {
+    fail("Homepage: honest source-free video replacement boundary is missing or exposes a fake control.");
+  }
+  if (!homepage.includes("Процедурная визуализация") || !homepage.includes("Видео будет добавлено")) {
+    fail("Homepage: missing-video state is not explicit.");
+  }
+  for (const direction of content.directions) {
+    if (!homepage.includes(`<li><span aria-hidden="true"></span>${direction.title}</li>`)) {
+      fail(`Homepage: Reactor diagnostic is missing factual category “${direction.title}”.`);
+    }
+  }
+  for (const forbiddenTelemetry of ["Концентрация озона", "Растворённый озон", "ОВП"]) {
+    if (homepage.includes(forbiddenTelemetry)) fail(`Homepage: unsupported telemetry label found: ${forbiddenTelemetry}.`);
   }
 }
 

@@ -33,7 +33,7 @@ function renderVariantSwitcher(config = presentationConfig) {
     const checked = variant.id === config.defaultVariant ? " checked" : "";
     return `<div class="variant-switcher__option">
       <input type="radio" id="variant-${variant.id}" name="presentation-variant" value="${variant.id}"${checked}>
-      <label for="variant-${variant.id}"><span aria-hidden="true">${variant.index}</span>${escapeHtml(variant.name)}</label>
+      <label for="variant-${variant.id}"><span class="variant-switcher__index" aria-hidden="true">${variant.index}</span><span class="variant-switcher__name">${escapeHtml(variant.name)}</span></label>
     </div>`;
   }).join("");
 
@@ -49,9 +49,23 @@ function serializePresentationConfig(config) {
   return JSON.stringify(config).replaceAll("<", "\\u003c");
 }
 
+function renderDirectionSymbol(direction) {
+  const symbols = {
+    "ozone-systems": `<circle cx="34" cy="40" r="14"/><path d="M8 40h12m28 0h16M27 31l14 18M27 49l14-18"/>`,
+    "ozonated-oils": `<path d="M36 10c0 0-17 21-17 34a17 17 0 0 0 34 0C53 31 36 10 36 10Z"/><path d="M30 48c2 4 5 6 10 6"/>`,
+    hydrolats: `<path d="M31 17c0 0-13 16-13 26a13 13 0 0 0 26 0c0-10-13-26-13-26Z"/><path d="M51 55c8-6 8-14 0-20m8 23c8-8 8-20 0-28"/>`,
+  };
+  return `<figure class="direction-symbol">
+    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false">${symbols[direction.id]}</svg>
+    <figcaption>Схема направления; изображение ${direction.id === "ozone-systems" ? "оборудования" : "продукции"} уточняется</figcaption>
+  </figure>`;
+}
+
 function renderDirectionCards() {
-  return content.directions.map((direction) => `
-    <article class="content-item">
+  return content.directions.map((direction, index) => `
+    <article class="content-item direction-item" data-direction="${escapeHtml(direction.id)}">
+      <span class="direction-index" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+      ${renderDirectionSymbol(direction)}
       <h3>${escapeHtml(direction.title)}</h3>
       <p>${escapeHtml(direction.summary)}</p>
       ${link(direction.path, "О направлении", "text-link")}
@@ -66,6 +80,40 @@ function renderIndustryItems() {
     </article>`).join("");
 }
 
+function renderAtmosphereCanvas(kind = "ambient") {
+  return `<canvas class="variant-field variant-field--${kind}" data-reactor-field="${kind}" aria-hidden="true"></canvas>
+    <div class="variant-field-fallback" aria-hidden="true"><i></i><i></i><i></i></div>`;
+}
+
+function renderHeroMedia() {
+  const diagnostics = content.directions.map((direction) => `
+    <li><span aria-hidden="true"></span>${escapeHtml(direction.title)}</li>`).join("");
+
+  return `<div class="hero-stage" data-variant-stage>
+    <figure class="media-aperture">
+      <video class="hero-video" preload="metadata" muted playsinline aria-describedby="hero-media-caption"></video>
+      <canvas class="media-placeholder-field" data-reactor-field="media" aria-hidden="true"></canvas>
+      <div class="media-empty-state">
+        <strong>Процедурная визуализация</strong>
+        <span>Видео будет добавлено после предоставления медиафайла</span>
+      </div>
+      <figcaption id="hero-media-caption">Зарезервировано место для подтверждённого видео о технологии или процессе. Сейчас показана синтетическая визуализация.</figcaption>
+    </figure>
+    <ul class="hero-diagnostics" aria-label="Подтверждённые направления компании">${diagnostics}</ul>
+  </div>`;
+}
+
+function renderInnerHero(title, lead, supporting = "") {
+  return `<section class="hero hero-inner" aria-labelledby="page-title">
+      ${renderAtmosphereCanvas()}
+      <div class="hero-copy">
+        <h1 id="page-title">${escapeHtml(title)}</h1>
+        <p class="lead">${escapeHtml(lead)}</p>
+        ${supporting}
+      </div>
+    </section>`;
+}
+
 function renderHome() {
   const selection = content.selection.map((step, index) => `
     <li>
@@ -76,33 +124,32 @@ function renderHome() {
   const proof = content.proof.map((item) => `<li class="placeholder" data-placeholder>${escapeHtml(item)}</li>`).join("");
 
   return `
-    <section class="hero" aria-labelledby="page-title">
-      <p class="eyebrow">${escapeHtml(content.audiences.primary)} — основной путь</p>
-      <h1 id="page-title">Системы озонации, озонированные масла и гидролаты</h1>
-      <p class="lead">Выберите направление или начните с отраслевой ситуации.</p>
-      <div class="actions">
-        ${link("/industry-solutions/", content.cta.primary, "button")}
-        ${link("/contacts/", content.cta.secondary, "text-link")}
+    <section class="hero hero-home" aria-labelledby="page-title">
+      ${renderAtmosphereCanvas("hero")}
+      <div class="hero-copy">
+        <h1 id="page-title"><span class="hero-line">Технологии озона</span><span class="hero-line">для воды, среды</span><span class="hero-line">и продукта</span></h1>
+        <p class="lead">Три направления для организаций и частных покупателей.</p>
+        <div class="actions">
+          ${link("/industry-solutions/", content.cta.primary, "button")}
+          ${link("/contacts/", content.cta.secondary, "button button--secondary")}
+        </div>
       </div>
+      ${renderHeroMedia()}
     </section>
     <section id="directions" aria-labelledby="directions-title">
-      <p class="eyebrow">Три направления</p>
       <h2 id="directions-title">Выберите предмет разговора</h2>
-      <div class="content-grid">${renderDirectionCards()}</div>
+      <div class="content-grid directions-grid">${renderDirectionCards()}</div>
     </section>
     <section id="industries" aria-labelledby="industries-title">
-      <p class="eyebrow">Для организаций</p>
       <h2 id="industries-title">Навигация по отраслевому контексту</h2>
       <div class="content-grid">${renderIndustryItems()}</div>
       ${link("/industry-solutions/", "Все отраслевые ситуации", "text-link")}
     </section>
     <section id="selection" aria-labelledby="selection-title">
-      <p class="eyebrow">Как ориентироваться</p>
       <h2 id="selection-title">От контекста к консультации</h2>
       <ol class="steps">${selection}</ol>
     </section>
     <section id="evidence" aria-labelledby="evidence-title">
-      <p class="eyebrow">Основания для выбора</p>
       <h2 id="evidence-title">Материалы ожидают подтверждения</h2>
       <ul class="plain-list">${proof}</ul>
     </section>
@@ -119,12 +166,7 @@ function renderDirection(route) {
   const options = direction.options.map((item) => `<li class="placeholder" data-placeholder>${escapeHtml(item)}</li>`).join("");
 
   return `
-    <section class="hero hero-inner" aria-labelledby="page-title">
-      <p class="eyebrow">Направление</p>
-      <h1 id="page-title">${escapeHtml(direction.title)}</h1>
-      <p class="lead">${escapeHtml(direction.summary)}</p>
-      <p class="placeholder" data-placeholder>${escapeHtml(direction.definition)}</p>
-    </section>
+    ${renderInnerHero(direction.title, direction.summary, `<p class="placeholder" data-placeholder>${escapeHtml(direction.definition)}</p>`)}
     <section aria-labelledby="applications-title">
       <h2 id="applications-title">Задачи и области применения</h2>
       <ul class="plain-list">${applications}</ul>
@@ -145,11 +187,7 @@ function renderDirection(route) {
 
 function renderIndustries() {
   return `
-    <section class="hero hero-inner" aria-labelledby="page-title">
-      <p class="eyebrow">${escapeHtml(content.audiences.primary)}</p>
-      <h1 id="page-title">Отраслевые решения</h1>
-      <p class="lead">Путь от ситуации организации к одному из направлений компании.</p>
-    </section>
+    ${renderInnerHero("Отраслевые решения", "Путь от ситуации организации к одному из направлений компании.")}
     <section aria-labelledby="organization-title">
       <h2 id="organization-title">Контексты организаций</h2>
       <div class="content-grid">${renderIndustryItems()}</div>
@@ -166,11 +204,7 @@ function renderAbout() {
   const proofItems = content.proof.map((item) => `<li class="placeholder" data-placeholder>${escapeHtml(item)}</li>`).join("");
 
   return `
-    <section class="hero hero-inner" aria-labelledby="page-title">
-      <p class="eyebrow">О компании</p>
-      <h1 id="page-title">${escapeHtml(content.company.name)}</h1>
-      <p class="lead">${escapeHtml(content.company.description)}</p>
-    </section>
+    ${renderInnerHero(content.company.name, content.company.description)}
     <section aria-labelledby="directions-title">
       <h2 id="directions-title">Направления</h2>
       <ul class="plain-list">${directionItems}</ul>
@@ -193,11 +227,7 @@ function renderContactList() {
 
 function renderContacts() {
   return `
-    <section class="hero hero-inner" aria-labelledby="page-title">
-      <p class="eyebrow">Связаться</p>
-      <h1 id="page-title">Контакты</h1>
-      <p class="lead">Все значения ниже централизованы и ожидают подтверждения.</p>
-    </section>
+    ${renderInnerHero("Контакты", "Все значения ниже централизованы и ожидают подтверждения.")}
     <section aria-labelledby="details-title">
       <h2 id="details-title">Контактные данные</h2>
       <dl class="contact-list">${renderContactList()}</dl>
@@ -218,6 +248,12 @@ function renderMain(route) {
 
 function renderPage(route) {
   const pageTitle = route.kind === "home" ? content.company.name : `${route.title} — ${content.company.name}`;
+  const variantStyles = presentationConfig.variants
+    .map((variant) => `<link rel="stylesheet" href="/assets/variants/${variant.id}.css">`)
+    .join("\n  ");
+  const variantScripts = presentationConfig.variants
+    .map((variant) => `<script src="/assets/variants/${variant.id}.js" defer></script>`)
+    .join("\n  ");
   return `<!doctype html>
 <html lang="ru" data-variant="${presentationConfig.defaultVariant}">
 <head>
@@ -226,6 +262,7 @@ function renderPage(route) {
   <meta name="description" content="${escapeHtml(content.company.description)}">
   <title>${escapeHtml(pageTitle)}</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  ${variantStyles}
   <script id="presentation-config" type="application/json">${serializePresentationConfig(presentationConfig)}</script>
 </head>
 <body data-route="${escapeHtml(route.kind)}">
@@ -235,13 +272,14 @@ function renderPage(route) {
     ${renderNavigation(route.path)}
   </header>
   ${renderVariantSwitcher()}
-  <main id="main-content">${renderMain(route)}</main>
+  <main id="main-content" class="site-main">${renderMain(route)}</main>
   <footer class="site-footer">
     <p><strong>${escapeHtml(content.company.name)}</strong></p>
     <p>${escapeHtml(content.contacts.phone)} · ${escapeHtml(content.contacts.email)}</p>
     ${link("/contacts/", "Контакты и реквизиты")}
   </footer>
   <script src="/assets/presentation-runtime.js"></script>
+  ${variantScripts}
 </body>
 </html>`;
 }
