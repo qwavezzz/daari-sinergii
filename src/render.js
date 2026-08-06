@@ -1,6 +1,7 @@
 "use strict";
 
 const { content } = require("./site-content");
+const { presentationConfig } = require("./presentation-config");
 
 function escapeHtml(value) {
   return String(value)
@@ -23,6 +24,29 @@ function renderNavigation(currentPath) {
   });
 
   return `<nav aria-label="Основная навигация"><ul class="nav-list">${items.join("")}</ul></nav>`;
+}
+
+function renderVariantSwitcher(config = presentationConfig) {
+  if (!config.switcherEnabled) return "";
+
+  const controls = config.variants.map((variant) => {
+    const checked = variant.id === config.defaultVariant ? " checked" : "";
+    return `<div class="variant-switcher__option">
+      <input type="radio" id="variant-${variant.id}" name="presentation-variant" value="${variant.id}"${checked}>
+      <label for="variant-${variant.id}"><span aria-hidden="true">${variant.index}</span>${escapeHtml(variant.name)}</label>
+    </div>`;
+  }).join("");
+
+  return `<aside class="variant-switcher" aria-label="Выбор варианта оформления">
+    <fieldset class="variant-switcher__fieldset">
+      <legend>Вариант оформления</legend>
+      <div class="variant-switcher__options">${controls}</div>
+    </fieldset>
+  </aside>`;
+}
+
+function serializePresentationConfig(config) {
+  return JSON.stringify(config).replaceAll("<", "\\u003c");
 }
 
 function renderDirectionCards() {
@@ -195,13 +219,14 @@ function renderMain(route) {
 function renderPage(route) {
   const pageTitle = route.kind === "home" ? content.company.name : `${route.title} — ${content.company.name}`;
   return `<!doctype html>
-<html lang="ru">
+<html lang="ru" data-variant="${presentationConfig.defaultVariant}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="${escapeHtml(content.company.description)}">
   <title>${escapeHtml(pageTitle)}</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <script id="presentation-config" type="application/json">${serializePresentationConfig(presentationConfig)}</script>
 </head>
 <body data-route="${escapeHtml(route.kind)}">
   <a class="skip-link" href="#main-content">К основному содержанию</a>
@@ -209,14 +234,16 @@ function renderPage(route) {
     <a class="brand" href="/">${escapeHtml(content.company.name)}</a>
     ${renderNavigation(route.path)}
   </header>
+  ${renderVariantSwitcher()}
   <main id="main-content">${renderMain(route)}</main>
   <footer class="site-footer">
     <p><strong>${escapeHtml(content.company.name)}</strong></p>
     <p>${escapeHtml(content.contacts.phone)} · ${escapeHtml(content.contacts.email)}</p>
     ${link("/contacts/", "Контакты и реквизиты")}
   </footer>
+  <script src="/assets/presentation-runtime.js"></script>
 </body>
 </html>`;
 }
 
-module.exports = { renderPage };
+module.exports = { renderPage, renderVariantSwitcher };

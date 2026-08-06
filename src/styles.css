@@ -7,9 +7,15 @@
   --white: #f8fcff;
   --blue: #1557e8;
   --deep: #061a2f;
+  --variant-marker: #5ea8ff;
   font-family: Onest, "Segoe UI", Arial, sans-serif;
   line-height: 1.55;
 }
+
+:root[data-variant="reactor-o3"] { --variant-marker: #5ea8ff; }
+:root[data-variant="white-laboratory"] { --variant-marker: #bdefff; }
+:root[data-variant="water-column"] { --variant-marker: #1557e8; }
+:root[data-variant="sectional-medium"] { --variant-marker: #a8b8a9; }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -18,12 +24,22 @@ a { color: inherit; text-underline-offset: 0.2em; }
 a:focus-visible { outline: 3px solid #5ea8ff; outline-offset: 4px; }
 .skip-link { position: fixed; top: 0.75rem; left: 0.75rem; z-index: 10; padding: 0.6rem 0.8rem; background: var(--white); transform: translateY(-200%); }
 .skip-link:focus { transform: translateY(0); }
-.site-header, main > *, .site-footer { padding-inline: max(1.25rem, calc((100vw - 80rem) / 2)); }
+.site-header, .variant-switcher, main > *, .site-footer { padding-inline: max(1.25rem, calc((100vw - 80rem) / 2)); }
 .site-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem; padding-block: 1.5rem; border-bottom: 1px solid var(--line); }
 .brand { font-size: 1.15rem; font-weight: 600; text-decoration: none; }
 .nav-list { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem 1.25rem; margin: 0; padding: 0; list-style: none; }
 .nav-list a { font-size: 0.9rem; }
 .nav-list [aria-current="page"] { text-decoration-thickness: 0.15em; }
+.variant-switcher { position: sticky; top: 0; z-index: 8; padding-block: 0.75rem; color: var(--white); background: var(--deep); border-bottom: 1px solid rgba(189, 239, 255, 0.3); }
+.variant-switcher__fieldset { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 1rem 1.5rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.variant-switcher__fieldset legend { float: left; width: auto; margin: 0; padding: 0; font-family: "PT Mono", Consolas, monospace; font-size: 0.75rem; letter-spacing: 0.04em; }
+.variant-switcher__options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; min-width: 0; }
+.variant-switcher__option { position: relative; min-width: 0; }
+.variant-switcher__option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.variant-switcher__option label { display: flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; padding: 0.55rem 0.75rem; border: 1px solid rgba(189, 239, 255, 0.34); border-radius: 4px; cursor: pointer; font-size: 0.82rem; line-height: 1.2; }
+.variant-switcher__option label span { flex: none; color: #bdefff; font-family: "PT Mono", Consolas, monospace; font-size: 0.7rem; }
+.variant-switcher__option input:checked + label { color: var(--white); background: #102a43; border-color: var(--variant-marker); box-shadow: inset 0 -3px var(--variant-marker); }
+.variant-switcher__option input:focus-visible + label { outline: 3px solid #bdefff; outline-offset: 3px; }
 main > section, main > aside { padding-block: clamp(4rem, 8vw, 7rem); border-bottom: 1px solid var(--line); }
 .hero { min-height: 70svh; display: grid; align-content: center; color: var(--white); background: var(--deep); }
 .hero-inner { min-height: 48svh; }
@@ -55,8 +71,16 @@ h3 { font-size: 1.35rem; line-height: 1.2; }
 @media (max-width: 800px) {
   .site-header { display: block; }
   .nav-list { justify-content: flex-start; margin-top: 1rem; }
+  .variant-switcher { position: static; }
+  .variant-switcher__fieldset { grid-template-columns: 1fr; gap: 0.65rem; }
+  .variant-switcher__fieldset legend { float: none; }
+  .variant-switcher__options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-grid, .steps { grid-template-columns: 1fr; }
   .contact-list > div { grid-template-columns: 1fr; gap: 0.25rem; }
+}
+
+@media (hover: hover) {
+  .variant-switcher__option label:hover { border-color: #bdefff; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -21,6 +21,10 @@ function build() {
   const assetsDirectory = path.join(outputRoot, "assets");
   fs.mkdirSync(assetsDirectory, { recursive: true });
   fs.copyFileSync(path.join(projectRoot, "src", "styles.css"), path.join(assetsDirectory, "styles.css"));
+  fs.copyFileSync(
+    path.join(projectRoot, "src", "presentation-runtime.js"),
+    path.join(assetsDirectory, "presentation-runtime.js"),
+  );
 
   console.log(`Generated ${routes.length} routes in ${path.relative(projectRoot, outputRoot)}.`);
 }

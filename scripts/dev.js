@@ -9,6 +9,7 @@ const port = Number.parseInt(process.env.PORT || "4173", 10);
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
 };
 
 function resolveRequestPath(requestUrl) {
