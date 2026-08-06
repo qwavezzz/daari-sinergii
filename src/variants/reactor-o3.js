@@ -5,8 +5,8 @@
 
   const documentObject = windowObject.document;
   const variantId = "reactor-o3";
-  const motionQuery = windowObject.matchMedia("(prefers-reduced-motion: reduce)");
-  const mobileQuery = windowObject.matchMedia("(max-width: 800px)");
+  const sharedRuntime = windowObject.DaryInteractions;
+  if (!sharedRuntime) return;
   const fields = [];
   let frameRequest = 0;
   let lastTime = 0;
@@ -27,15 +27,15 @@
   }
 
   function particleBudget(kind) {
-    if (kind === "media") return mobileQuery.matches ? 18 : 34;
-    return mobileQuery.matches ? 28 : 72;
+    const budget = sharedRuntime.getBudget();
+    return kind === "media" ? budget.mediaParticles : budget.ambientParticles;
   }
 
   function resizeField(field) {
     const rectangle = field.canvas.getBoundingClientRect();
     const width = Math.max(1, Math.round(rectangle.width));
     const height = Math.max(1, Math.round(rectangle.height));
-    const pixelRatio = Math.min(windowObject.devicePixelRatio || 1, 1.75);
+    const pixelRatio = Math.min(windowObject.devicePixelRatio || 1, sharedRuntime.getBudget().pixelRatio);
 
     if (field.width === width && field.height === height && field.pixelRatio === pixelRatio) return;
     field.width = width;
@@ -49,7 +49,7 @@
   function drawMediaField(field, time) {
     const { context, width, height } = field;
     context.clearRect(0, 0, width, height);
-    const phase = motionQuery.matches ? 0.35 : time * 0.00022;
+    const phase = sharedRuntime.getState().reducedMotion ? 0.35 : time * 0.00022;
 
     for (let line = 0; line < 5; line += 1) {
       context.beginPath();
@@ -80,7 +80,7 @@
   function drawAmbientField(field, time) {
     const { context, width, height } = field;
     context.clearRect(0, 0, width, height);
-    const phase = motionQuery.matches ? 0.42 : time * 0.00006;
+    const phase = sharedRuntime.getState().reducedMotion ? 0.42 : time * 0.00006;
 
     context.save();
     context.globalCompositeOperation = "lighter";
@@ -110,8 +110,8 @@
 
   function shouldAnimate() {
     return documentObject.documentElement.dataset.variant === variantId
-      && !motionQuery.matches
-      && !documentObject.hidden
+      && !sharedRuntime.getState().reducedMotion
+      && sharedRuntime.getState().documentVisible
       && fields.some((field) => field.visible);
   }
 
@@ -123,7 +123,7 @@
     frameRequest = 0;
     if (!shouldAnimate()) return;
 
-    if (time - lastTime >= 1000 / 30) {
+    if (time - lastTime >= 1000 / sharedRuntime.getBudget().framesPerSecond) {
       for (const field of fields) {
         if (field.visible) drawField(field, time);
       }
@@ -169,35 +169,21 @@
 
   if (fields.length === 0) return;
   documentObject.documentElement.classList.add("reactor-canvas-ready");
-
-  const observer = typeof windowObject.IntersectionObserver === "function"
-    ? new windowObject.IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const field = fields.find(({ canvas }) => canvas === entry.target);
-        if (field) field.visible = entry.isIntersecting;
-      }
+  for (const field of fields) {
+    sharedRuntime.registerStage(field.canvas, ({ visible }) => {
+      field.visible = visible;
       if (shouldAnimate()) schedule();
       else stop();
-    }, { rootMargin: "120px 0px" })
-    : null;
-
-  for (const field of fields) {
-    if (observer) observer.observe(field.canvas);
+    });
   }
 
-  let resizeTimer = 0;
-  windowObject.addEventListener("resize", () => {
-    windowObject.clearTimeout(resizeTimer);
-    resizeTimer = windowObject.setTimeout(() => {
-      for (const field of fields) {
-        field.particles = createParticles(particleBudget(field.kind), 17 + fields.indexOf(field) * 41);
-        field.width = 0;
-      }
-      reconcile();
-    }, 120);
-  }, { passive: true });
-  documentObject.addEventListener("visibilitychange", reconcile);
+  sharedRuntime.subscribe(() => {
+    for (const field of fields) {
+      field.particles = createParticles(particleBudget(field.kind), 17 + fields.indexOf(field) * 41);
+      field.width = 0;
+    }
+    reconcile();
+  });
   documentObject.addEventListener("presentation:variantchange", reconcile);
-  motionQuery.addEventListener?.("change", reconcile);
   reconcile();
 })(typeof window === "undefined" ? null : window);

@@ -4,13 +4,15 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { content, routes } = require("../src/site-content");
 const { presentationConfig } = require("../src/presentation-config");
+const { heroMedia, motionBudgets } = require("../src/interaction-config");
+const { validationMessageFor } = require("../src/shared-interactions");
 const {
   appendVariantToHref,
   initPresentation,
   readStoredVariant,
   resolveVariant,
 } = require("../src/presentation-runtime");
-const { renderVariantSwitcher } = require("../src/render");
+const { renderHeroMedia, renderVariantSwitcher } = require("../src/render");
 
 const projectRoot = path.resolve(__dirname, "..");
 const outputRoot = path.join(projectRoot, "dist");
@@ -68,6 +70,39 @@ if (appendVariantToHref("#main-content", "water-column", "http://localhost/", pr
 
 if (renderVariantSwitcher({ ...presentationConfig, switcherEnabled: false }) !== "") {
   fail("The presentation switcher must be removable through its single configuration flag.");
+}
+
+if (heroMedia.sources.map(({ format }) => format).join(",") !== "webm,mp4"
+  || heroMedia.sources.map(({ type }) => type).join(",") !== "video/webm,video/mp4") {
+  fail("Hero media configuration must preserve replaceable WebM and MP4 source boundaries.");
+}
+if (heroMedia.sources.some(({ src }) => src) || heroMedia.poster) {
+  fail("Hero media must remain source-free until owned video and poster files are supplied.");
+}
+const configuredMedia = renderHeroMedia({
+  poster: "/media/hero-poster.jpg",
+  sources: [
+    { format: "webm", type: "video/webm", src: "/media/hero.webm" },
+    { format: "mp4", type: "video/mp4", src: "/media/hero.mp4" },
+  ],
+});
+if (!configuredMedia.includes('poster="/media/hero-poster.jpg" controls')
+  || !configuredMedia.includes('data-media-state="configured" data-media-poster="true"')
+  || !configuredMedia.includes('src="/media/hero.webm" type="video/webm" data-media-format="webm"')
+  || !configuredMedia.includes('src="/media/hero.mp4" type="video/mp4" data-media-format="mp4"')) {
+  fail("Hero media renderer must activate native playback for configured local WebM, MP4, and poster assets.");
+}
+if (motionBudgets.compact.ambientParticles >= motionBudgets.full.ambientParticles
+  || motionBudgets.compact.pixelRatio >= motionBudgets.full.pixelRatio
+  || motionBudgets.reduced.framesPerSecond !== 0) {
+  fail("Shared compact and reduced-motion budgets must cap continuous work.");
+}
+
+const requiredName = { name: "name", type: "text", value: "", required: true, validity: {} };
+const shortMessage = { name: "message", type: "textarea", value: "коротко", required: true, validity: {} };
+const uncheckedDemo = { name: "demo-acknowledgement", type: "checkbox", checked: false, required: true, validity: {} };
+if (!validationMessageFor(requiredName) || !validationMessageFor(shortMessage) || !validationMessageFor(uncheckedDemo)) {
+  fail("Demonstration form validation must reject missing, short, and unacknowledged input.");
 }
 
 const browserControls = presentationConfig.variants.map(({ id }) => ({
@@ -153,6 +188,8 @@ for (const route of routes) {
     [/<fieldset\b[^>]*class="variant-switcher__fieldset"/, "variant switcher fieldset"],
     [/<legend\b[^>]*>[^<]+<\/legend>/, "variant switcher label"],
     [/<script src="\/assets\/presentation-runtime\.js"><\/script>/, "presentation runtime"],
+    [/<script src="\/assets\/shared-interactions\.js"><\/script>/, "shared interaction runtime"],
+    [/id="interaction-config"[^>]*>[^<]*motionBudgets/, "shared motion budget configuration"],
   ];
 
   for (const [pattern, label] of requiredPatterns) {
@@ -170,6 +207,10 @@ for (const route of routes) {
 
   if (!html.includes("PLACEHOLDER — уточнить")) {
     fail(`${route.path}: no explicit factual placeholder found.`);
+  }
+
+  for (const value of [content.contacts.phone, content.contacts.email]) {
+    if (!html.includes(value)) fail(`${route.path}: footer is missing centralized contact value “${value}”.`);
   }
 
   if (/\bhttps?:\/\//i.test(html)) {
@@ -211,6 +252,10 @@ if (fs.existsSync(homePath)) {
   if (!/<video\b(?![^>]*\bcontrols\b)(?![^>]*\bsrc=)[^>]*><\/video>/.test(homepage)) {
     fail("Homepage: honest source-free video replacement boundary is missing or exposes a fake control.");
   }
+  if (!homepage.includes('data-hero-media data-media-state="empty" data-media-poster="false"')
+    || homepage.includes("data-media-format")) {
+    fail("Homepage: source-free media state must be explicit and must not emit empty source elements.");
+  }
   if (!homepage.includes("Процедурная визуализация") || !homepage.includes("Видео будет добавлено")) {
     fail("Homepage: missing-video state is not explicit.");
   }
@@ -230,7 +275,37 @@ if (fs.existsSync(contactsPath)) {
   for (const value of Object.values(content.contacts)) {
     if (!contactsPage.includes(value)) fail(`Contacts: missing centralized value “${value}”.`);
   }
-  if (/<form\b/i.test(contactsPage)) fail("Contacts: a submission form was introduced before its ticket.");
+  const formRequirements = [
+    [/<form\b[^>]*data-demo-form[^>]*novalidate/, "labelled demonstration form boundary"],
+    [/<button\b[^>]*type="submit"[^>]*disabled[^>]*data-demo-submit/, "safe-by-default submit control"],
+    [/role="status"[^>]*aria-live="polite"/, "announced local result state"],
+    [/данные не будут отправлены или сохранены/i, "unmistakable non-submission message"],
+  ];
+  for (const [pattern, label] of formRequirements) {
+    if (!pattern.test(contactsPage)) fail(`Contacts: missing ${label}.`);
+  }
+  if (/<form\b[^>]*\baction=/i.test(contactsPage)) fail("Contacts: demonstration form must not expose a submission endpoint.");
+  for (const { label } of content.consultation.topics) {
+    if (!contactsPage.includes(label)) fail(`Contacts: missing centralized consultation option “${label}”.`);
+  }
+}
+
+const sharedRuntimePath = path.join(outputRoot, "assets", "shared-interactions.js");
+if (!fs.existsSync(sharedRuntimePath)) {
+  fail("Shared interaction runtime asset is missing.");
+} else {
+  const sharedRuntime = fs.readFileSync(sharedRuntimePath, "utf8");
+  for (const forbiddenTransport of ["fetch(", "XMLHttpRequest", "sendBeacon", "FormData(", "localStorage", "sessionStorage"]) {
+    if (sharedRuntime.includes(forbiddenTransport)) fail(`Shared runtime contains forbidden transport/storage API: ${forbiddenTransport}.`);
+  }
+}
+
+for (const variant of presentationConfig.variants) {
+  const variantRuntimePath = path.join(outputRoot, "assets", "variants", `${variant.id}.js`);
+  if (!fs.existsSync(variantRuntimePath)) continue;
+  const variantRuntime = fs.readFileSync(variantRuntimePath, "utf8");
+  if (!variantRuntime.includes("DaryInteractions")) fail(`${variant.name}: runtime is not connected to shared motion state.`);
+  if (/addEventListener\(["']scroll["']/.test(variantRuntime)) fail(`${variant.name}: independent scroll listener bypasses the shared coordinator.`);
 }
 
 if (failures.length > 0) {
@@ -238,5 +313,5 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`Verified ${routes.length} routes, semantic landmarks, internal links, shared CTAs, and explicit placeholders.`);
+  console.log(`Verified ${routes.length} routes, shared media/runtime boundaries, local-only form behavior, contacts, and motion budgets.`);
 }

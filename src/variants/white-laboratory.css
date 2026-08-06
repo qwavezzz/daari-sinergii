@@ -469,10 +469,6 @@ html[data-variant="white-laboratory"] .media-placeholder-field {
   object-fit: cover;
 }
 
-html[data-variant="white-laboratory"] .hero-video:not([src]) {
-  display: none;
-}
-
 html[data-variant="white-laboratory"] .media-placeholder-field {
   display: block;
   opacity: 0.98;

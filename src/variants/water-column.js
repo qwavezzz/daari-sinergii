@@ -5,8 +5,8 @@
 
   const documentObject = windowObject.document;
   const variantId = "water-column";
-  const motionQuery = windowObject.matchMedia("(prefers-reduced-motion: reduce)");
-  const compactQuery = windowObject.matchMedia("(max-width: 820px)");
+  const sharedRuntime = windowObject.DaryInteractions;
+  if (!sharedRuntime) return;
   const fields = [];
   let frameRequest = 0;
   let scrollRequest = 0;
@@ -33,15 +33,16 @@
   }
 
   function bubbleBudget(kind) {
-    if (kind === "media") return compactQuery.matches ? 5 : 9;
-    return compactQuery.matches ? 9 : 20;
+    const compact = sharedRuntime.getState().compact;
+    if (kind === "media") return compact ? 5 : 9;
+    return compact ? 9 : 20;
   }
 
   function resizeField(field) {
     const bounds = field.canvas.getBoundingClientRect();
     const width = Math.max(1, Math.round(bounds.width));
     const height = Math.max(1, Math.round(bounds.height));
-    const pixelRatio = Math.min(windowObject.devicePixelRatio || 1, 1.5);
+    const pixelRatio = Math.min(windowObject.devicePixelRatio || 1, sharedRuntime.getBudget().pixelRatio);
 
     if (field.width === width && field.height === height && field.pixelRatio === pixelRatio) return;
     field.width = width;
@@ -77,7 +78,7 @@
 
   function drawCaustics(field, time) {
     const { context, width, height } = field;
-    const phase = motionQuery.matches ? 1.8 : time * 0.00018;
+    const phase = sharedRuntime.getState().reducedMotion ? 1.8 : time * 0.00018;
 
     context.save();
     context.globalCompositeOperation = "screen";
@@ -103,7 +104,7 @@
     context.clearRect(0, 0, width, height);
     if (field.kind === "media") drawCaustics(field, time);
 
-    const elapsed = motionQuery.matches ? 3.8 : time * 0.001;
+    const elapsed = sharedRuntime.getState().reducedMotion ? 3.8 : time * 0.001;
     for (const bubble of field.bubbles) {
       const ascent = (bubble.y + elapsed * bubble.speed) % 1.18;
       const y = height * (1.12 - ascent);
@@ -119,8 +120,8 @@
 
   function shouldAnimate() {
     return isActive()
-      && !motionQuery.matches
-      && !documentObject.hidden
+      && !sharedRuntime.getState().reducedMotion
+      && sharedRuntime.getState().documentVisible
       && fields.some((field) => field.visible);
   }
 
@@ -132,7 +133,7 @@
     frameRequest = 0;
     if (!shouldAnimate()) return;
 
-    if (time - lastFrame >= 1000 / 24) {
+    if (time - lastFrame >= 1000 / sharedRuntime.getBudget().framesPerSecond) {
       for (const field of fields) {
         if (field.visible) drawField(field, time);
       }
@@ -241,19 +242,12 @@
 
   if (fields.length) documentObject.documentElement.classList.add("wc-canvas-ready");
 
-  const fieldObserver = typeof windowObject.IntersectionObserver === "function"
-    ? new windowObject.IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const field = fields.find((candidate) => candidate.canvas === entry.target);
-        if (field) field.visible = entry.isIntersecting;
-      }
+  for (const field of fields) {
+    sharedRuntime.registerStage(field.canvas, ({ visible }) => {
+      field.visible = visible;
       if (shouldAnimate()) scheduleAnimation();
       else stopAnimation();
-    }, { rootMargin: "100px 0px" })
-    : null;
-
-  for (const field of fields) {
-    if (fieldObserver) fieldObserver.observe(field.canvas);
+    });
   }
 
   function reconcile() {
@@ -266,22 +260,14 @@
     scheduleAnimation();
   }
 
-  let resizeTimer = 0;
-  windowObject.addEventListener("resize", () => {
-    windowObject.clearTimeout(resizeTimer);
-    resizeTimer = windowObject.setTimeout(() => {
-      for (const [index, field] of fields.entries()) {
-        field.bubbles = makeBubbles(bubbleBudget(field.kind), 37 + index * 61);
-        field.width = 0;
-      }
-      reconcile();
-    }, 140);
-  }, { passive: true });
-
-  windowObject.addEventListener("scroll", scheduleProgress, { passive: true });
-  documentObject.addEventListener("visibilitychange", reconcile);
+  sharedRuntime.subscribe(() => {
+    for (const [index, field] of fields.entries()) {
+      field.bubbles = makeBubbles(bubbleBudget(field.kind), 37 + index * 61);
+      field.width = 0;
+    }
+    reconcile();
+  });
+  sharedRuntime.subscribeFrame(scheduleProgress);
   documentObject.addEventListener("presentation:variantchange", reconcile);
-  motionQuery.addEventListener?.("change", reconcile);
-  compactQuery.addEventListener?.("change", reconcile);
   reconcile();
 })(typeof window === "undefined" ? null : window);

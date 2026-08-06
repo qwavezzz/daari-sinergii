@@ -5,14 +5,12 @@
 
   const { document: documentObject } = windowObject;
   const variantId = "white-laboratory";
-  const motionQuery = windowObject.matchMedia?.("(prefers-reduced-motion: reduce)") || {
-    matches: false,
-    addEventListener() {},
-  };
+  const sharedRuntime = windowObject.DaryInteractions;
+  if (!sharedRuntime) return;
   const canvases = [];
   let frame = 0;
-  let visible = !documentObject.hidden;
   let heroVisible = true;
+  let lastFrame = 0;
 
   function isActive() {
     return documentObject.documentElement.dataset.variant === variantId;
@@ -59,7 +57,7 @@
     const bounds = entry.canvas.getBoundingClientRect();
     if (bounds.width < 1 || bounds.height < 1) return false;
 
-    const ratio = Math.min(windowObject.devicePixelRatio || 1, 1.5);
+    const ratio = Math.min(windowObject.devicePixelRatio || 1, sharedRuntime.getBudget().pixelRatio);
     const width = Math.max(1, Math.round(bounds.width * ratio));
     const height = Math.max(1, Math.round(bounds.height * ratio));
     if (entry.canvas.width !== width || entry.canvas.height !== height) {
@@ -155,7 +153,7 @@
       context.stroke();
     }
 
-    const progress = motionQuery.matches ? 0.58 : ((elapsed / 5400) % 1);
+    const progress = sharedRuntime.getState().reducedMotion ? 0.58 : ((elapsed / 5400) % 1);
     const scanX = width * (0.22 + progress * 0.66);
     const scan = context.createLinearGradient(scanX - 42, 0, scanX + 20, 0);
     scan.addColorStop(0, "rgba(0, 167, 245, 0)");
@@ -180,12 +178,16 @@
 
   function tick(elapsed) {
     frame = 0;
-    if (!isActive() || !visible || !heroVisible || motionQuery.matches) {
+    const state = sharedRuntime.getState();
+    if (!isActive() || !state.documentVisible || !heroVisible || state.reducedMotion) {
       draw(0);
       return;
     }
 
-    draw(elapsed);
+    if (elapsed - lastFrame >= 1000 / sharedRuntime.getBudget().framesPerSecond) {
+      draw(elapsed);
+      lastFrame = elapsed;
+    }
     frame = windowObject.requestAnimationFrame(tick);
   }
 
@@ -197,7 +199,8 @@
 
     if (!isActive()) return;
     draw(0);
-    if (visible && heroVisible && !motionQuery.matches) {
+    const state = sharedRuntime.getState();
+    if (state.documentVisible && heroVisible && !state.reducedMotion) {
       frame = windowObject.requestAnimationFrame(tick);
     }
   }
@@ -207,24 +210,17 @@
     .forEach((canvas, index) => configureCanvas(canvas, index));
 
   const observedHero = documentObject.querySelector(".hero");
-  if (observedHero && "IntersectionObserver" in windowObject) {
-    const observer = new windowObject.IntersectionObserver(([entry]) => {
-      heroVisible = Boolean(entry?.isIntersecting);
+  if (observedHero) {
+    sharedRuntime.registerStage(observedHero, ({ visible }) => {
+      heroVisible = visible;
       reconcile();
-    }, { rootMargin: "120px 0px" });
-    observer.observe(observedHero);
+    });
   }
 
-  let resizeTimer = 0;
-  windowObject.addEventListener("resize", () => {
-    windowObject.clearTimeout(resizeTimer);
-    resizeTimer = windowObject.setTimeout(reconcile, 120);
-  });
-  documentObject.addEventListener("visibilitychange", () => {
-    visible = !documentObject.hidden;
+  sharedRuntime.subscribe(() => {
+    for (const entry of canvases) entry.width = 0;
     reconcile();
   });
   documentObject.addEventListener("presentation:variantchange", reconcile);
-  motionQuery.addEventListener?.("change", reconcile);
   reconcile();
 })(typeof window === "undefined" ? null : window);

@@ -6,8 +6,8 @@
   const main = document.querySelector(".site-main");
   if (!main) return;
 
-  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const mobileQuery = window.matchMedia("(max-width: 800px)");
+  const sharedRuntime = window.DaryInteractions;
+  if (!sharedRuntime) return;
   const route = document.body.dataset.route || "home";
   const routeLabels = {
     home: ["Среда · вода", "Продукт · три направления", "Аудитория", "Процесс выбора", "Подтверждение", "Действие"],
@@ -19,7 +19,6 @@
   const labels = routeLabels[route] || routeLabels.home;
   const bands = Array.from(main.children).filter((element) => element.matches("section, aside"));
   let frameRequest = 0;
-  let listening = false;
 
   function slugForLabel(label) {
     if (/действие|контакт/i.test(label)) return "action";
@@ -79,7 +78,8 @@
   function updateProgress() {
     frameRequest = 0;
     if (!isActive()) return;
-    if (motionQuery.matches || mobileQuery.matches) {
+    const state = sharedRuntime.getState();
+    if (state.reducedMotion || state.compact || !state.documentVisible) {
       setStaticState();
       return;
     }
@@ -102,18 +102,7 @@
     if (!frameRequest) frameRequest = window.requestAnimationFrame(updateProgress);
   }
 
-  function addListeners() {
-    if (listening) return;
-    window.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.addEventListener("resize", scheduleUpdate, { passive: true });
-    listening = true;
-  }
-
-  function removeListeners() {
-    if (!listening) return;
-    window.removeEventListener("scroll", scheduleUpdate);
-    window.removeEventListener("resize", scheduleUpdate);
-    listening = false;
+  function stopUpdate() {
     if (frameRequest) window.cancelAnimationFrame(frameRequest);
     frameRequest = 0;
   }
@@ -122,24 +111,21 @@
     const active = isActive();
     root.classList.toggle("sectional-active", active);
     if (!active) {
-      removeListeners();
+      stopUpdate();
       return;
     }
-    if (motionQuery.matches || mobileQuery.matches) {
-      removeListeners();
+    const state = sharedRuntime.getState();
+    if (state.reducedMotion || state.compact || !state.documentVisible) {
+      stopUpdate();
       setStaticState();
     } else {
-      addListeners();
       scheduleUpdate();
     }
   }
 
-  if (typeof window.IntersectionObserver === "function") {
-    const observer = new window.IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const index = bands.indexOf(entry.target);
-        if (index < 0) continue;
+  bands.forEach((band, index) => {
+    sharedRuntime.registerStage(band, ({ visible }) => {
+      if (visible) {
         bands.forEach((band, bandIndex) => {
           band.toggleAttribute("data-sectional-current", bandIndex === index);
         });
@@ -147,16 +133,14 @@
           item.toggleAttribute("data-current", Number(item.dataset.sectionTarget) === index);
         });
       }
-    }, { rootMargin: "-32% 0px -54%", threshold: 0 });
-    bands.forEach((band) => observer.observe(band));
-  }
+    });
+  });
 
   document.addEventListener("presentation:variantchange", reconcile);
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) removeListeners();
-    else reconcile();
+  sharedRuntime.subscribe(reconcile);
+  sharedRuntime.subscribeFrame(() => {
+    const state = sharedRuntime.getState();
+    if (isActive() && !state.reducedMotion && !state.compact && state.documentVisible) scheduleUpdate();
   });
-  motionQuery.addEventListener?.("change", reconcile);
-  mobileQuery.addEventListener?.("change", reconcile);
   reconcile();
 })();

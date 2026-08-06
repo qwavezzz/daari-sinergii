@@ -2,6 +2,7 @@
 
 const { content } = require("./site-content");
 const { presentationConfig } = require("./presentation-config");
+const { heroMedia, motionBudgets } = require("./interaction-config");
 
 function escapeHtml(value) {
   return String(value)
@@ -81,18 +82,27 @@ function renderIndustryItems() {
 }
 
 function renderAtmosphereCanvas(kind = "ambient") {
-  return `<canvas class="variant-field variant-field--${kind}" data-reactor-field="${kind}" aria-hidden="true"></canvas>
+  return `<canvas class="variant-field variant-field--${kind}" data-reactor-field="${kind}" data-motion-stage aria-hidden="true"></canvas>
     <div class="variant-field-fallback" aria-hidden="true"><i></i><i></i><i></i></div>`;
 }
 
-function renderHeroMedia() {
+function renderHeroMedia(media = heroMedia) {
   const diagnostics = content.directions.map((direction) => `
     <li><span aria-hidden="true"></span>${escapeHtml(direction.title)}</li>`).join("");
+  const sources = media.sources
+    .filter(({ src }) => Boolean(src))
+    .map(({ src, type, format }) => `<source src="${escapeHtml(src)}" type="${escapeHtml(type)}" data-media-format="${escapeHtml(format)}">`)
+    .join("");
+  const hasSource = sources.length > 0;
+  const hasPoster = Boolean(media.poster);
+  const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
+  const controls = hasSource ? " controls" : "";
+  const mediaState = hasSource ? "configured" : "empty";
 
-  return `<div class="hero-stage" data-variant-stage>
-    <figure class="media-aperture">
-      <video class="hero-video" preload="metadata" muted playsinline aria-describedby="hero-media-caption"></video>
-      <canvas class="media-placeholder-field" data-reactor-field="media" aria-hidden="true"></canvas>
+  return `<div class="hero-stage" data-variant-stage data-motion-stage>
+    <figure class="media-aperture" data-hero-media data-media-state="${mediaState}" data-media-poster="${hasPoster}">
+      <video class="hero-video" preload="metadata" muted playsinline${poster}${controls} aria-describedby="hero-media-caption">${sources}</video>
+      <canvas class="media-placeholder-field" data-reactor-field="media" data-motion-stage aria-hidden="true"></canvas>
       <div class="media-empty-state">
         <strong>Процедурная визуализация</strong>
         <span>Видео будет добавлено после предоставления медиафайла</span>
@@ -225,6 +235,54 @@ function renderContactList() {
   }).map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd class="placeholder" data-placeholder>${escapeHtml(value)}</dd></div>`).join("");
 }
 
+function renderConsultationForm() {
+  const options = content.consultation.topics
+    .map(({ value, label }) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+    .join("");
+
+  return `<form id="consultation-form" class="demo-form" data-demo-form novalidate>
+    <div class="demo-form__intro">
+      <h3>${escapeHtml(content.consultation.title)}</h3>
+      <p id="demo-form-note" class="demo-form__notice">${escapeHtml(content.consultation.description)}</p>
+    </div>
+    <div class="demo-form__grid">
+      <div class="form-field">
+        <label for="consultation-name">Как к вам обращаться</label>
+        <input id="consultation-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="80" required aria-describedby="consultation-name-error demo-form-note" data-demo-field>
+        <span id="consultation-name-error" class="form-field__error" aria-live="polite"></span>
+      </div>
+      <div class="form-field">
+        <label for="consultation-email">Электронная почта</label>
+        <input id="consultation-email" name="email" type="email" autocomplete="email" maxlength="254" required aria-describedby="consultation-email-error demo-form-note" data-demo-field>
+        <span id="consultation-email-error" class="form-field__error" aria-live="polite"></span>
+      </div>
+      <div class="form-field demo-form__topic">
+        <label for="consultation-topic">Предмет разговора</label>
+        <select id="consultation-topic" name="topic" required aria-describedby="consultation-topic-error demo-form-note" data-demo-field>
+          <option value="">Выберите вариант</option>
+          ${options}
+        </select>
+        <span id="consultation-topic-error" class="form-field__error" aria-live="polite"></span>
+      </div>
+      <div class="form-field demo-form__message">
+        <label for="consultation-message">Кратко опишите задачу</label>
+        <textarea id="consultation-message" name="message" rows="5" minlength="10" maxlength="1000" required aria-describedby="consultation-message-hint consultation-message-error demo-form-note" data-demo-field></textarea>
+        <span id="consultation-message-hint" class="form-field__hint">От 10 до 1000 символов. Не указывайте чувствительные данные — это демонстрация.</span>
+        <span id="consultation-message-error" class="form-field__error" aria-live="polite"></span>
+      </div>
+    </div>
+    <label class="demo-form__acknowledgement">
+      <input name="demo-acknowledgement" type="checkbox" required aria-describedby="consultation-acknowledgement-error demo-form-note" data-demo-field>
+      <span>Я понимаю, что это демонстрация: данные не будут отправлены или сохранены.</span>
+    </label>
+    <span id="consultation-acknowledgement-error" class="form-field__error" aria-live="polite"></span>
+    <div class="demo-form__actions">
+      <button class="button demo-form__submit" type="submit" disabled data-demo-submit>Проверить демо-заявку</button>
+      <p class="demo-form__status" role="status" aria-live="polite" data-demo-status>Отправка отключена. Проверка выполняется локально, затем поля будут очищены.</p>
+    </div>
+  </form>`;
+}
+
 function renderContacts() {
   return `
     ${renderInnerHero("Контакты", "Все значения ниже централизованы и ожидают подтверждения.")}
@@ -232,6 +290,7 @@ function renderContacts() {
       <h2 id="details-title">Контактные данные</h2>
       <dl class="contact-list">${renderContactList()}</dl>
       <p class="notice">Форма отправки ещё не подключена. На этой странице данные не передаются и не сохраняются.</p>
+      ${renderConsultationForm()}
     </section>`;
 }
 
@@ -264,6 +323,7 @@ function renderPage(route) {
   <link rel="stylesheet" href="/assets/styles.css">
   ${variantStyles}
   <script id="presentation-config" type="application/json">${serializePresentationConfig(presentationConfig)}</script>
+  <script id="interaction-config" type="application/json">${serializePresentationConfig({ motionBudgets })}</script>
 </head>
 <body data-route="${escapeHtml(route.kind)}">
   <a class="skip-link" href="#main-content">К основному содержанию</a>
@@ -279,9 +339,10 @@ function renderPage(route) {
     ${link("/contacts/", "Контакты и реквизиты")}
   </footer>
   <script src="/assets/presentation-runtime.js"></script>
+  <script src="/assets/shared-interactions.js"></script>
   ${variantScripts}
 </body>
 </html>`;
 }
 
-module.exports = { renderPage, renderVariantSwitcher };
+module.exports = { renderHeroMedia, renderPage, renderVariantSwitcher };

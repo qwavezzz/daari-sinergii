@@ -25,6 +25,10 @@ function build() {
     path.join(projectRoot, "src", "presentation-runtime.js"),
     path.join(assetsDirectory, "presentation-runtime.js"),
   );
+  fs.copyFileSync(
+    path.join(projectRoot, "src", "shared-interactions.js"),
+    path.join(assetsDirectory, "shared-interactions.js"),
+  );
   fs.cpSync(
     path.join(projectRoot, "src", "variants"),
     path.join(assetsDirectory, "variants"),

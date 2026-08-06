@@ -93,6 +93,15 @@ const content = {
     address: placeholder("адрес"),
     schedule: placeholder("режим работы"),
   },
+  consultation: {
+    title: "Демонстрационная заявка",
+    description: "Проверьте будущий сценарий обращения. Введённые данные никуда не отправляются и не сохраняются.",
+    topics: [
+      ...directions.map(({ id, title }) => ({ value: id, label: title })),
+      { value: "industry-context", label: "Отраслевой контекст" },
+      { value: "not-selected", label: "Направление пока не выбрано" },
+    ],
+  },
   cta: {
     primary: "Подобрать решение",
     secondary: "Получить консультацию",

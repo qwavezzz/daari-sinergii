@@ -719,8 +719,8 @@ html[data-variant="sectional-medium"] main > aside > h2 {
   align-self: start;
 }
 
-html[data-variant="sectional-medium"] main > section:not(.hero) > :is(.content-grid, .steps, .plain-list, .contact-list),
-html[data-variant="sectional-medium"] main > aside > :is(.content-grid, .steps, .plain-list, .contact-list) {
+html[data-variant="sectional-medium"] main > section:not(.hero) > :is(.content-grid, .steps, .plain-list, .contact-list, .demo-form),
+html[data-variant="sectional-medium"] main > aside > :is(.content-grid, .steps, .plain-list, .contact-list, .demo-form) {
   grid-column: 6 / 13;
   align-self: start;
 }
@@ -928,6 +928,10 @@ html[data-variant="sectional-medium"] .contact-list > div {
 
 html[data-variant="sectional-medium"] .contact-list dt {
   font-weight: 600;
+}
+
+html[data-variant="sectional-medium"] [data-sectional-layer="action"] .demo-form {
+  --form-error: #ffd1d7;
 }
 
 html[data-variant="sectional-medium"] .callout {
@@ -1342,8 +1346,8 @@ html[data-variant="sectional-medium"] :focus-visible {
 
   html[data-variant="sectional-medium"] main > section:not(.hero) > h2,
   html[data-variant="sectional-medium"] main > aside > h2,
-  html[data-variant="sectional-medium"] main > section:not(.hero) > :is(.content-grid, .steps, .plain-list, .contact-list),
-  html[data-variant="sectional-medium"] main > aside > :is(.content-grid, .steps, .plain-list, .contact-list),
+  html[data-variant="sectional-medium"] main > section:not(.hero) > :is(.content-grid, .steps, .plain-list, .contact-list, .demo-form),
+  html[data-variant="sectional-medium"] main > aside > :is(.content-grid, .steps, .plain-list, .contact-list, .demo-form),
   html[data-variant="sectional-medium"] main > section:not(.hero) > p,
   html[data-variant="sectional-medium"] main > aside > p,
   html[data-variant="sectional-medium"] main > section:not(.hero) > .text-link,

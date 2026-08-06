@@ -717,6 +717,20 @@ html[data-variant="water-column"] .contact-list dd {
   color: var(--wc-white);
 }
 
+html[data-variant="water-column"] .demo-form {
+  --form-error: #ffb8c1;
+  position: relative;
+  z-index: 7;
+  color: var(--wc-white);
+  border-color: var(--wc-line);
+}
+
+html[data-variant="water-column"] .demo-form__notice,
+html[data-variant="water-column"] .form-field__hint,
+html[data-variant="water-column"] .demo-form__status {
+  color: var(--wc-mist);
+}
+
 html[data-variant="water-column"] .callout {
   min-height: 74svh;
   align-content: end;
