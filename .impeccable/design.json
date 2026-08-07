@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T00:15:21.9891735+04:00",
+  "title": "Design System: Дары Синергии — Управляемый поток",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Чернильная вода",
+        "tonalRamp": ["oklch(15% 0.035 251)", "oklch(24% 0.035 251)", "oklch(35% 0.035 251)", "oklch(47% 0.035 251)", "oklch(59% 0.035 251)", "oklch(71% 0.035 251)", "oklch(83% 0.035 251)", "oklch(95% 0.035 251)"]
+      },
+      "ink-deep": {
+        "role": "neutral",
+        "displayName": "Глубина воды",
+        "tonalRamp": ["oklch(15% 0.03 252)", "oklch(24% 0.03 252)", "oklch(35% 0.03 252)", "oklch(47% 0.03 252)", "oklch(59% 0.03 252)", "oklch(71% 0.03 252)", "oklch(83% 0.03 252)", "oklch(95% 0.03 252)"]
+      },
+      "basin": {
+        "role": "neutral",
+        "displayName": "Тихая впадина",
+        "tonalRamp": ["oklch(15% 0.025 250)", "oklch(24% 0.025 250)", "oklch(35% 0.025 250)", "oklch(47% 0.025 250)", "oklch(59% 0.025 250)", "oklch(71% 0.025 250)", "oklch(83% 0.025 250)", "oklch(95% 0.025 250)"]
+      },
+      "system-bed": {
+        "role": "neutral",
+        "displayName": "Ложе системы",
+        "tonalRamp": ["oklch(15% 0.03 252)", "oklch(24% 0.03 252)", "oklch(35% 0.03 252)", "oklch(47% 0.03 252)", "oklch(59% 0.03 252)", "oklch(71% 0.03 252)", "oklch(83% 0.03 252)", "oklch(95% 0.03 252)"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Водная поверхность",
+        "tonalRamp": ["oklch(15% 0.055 251)", "oklch(24% 0.055 251)", "oklch(35% 0.055 251)", "oklch(47% 0.055 251)", "oklch(59% 0.055 251)", "oklch(71% 0.055 251)", "oklch(83% 0.055 251)", "oklch(95% 0.055 251)"]
+      },
+      "surface-strong": {
+        "role": "neutral",
+        "displayName": "Плотная вода",
+        "tonalRamp": ["oklch(15% 0.085 252)", "oklch(24% 0.085 252)", "oklch(35% 0.085 252)", "oklch(47% 0.085 252)", "oklch(59% 0.085 252)", "oklch(71% 0.085 252)", "oklch(83% 0.085 252)", "oklch(95% 0.085 252)"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Гидролиния",
+        "tonalRamp": ["oklch(15% 0.1 250)", "oklch(24% 0.1 250)", "oklch(35% 0.1 250)", "oklch(47% 0.1 250)", "oklch(59% 0.1 250)", "oklch(71% 0.1 250)", "oklch(83% 0.1 250)", "oklch(95% 0.1 250)"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Точный белый",
+        "tonalRamp": ["oklch(15% 0.01 230)", "oklch(24% 0.01 230)", "oklch(35% 0.01 230)", "oklch(47% 0.01 230)", "oklch(59% 0.01 230)", "oklch(71% 0.01 230)", "oklch(83% 0.01 230)", "oklch(95% 0.01 230)"]
+      },
+      "text-soft": {
+        "role": "neutral",
+        "displayName": "Мягкий лёд",
+        "tonalRamp": ["oklch(15% 0.06 230)", "oklch(24% 0.06 230)", "oklch(35% 0.06 230)", "oklch(47% 0.06 230)", "oklch(59% 0.06 230)", "oklch(71% 0.06 230)", "oklch(83% 0.06 230)", "oklch(95% 0.06 230)"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Приглушённый голубой",
+        "tonalRamp": ["oklch(15% 0.1 245)", "oklch(24% 0.1 245)", "oklch(35% 0.1 245)", "oklch(47% 0.1 245)", "oklch(59% 0.1 245)", "oklch(71% 0.1 245)", "oklch(83% 0.1 245)", "oklch(95% 0.1 245)"]
+      },
+      "energy": {
+        "role": "primary",
+        "displayName": "Ледяной поток",
+        "tonalRamp": ["oklch(15% 0.09 235)", "oklch(24% 0.09 235)", "oklch(35% 0.09 235)", "oklch(47% 0.09 235)", "oklch(59% 0.09 235)", "oklch(71% 0.09 235)", "oklch(83% 0.09 235)", "oklch(95% 0.09 235)"]
+      },
+      "energy-bright": {
+        "role": "primary",
+        "displayName": "Пик растворённого света",
+        "tonalRamp": ["oklch(15% 0.035 225)", "oklch(24% 0.035 225)", "oklch(35% 0.035 225)", "oklch(47% 0.035 225)", "oklch(59% 0.035 225)", "oklch(71% 0.035 225)", "oklch(83% 0.035 225)", "oklch(95% 0.035 225)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero, доказательный манифест и финальный контактный вопрос." },
+      "headline": { "displayName": "Headline", "purpose": "Вступления больших смысловых секций." },
+      "title": { "displayName": "Title", "purpose": "Продуктовые направления, контексты и этапы процесса." },
+      "body": { "displayName": "Body", "purpose": "Предметные пояснения и доказательный текст." },
+      "navigation": { "displayName": "Navigation", "purpose": "Спокойные текстовые ссылки в header, меню и footer." },
+      "action": { "displayName": "Action", "purpose": "Текстовые действия с линией и стрелкой." },
+      "label": { "displayName": "Mono Label", "purpose": "Продуктовые маркеры, статусы и названия контактных каналов." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-smooth", "value": "cubic-bezier(.32, .72, 0, 1)", "purpose": "Вход полноэкранной панели и крупные физические сдвиги." },
+      { "name": "ease-out", "value": "cubic-bezier(.17, 1, .35, .96)", "purpose": "Reveal текста, раскрытие линий и направленные состояния ссылок." },
+      { "name": "nav-underline", "value": "420ms cubic-bezier(.17, 1, .35, .96)", "purpose": "Подчёркивание ссылок header и footer." },
+      { "name": "text-action", "value": "500ms cubic-bezier(.17, 1, .35, .96)", "purpose": "Раскрытие линии и сдвиг стрелки текстового действия." },
+      { "name": "mobile-panel", "value": "720ms cubic-bezier(.32, .72, 0, 1)", "purpose": "Вход полноэкранного мобильного меню сверху." },
+      { "name": "content-reveal", "value": "900ms cubic-bezier(.17, 1, .35, .96)", "purpose": "Небольшой подъём и снятие blur у контента при появлении." },
+      { "name": "bubble-pulse", "value": "3.4s ease-in-out infinite alternate", "purpose": "Тихая пульсация части системных микропузырьков." },
+      { "name": "steam-rise", "value": "8s linear infinite", "purpose": "Медленное движение штриха в схеме гидролатов." }
+    ],
+    "breakpoints": [
+      { "name": "compact-grid", "value": "991px", "purpose": "12 колонок переходят в 6; desktop-nav заменяется menu control." },
+      { "name": "single-column", "value": "767px", "purpose": "Продуктовые пары, контексты и процесс складываются вертикально." },
+      { "name": "narrow-mobile", "value": "479px", "purpose": "Уточняются размеры бренда, hero-копии и нижних маркеров." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Text Action",
+      "kind": "custom",
+      "refersTo": "text-action",
+      "description": "Премиальное текстовое действие с раскрывающейся линией и направленной стрелкой.",
+      "html": "<a class=\"ds-text-action\" href=\"#\"><span>Смотреть решения</span><svg viewBox=\"0 0 18 18\" aria-hidden=\"true\"><path d=\"M3 9h11M10 4l5 5-5 5\" /></svg></a>",
+      "css": ".ds-text-action { display: inline-flex; align-items: center; gap: 12px; color: var(--text, #f7fbfd); text-decoration: none; font: 560 14px 'Manrope Variable', Arial, sans-serif; } .ds-text-action span { position: relative; } .ds-text-action span::after { position: absolute; right: 0; bottom: -.45em; left: 0; height: 1px; content: ''; transform: scaleX(.25); transform-origin: left; background: currentColor; transition: transform 500ms var(--ease-out, cubic-bezier(.17, 1, .35, .96)); } .ds-text-action svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; transition: transform 500ms var(--ease-out, cubic-bezier(.17, 1, .35, .96)); } .ds-text-action:hover span::after, .ds-text-action:focus-visible span::after { transform: scaleX(1); } .ds-text-action:hover svg, .ds-text-action:focus-visible svg { transform: translateX(5px); } .ds-text-action:focus-visible { outline: 2px solid var(--energy-bright, #d9f3ff); outline-offset: 5px; }"
+    },
+    {
+      "name": "Desktop Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-link",
+      "description": "Четыре спокойные ссылки с направленным подчёркиванием и без контейнера.",
+      "html": "<nav class=\"ds-desktop-nav\" aria-label=\"Основная навигация\"><a href=\"#\">Решения</a><a href=\"#\">Применение</a><a href=\"#\">Производство</a><a href=\"#\">Контакты</a></nav>",
+      "css": ".ds-desktop-nav { display: flex; align-items: center; justify-content: flex-end; gap: 28px; color: var(--text, #f7fbfd); font: 400 13px 'Manrope Variable', Arial, sans-serif; } .ds-desktop-nav a { position: relative; color: inherit; text-decoration: none; } .ds-desktop-nav a::after { position: absolute; right: 0; bottom: -.4em; left: 0; height: 1px; content: ''; transform: scaleX(0); transform-origin: right; background: currentColor; transition: transform 420ms var(--ease-out, cubic-bezier(.17, 1, .35, .96)); } .ds-desktop-nav a:hover::after, .ds-desktop-nav a:focus-visible::after { transform: scaleX(1); transform-origin: left; } .ds-desktop-nav a:focus-visible { outline: 2px solid var(--energy-bright, #d9f3ff); outline-offset: 5px; }"
+    },
+    {
+      "name": "Mobile Menu Control",
+      "kind": "button",
+      "refersTo": "mobile-menu-control",
+      "description": "Незалитая кнопка меню с доступной областью 44×44 px.",
+      "html": "<button class=\"ds-menu-control\" type=\"button\" aria-expanded=\"false\">Меню</button>",
+      "css": ".ds-menu-control { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 0; border: 0; cursor: pointer; color: var(--text, #f7fbfd); background: transparent; font: 400 14px 'Manrope Variable', Arial, sans-serif; } .ds-menu-control:focus-visible { outline: 2px solid var(--energy-bright, #d9f3ff); outline-offset: 5px; }"
+    },
+    {
+      "name": "Application Context Row",
+      "kind": "custom",
+      "refersTo": "context-row",
+      "description": "Линейная строка контекста с крупным названием и водным hover-полем.",
+      "html": "<div class=\"ds-context-row\" tabindex=\"0\"><span>Спортивные клубы</span><small>Спортивная инфраструктура</small></div>",
+      "css": ".ds-context-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: end; min-height: 118px; padding: 24px 0 20px; overflow: hidden; border-top: 1px solid rgba(137, 191, 226, .18); color: var(--text, #f7fbfd); transition: padding-left 600ms var(--ease-out, cubic-bezier(.17, 1, .35, .96)), color 400ms ease; } .ds-context-row::before { position: absolute; top: 50%; right: 0; width: 48%; height: 180%; content: ''; transform: translate(30%, -50%) scaleX(.25); transform-origin: right; border-radius: 50%; opacity: 0; background: radial-gradient(ellipse, rgba(137, 191, 226, .18), transparent 68%); transition: transform 750ms var(--ease-smooth, cubic-bezier(.32, .72, 0, 1)), opacity 300ms ease; } .ds-context-row > * { position: relative; z-index: 1; } .ds-context-row > span { font: 500 clamp(34px, 4.3vw, 66px)/.95 'Manrope Variable', Arial, sans-serif; letter-spacing: -.035em; } .ds-context-row small { justify-self: end; padding-bottom: 7px; color: var(--text-muted, #699cc6); font: 400 13px 'Manrope Variable', Arial, sans-serif; } .ds-context-row:hover, .ds-context-row:focus-visible { padding-left: 20px; color: var(--energy-bright, #d9f3ff); outline: 2px solid var(--energy-bright, #d9f3ff); outline-offset: 5px; } .ds-context-row:hover::before, .ds-context-row:focus-visible::before { transform: translate(0, -50%) scaleX(1); opacity: 1; }"
+    },
+    {
+      "name": "Process Act",
+      "kind": "custom",
+      "refersTo": "process-act",
+      "description": "Плоский этап процесса, отделённый только верхней линией.",
+      "html": "<article class=\"ds-process-act\"><h3>Производим</h3><p>Собственное производство — отправная точка систем озонирования воды.</p></article>",
+      "css": ".ds-process-act { min-height: 280px; padding: 28px 0 0; border-top: 1px solid rgba(137, 191, 226, .26); color: var(--text, #f7fbfd); background: transparent; } .ds-process-act h3 { margin: 0; font: 500 clamp(38px, 4.5vw, 68px)/.95 'Manrope Variable', Arial, sans-serif; letter-spacing: -.03em; } .ds-process-act p { max-width: 46ch; margin: 24px 0 0; color: var(--text-soft, #b1dff6); font: 400 16px/1.45 'Manrope Variable', Arial, sans-serif; }"
+    },
+    {
+      "name": "Contact Channel",
+      "kind": "custom",
+      "refersTo": "contact-channel",
+      "description": "Честный контактный канал с mono-меткой и крупным значением.",
+      "html": "<div class=\"ds-contact-channel\"><span>Электронная почта</span><p>Будет добавлена</p></div>",
+      "css": ".ds-contact-channel { padding: 20px 0 0; border-top: 1px solid rgba(137, 191, 226, .22); color: var(--text-soft, #b1dff6); background: var(--ink-deep, #04101f); } .ds-contact-channel span { color: var(--text-muted, #699cc6); font: 400 10px/1 'IBM Plex Mono', Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; } .ds-contact-channel p { margin: 14px 0 0; color: var(--text-soft, #b1dff6); font: 400 clamp(28px, 3vw, 46px)/1.1 'Manrope Variable', Arial, sans-serif; letter-spacing: -.03em; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Управляемый поток",
+    "overview": "«Управляемый поток» показывает природную силу через инженерную точность: видимый источник, понятное направление движения и конкретное применение. Мир строится на глубокой navy-воде, ледяном cyan-свете, белой типографике и большом количестве воздуха; он научный, премиальный и визуальный, но не стерильно-медицинский.\n\nКомпозиция следует пути «источник → применение». В hero Canvas изображает физически правдоподобный диффузор, выпускающий озоновые микропузырьки в движущуюся воду; поток раскрывается вправо, сохраняя тёмную область для текста слева. Дальше сайт чередует крупные типографические акты, схемы продукта, длинные паузы и прикладные списки без декоративных карточек, эзотерики и неподтверждённых медицинских обещаний.",
+    "keyCharacteristics": [
+      "Глубокая navy-среда и холодный cyan-свет вместо нейтрального чёрного или неона.",
+      "Крупный Manrope с плотным интерлиньяжем; IBM Plex Mono только для служебных подписей.",
+      "Полноширинная 12/6-колоночная сетка с постоянными полями и промежутками по 20 px.",
+      "Плоские поверхности, тонкие разделители и почти полное отсутствие скруглённых контейнеров.",
+      "Текстовые действия с линией и стрелкой вместо залитых премиальных кнопок.",
+      "Физически мотивированное движение с полным режимом `prefers-reduced-motion`."
+    ],
+    "rules": [
+      { "name": "The Cold Water Rule", "body": "Cyan всегда выходит из navy как свет внутри воды; он не превращается в повсеместный неоновый эффект.", "section": "colors" },
+      { "name": "The Two-Voice Rule", "body": "Manrope несёт смысл и действие, IBM Plex Mono только маркирует; третий интерфейсный шрифт не вводится.", "section": "typography" },
+      { "name": "The Source-to-Application Rule", "body": "Визуальное направление начинается в левой или центральной точке и раскрывается вправо либо в следующий смысловой акт; декоративное движение без источника не используется.", "section": "layout" },
+      { "name": "The Flat-by-Default Rule", "body": "Глубина появляется из тона, света и движения воды; тени под текстом, секциями и псевдокарточками не добавляются.", "section": "elevation" },
+      { "name": "The No-Container Rule", "body": "Не оборачивать смысловые блоки в скруглённые панели: границу задают фон, сетка, тонкая линия или пустое пространство.", "section": "shapes" },
+      { "name": "The Text-Only Action Rule", "body": "Премиальные действия остаются текстом, линией и направлением; залитую кнопку не добавлять без нового подтверждённого функционального приоритета.", "section": "components" }
+    ],
+    "dos": [
+      "Do сохранять navy/cyan-мир, 20 px поля и 12/6-колоночную сетку на новых экранах.",
+      "Do показывать физический источник, направление и применение любой потоковой графики.",
+      "Do использовать официальный знак и lockup без перерисовки; на тёмном фоне допустима только реализованная белая инверсия.",
+      "Do оставлять действия текстовыми и обеспечивать заметные hover/focus-состояния.",
+      "Do сохранять крупную типографику и смысловую последовательность при мобильной перестройке.",
+      "Do оставлять первый кадр, навигацию и весь смысл доступными при reduced motion или отсутствии hero-видео."
+    ],
+    "donts": [
+      "Don't превращать поток озона в космос, портал, плазму, электричество, дым или абстрактную магию.",
+      "Don't использовать эзотерику, агрессивные медицинские образы или неподтверждённые обещания результата.",
+      "Don't добавлять декоративные карточки, pill-кнопки, тени и повсеместный cyan glow.",
+      "Don't размещать основной текст поверх самого яркого участка воды или полагаться на motion как единственный носитель смысла.",
+      "Don't заменять будущим Gemini-видео что-либо кроме hero-media слоя или менять утверждённую композицию источника и текста.",
+      "Don't вводить новые цвета, радиусы или компонентные варианты, если они не повторяются в реальной реализации."
+    ]
+  }
+}

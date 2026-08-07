@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "Orbital Reactor",
+  "image": "comp-b-orbital-reactor.png",
+  "approved": false,
+  "prompt": "Desktop 16:10 hero for Дары Синергии: strict 12-column grid, deep navy and cyan, sparse navigation, large lower-left headline ОЗОН. В ТОЧНОЙ СИСТЕМЕ., a central asymmetric orbital reactor with three output nodes and particles flowing right and up. No photography or factual claims.",
+  "implementationIntent": "Canvas particle orbit plus semantic HTML navigation, headline, CTA and product teasers."
+}

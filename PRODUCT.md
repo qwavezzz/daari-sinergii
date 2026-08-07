@@ -8,65 +8,70 @@ web
 
 ## Stack
 
-Delegated: static multi-page HTML, CSS, and vanilla JavaScript, generated and served with small dependency-free Node.js scripts. Native IntersectionObserver, requestAnimationFrame, Canvas 2D, CSS transforms, and an HTML5 video slot provide motion without a heavy framework or WebGL requirement.
+React + Vite. Выбор подтверждён пользователем для одностраничного лендинга с выразительным hero и сложным motion.
 
 ## Users
 
-Primary users are representatives of organizations choosing ozone-related products and solutions: sports and recovery centers, sanatoriums and wellness complexes, pools and SPA, water-treatment companies, veterinary clinics, livestock operations, and agricultural enterprises.
+- Спортивные клубы, которым нужны решения для своей инфраструктуры и процессов восстановления спортсменов.
+- Ветеринарные организации и специалисты.
+- Санатории и оздоровительные объекты.
+- Семьи и частные пользователи.
+- Сельскохозяйственные предприятия.
 
-Secondary users are private buyers exploring products for personal use.
-
-Visitors need to understand the company's three directions quickly, identify the relevant application, compare the available paths, and contact a specialist.
+На первом экране компания представляется целиком; отраслевые сценарии раскрываются после hero без назначения одной аудитории единственной главной.
 
 ## Product Purpose
 
-The website presents «Дары Синергии» across three directions: ozone systems, ozonated oils, and hydrolats. It should help a visitor understand the offer, choose a direction or industry scenario, and leave a consultation request.
+«Дары Синергии» производит системы озонирования воды и монтирует их на объектах. Компания также производит озонированные масла и гидролаты.
 
-Success means that an organization can reach the appropriate direction and a clear contact action without reading long promotional copy.
+Лендинг должен быстро объяснять, что компания работает с озоном как с инженерной и производственной технологией, показать широту сценариев применения и привести заинтересованного посетителя к прямому контакту.
 
 ## Positioning
 
-The intended positioning is quality. No supporting certificates, measurements, case studies, specifications, or quantified results are currently available, so quality must not be expressed as a comparative or proven claim until evidence is supplied.
+Компания соединяет собственное производство систем озонирования воды с монтажом на объектах и отдельной линейкой озонированных масел и гидролатов. Коммуникация строится на конкретных продуктах и производственной компетенции, а не на эзотерике или неподтверждённых медицинских обещаниях.
 
 ## Operating Context
 
-The site is a Russian-language, public-facing marketing website used on desktop, tablet, and mobile devices. It must support a presentation mode where stakeholders can switch between four radically different site variants while the underlying product facts remain identical.
+- Системы озонирования воды производятся компанией и устанавливаются непосредственно на объектах заказчиков.
+- Гидролаты — водные продукты паровой или гидродистилляции растительного сырья; сайт объясняет термин нейтрально, без лечебных утверждений.
+- Разные отрасли должны узнавать свои сценарии последовательно после общего продуктового hero.
+- Основной следующий шаг посетителя — связаться с компанией по электронной почте или телефону.
 
 ## Capabilities and Constraints
 
-- Seven routes are planned: Home, Ozone Systems, Ozonated Oils, Hydrolats, Industry Solutions, About, and Contacts.
-- Four complete visual variants must apply across all routes and be selectable through a presentation switcher.
-- The selected variant persists through navigation and can be removed from the production experience later.
-- The hero contains an HTML5 video slot. Until a real file is supplied, a clearly non-factual procedural ozone/water placeholder and poster fallback are used.
-- Contact forms are demonstration-only: validation and success states work, but no submission endpoint or data storage is invented.
-- Contact details must be centralized as editable placeholders so a later admin interface can replace them.
-- Main-page copy stays short and scannable. Layouts are compact enough to avoid excessive empty stretches while preserving legibility.
-- No invented prices, testimonials, customer logos, certificates, medical promises, performance figures, or product specifications.
-- Motion is progressive: cinematic on capable desktop devices, simplified on mobile, and static under reduced-motion preferences.
+- Подтверждено: производство систем озонирования воды.
+- Подтверждено: монтаж систем на объектах.
+- Подтверждено: производство озонированных масел.
+- Подтверждено: производство гидролатов.
+- Контактный email и номер телефона ещё не предоставлены; в первой версии используются явно обозначенные заглушки.
+- Нет подтверждённых фотографий, цен, отзывов, количественных показателей, сертификатов, кейсов и технических характеристик. Их нельзя выдумывать.
+- Нельзя заявлять лечение, ускорение восстановления или иные медицинские эффекты без предоставленного доказательства и юридически допустимой формулировки.
+- Hero-видео будет произведено отдельно; первая версия должна иметь выразительный самостоятельный fallback и понятный слот для последующей замены видео.
 
 ## Brand Commitments
 
-- Name: «Дары Синергии».
-- Visual authority: `DESIGN.md` and the five supplied images under `references/`.
-- Core palette commitment: cyan and white, with the deeper blue and technical neutrals defined by the design system.
-- Durable visual ideas: water/ozone atmosphere, large modern grotesk type, diagnostic information overlays, controlled text occlusion, and ozone bubbles passing between display layers.
-- The tone is professional, concise, clear, and trustworthy.
+- Название: «Дары Синергии».
+- Официальный логотип: `b0fa1e44-25f2-499a-9005-1bb01b4af64d.png`.
+- Визуальная система и обязательные правила: `DESIGN.md` и `.impeccable/design.json`.
+- Hero наследует композиционный принцип предоставленного Payius-референса: мало текста слева, направленное энергетическое поле справа, сильный первый экран.
+- Ритм длинной страницы наследует пространственную дисциплину day one® Run: крупные типографические акты, длинные паузы, смена плотности и формата секций.
+- Тон: уверенный, научный, точный, современный; без эзотерики и агрессивных медицинских обещаний.
 
 ## Evidence on Hand
 
-- `DESIGN.md`: the current seed design system.
-- `references/1.png` through `references/5.png`: visual references.
-- `promt.md`: initial product and route brief.
-- No real photography, hero video, prices, testimonials, metrics, certificates, detailed specifications, or finalized contact details are available.
+- Логотип компании: `b0fa1e44-25f2-499a-9005-1bb01b4af64d.png`.
+- Зафиксированная дизайн-система: `DESIGN.md`.
+- Подтверждённое пользователем описание продуктовых направлений и аудиторий.
+- Отсутствуют реальные фото, видео, цены, отзывы, цифры, контакты, кейсы и технические спецификации; вместо них должны использоваться честные заглушки или нейтральные демонстрационные сцены без коммерческих и медицинских утверждений.
 
 ## Product Principles
 
-1. Explain the three directions before asking the visitor to choose.
-2. Put organizational decision-makers first while keeping a clear path for private buyers.
-3. Use visual spectacle to reveal real information, never to simulate proof.
-4. Keep factual unknowns visible as replaceable placeholders rather than filling them with invented claims.
-5. Balance cinematic presentation with fast loading and graceful behavior on modest devices.
+1. Сначала показывать реальный продукт и производственную компетенцию, затем отраслевые сценарии.
+2. Объяснять сложную технологию коротко и предметно, не подменяя факты громкими обещаниями.
+3. Разделять подтверждённые возможности, будущие материалы и демонстрационные заглушки.
+4. Давать каждой аудитории узнаваемую точку входа, сохраняя единый образ компании.
+5. Завершать каждый убедительный смысловой акт прямым и понятным путём к контакту.
 
 ## Accessibility & Inclusion
 
-All core content and actions must remain available without animation. The implementation must support keyboard navigation, visible focus, semantic landmarks, sufficient color contrast, responsive type, and `prefers-reduced-motion`.
+Лендинг должен сохранять читаемость и функциональность при клавиатурной навигации, увеличении текста и `prefers-reduced-motion`. Фоновая energy-анимация не является единственным носителем смысла и не блокирует CTA.

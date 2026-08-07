@@ -1,9 +1,16 @@
+node_modules/
+dist/
+
+# Local Impeccable working files
+.impeccable/qa/
+.impeccable/research/
+.impeccable/tools/
+
+# Local environment and logs
 .env
 .env.*
 !.env.example
-node_modules/
-dist/
+*.log
 .DS_Store
 Thumbs.db
-*.log
 
