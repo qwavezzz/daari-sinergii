@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import ContextsStory from './ContextsStory.jsx'
+import { usePageMotion } from './motion.js'
 
 const navItems = [
   ['Решения', '#products'],
@@ -8,11 +10,36 @@ const navItems = [
 ]
 
 const contexts = [
-  ['Спортивные клубы', 'Спортивная инфраструктура'],
-  ['Ветеринария', 'Вода и уходовые процессы'],
-  ['Санатории', 'Инфраструктура объектов'],
-  ['Для всей семьи', 'Частные сценарии использования'],
-  ['Сельское хозяйство', 'Вода и хозяйственные процессы'],
+  {
+    id: 'sport',
+    title: 'Спортивные клубы',
+    caption: 'Спортивная инфраструктура',
+    visualMode: 'directed',
+  },
+  {
+    id: 'veterinary',
+    title: 'Ветеринария',
+    caption: 'Вода и уходовые процессы',
+    visualMode: 'concentric',
+  },
+  {
+    id: 'sanatorium',
+    title: 'Санатории',
+    caption: 'Инфраструктура объектов',
+    visualMode: 'layered',
+  },
+  {
+    id: 'family',
+    title: 'Для всей семьи',
+    caption: 'Частные сценарии использования',
+    visualMode: 'local',
+  },
+  {
+    id: 'agriculture',
+    title: 'Сельское хозяйство',
+    caption: 'Вода и хозяйственные процессы',
+    visualMode: 'branching',
+  },
 ]
 
 function Brand({ full = false }) {
@@ -53,7 +80,7 @@ function TextLink({ href, children, className = '' }) {
   )
 }
 
-function OzoneWaterCanvas() {
+function OzoneWaterCanvas({ scrollProgressRef }) {
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -172,7 +199,8 @@ function OzoneWaterCanvas() {
     }
 
     const draw = (time) => {
-      const sourceX = width * (width < 600 ? 0.42 : 0.31)
+      const scrollProgress = scrollProgressRef?.current ?? 0
+      const sourceX = width * (width < 600 ? 0.42 : 0.31) + width * scrollProgress * 0.012
       const sourceY = height * 0.54
 
       const base = ctx.createLinearGradient(0, 0, width, height)
@@ -220,6 +248,11 @@ function OzoneWaterCanvas() {
         ctx.stroke()
       }
       ctx.restore()
+
+      if (scrollProgress > 0) {
+        ctx.fillStyle = `rgba(4, 16, 31, ${scrollProgress * 0.16})`
+        ctx.fillRect(0, 0, width, height)
+      }
     }
 
     const loop = (time) => {
@@ -289,6 +322,18 @@ function OilGraphic() {
   return (
     <div className="oil-graphic" aria-hidden="true">
       <svg viewBox="0 0 620 620">
+        <defs>
+          <clipPath id="oilDropClip">
+            <path d="M310 58C246 164 132 280 132 397c0 98 80 165 178 165s178-67 178-165C488 280 374 164 310 58Z" />
+          </clipPath>
+          <linearGradient id="oilFillGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#89bfe2" stopOpacity=".24" />
+            <stop offset="1" stopColor="#0b2b5a" stopOpacity=".48" />
+          </linearGradient>
+        </defs>
+        <g clipPath="url(#oilDropClip)">
+          <rect className="oil-fill" x="120" y="48" width="380" height="524" fill="url(#oilFillGradient)" />
+        </g>
         <path
           className="oil-drop"
           d="M310 58C246 164 132 280 132 397c0 98 80 165 178 165s178-67 178-165C488 280 374 164 310 58Z"
@@ -334,10 +379,14 @@ function ProcessDiagram() {
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const pageRef = useRef(null)
+  const heroProgressRef = useRef(0)
   const menuRef = useRef(null)
   const menuToggleRef = useRef(null)
   const previousFocusRef = useRef(null)
   const restoreFocusRef = useRef(true)
+
+  usePageMotion(pageRef, heroProgressRef)
 
   useEffect(() => {
     const nodes = document.querySelectorAll('[data-reveal]')
@@ -426,7 +475,7 @@ function App() {
   }
 
   return (
-    <>
+    <div className="site-shell" ref={pageRef}>
       <a className="skip-link" href="#main-content" data-menu-background>
         Перейти к содержанию
       </a>
@@ -479,7 +528,7 @@ function App() {
 
       <main id="main-content" data-menu-background>
         <section className="hero" aria-labelledby="hero-title">
-          <OzoneWaterCanvas />
+          <OzoneWaterCanvas scrollProgressRef={heroProgressRef} />
           <div className="hero-vignette" aria-hidden="true" />
           <div className="hero-content">
             <h1 id="hero-title">
@@ -565,23 +614,7 @@ function App() {
           </article>
         </section>
 
-        <section className="contexts section-pad" id="contexts" aria-labelledby="contexts-title">
-          <div className="contexts-head" data-reveal="rise">
-            <h2 id="contexts-title">Одна технология. Разные контексты.</h2>
-            <p>
-              Мы показываем направления без выдуманных кейсов. Детали каждого сценария
-              уточняются в диалоге.
-            </p>
-          </div>
-          <ul className="context-list">
-            {contexts.map(([name, description]) => (
-              <li key={name}>
-                <span>{name}</span>
-                <small>{description}</small>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <ContextsStory contexts={contexts} />
 
         <section className="process section-pad" id="process" aria-labelledby="process-title">
           <header className="process-head" data-reveal="clip">
@@ -607,7 +640,7 @@ function App() {
         </section>
 
         <section className="evidence section-pad" aria-labelledby="evidence-title">
-          <div className="evidence-inner" data-reveal="rise">
+          <div className="evidence-inner">
             <h2 id="evidence-title">Технология — вместо обещаний.</h2>
             <p>
               Мы не подменяем инженерную работу громкими словами. Характеристики, режимы,
@@ -650,7 +683,7 @@ function App() {
         </nav>
         <a href="#top">Наверх</a>
       </footer>
-    </>
+    </div>
   )
 }
 
