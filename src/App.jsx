@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ConceptPhoto from './ConceptPhoto.jsx'
 import ContextsStory from './ContextsStory.jsx'
 import { usePageMotion } from './motion.js'
 
@@ -12,33 +13,62 @@ const navItems = [
 const contexts = [
   {
     id: 'sport',
-    title: 'Спортивные клубы',
-    caption: 'Спортивная инфраструктура',
+    title: 'Спортивные объекты',
+    caption:
+      'Водоподготовка для бассейнов, купелей и душевых контуров. Состав системы определяем по схеме рециркуляции, качеству исходной воды и требованиям объекта.',
     visualMode: 'directed',
   },
   {
     id: 'veterinary',
-    title: 'Ветеринария',
-    caption: 'Вода и уходовые процессы',
+    title: 'Ветеринарные объекты',
+    caption:
+      'Локальная водоподготовка для хозяйственных и технологических контуров. Без лечебных обещаний: сначала изучаем исходную воду и режим использования.',
     visualMode: 'concentric',
   },
   {
     id: 'sanatorium',
     title: 'Санатории',
-    caption: 'Инфраструктура объектов',
+    caption:
+      'Дополнительная ступень водоподготовки для бассейнов, купелей и рекреационных водных зон. Интеграцию рассчитываем вместе с действующей фильтрацией и автоматикой.',
     visualMode: 'layered',
   },
   {
     id: 'family',
-    title: 'Для всей семьи',
-    caption: 'Частные сценарии использования',
+    title: 'Частные дома',
+    caption:
+      'Система для воды в доме, подобранная под источник, анализ воды и требуемый расход. Назначение обработанной воды подтверждается проектом и контрольными измерениями.',
     visualMode: 'local',
   },
   {
     id: 'agriculture',
     title: 'Сельское хозяйство',
-    caption: 'Вода и хозяйственные процессы',
+    caption:
+      'Вода для мойки продукции, тары и технологических контуров. Решение зависит от органической нагрузки, расхода и требований конкретного производства.',
     visualMode: 'branching',
+  },
+]
+
+const complianceDocuments = [
+  {
+    title: 'Генераторы озона O3 1, O3 2 и O3 M',
+    category: 'Оборудование',
+    registration: 'ЕАЭС N RU Д-RU.РА02.В.86418/26',
+    validUntil: 'Действует до 25 марта 2031 года',
+    href: '/documents/ozone-generator-declaration.pdf',
+  },
+  {
+    title: 'Косметические озонированные масла',
+    category: 'Серийный выпуск',
+    registration: 'ЕАЭС N RU Д-RU.РА12.В.18093/25',
+    validUntil: 'Действует до 29 декабря 2030 года',
+    href: '/documents/ozonated-oils-declaration.pdf',
+  },
+  {
+    title: 'Гидролаты и травяные вытяжки',
+    category: 'Серийный выпуск',
+    registration: 'ЕАЭС N RU Д-RU.РА12.В.07428/25',
+    validUntil: 'Действует до 29 декабря 2030 года',
+    href: '/documents/hydrolats-declaration.pdf',
   },
 ]
 
@@ -49,6 +79,10 @@ function Brand({ full = false }) {
         className="brand-full"
         src="/assets/brand-lockup-navy.png"
         alt="Дары Синергии"
+        width="1289"
+        height="1043"
+        loading="lazy"
+        decoding="async"
       />
     )
   }
@@ -56,7 +90,7 @@ function Brand({ full = false }) {
   return (
     <a className="brand" href="#top" aria-label="Дары Синергии — на главную">
       <span className="brand-mark" aria-hidden="true">
-        <img src="/assets/brand-mark-navy.png" alt="" />
+        <img src="/assets/brand-mark-navy.png" alt="" width="848" height="848" decoding="async" />
       </span>
       <span>Дары Синергии</span>
     </a>
@@ -71,322 +105,223 @@ function ArrowMark() {
   )
 }
 
-function TextLink({ href, children, className = '' }) {
+function TextLink({ href, children, className = '', ...props }) {
   return (
-    <a className={`text-link ${className}`} href={href}>
+    <a className={`text-link ${className}`} href={href} {...props}>
       <span>{children}</span>
       <ArrowMark />
     </a>
   )
 }
 
-function OzoneWaterCanvas({ scrollProgressRef }) {
-  const canvasRef = useRef(null)
+function HeroVideo() {
+  const videoRef = useRef(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d', { alpha: false })
+    const video = videoRef.current
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let animationFrame = 0
     let isVisible = true
-    let width = 0
-    let height = 0
-    let dpr = 1
-    let bubbles = []
 
-    const randomBubble = (initial = true) => ({
-      t: initial ? Math.random() : 0,
-      lane: (Math.random() + Math.random() + Math.random() - 1.5) / 1.5,
-      wobble: Math.random() * Math.PI * 2,
-      radius: 0.6 + Math.random() * 1.7,
-      speed: 0.0012 + Math.random() * 0.002,
-      opacity: 0.22 + Math.random() * 0.58,
-    })
+    const syncPlayback = () => {
+      const shouldPlay = isVisible && !document.hidden && !reduceMotion.matches
 
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect()
-      width = rect.width
-      height = rect.height
-      dpr = Math.min(window.devicePixelRatio || 1, 1.6)
-      canvas.width = Math.round(width * dpr)
-      canvas.height = Math.round(height * dpr)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      const count = Math.min(260, Math.max(120, Math.floor(width / 5)))
-      bubbles = Array.from({ length: count }, () => randomBubble(true))
-      draw(0)
-    }
-
-    const drawWaterField = (sourceX, sourceY, time) => {
-      ctx.save()
-      ctx.globalCompositeOperation = 'screen'
-      ctx.lineWidth = 1
-
-      for (let i = 0; i < 7; i += 1) {
-        const fieldY = height * (0.12 + i * 0.13)
-        const phase = time * 0.00018 + i * 0.82
-        const lift = Math.sin(phase) * 7
-        ctx.strokeStyle = `rgba(137, 191, 226, ${0.035 + (i % 3) * 0.018})`
-        ctx.beginPath()
-        ctx.moveTo(-width * 0.05, fieldY + lift)
-        ctx.bezierCurveTo(
-          width * 0.22,
-          fieldY - 14 + lift,
-          width * 0.5,
-          fieldY + 18 * Math.sin(phase * 1.3),
-          width * 0.72,
-          fieldY - 9 + lift,
-        )
-        ctx.bezierCurveTo(
-          width * 0.84,
-          fieldY - 18 * Math.cos(phase),
-          width * 1.05,
-          fieldY + 12 + lift,
-          width * 1.08,
-          fieldY + lift,
-        )
-        ctx.stroke()
+      if (!shouldPlay) {
+        video.pause()
+        return
       }
 
-      for (let i = 0; i < 6; i += 1) {
-        const wakeY = sourceY + (i - 2.5) * 13
-        const turbulence = Math.sin(time * 0.00055 + i * 1.7) * 10
-        ctx.strokeStyle = `rgba(177, 223, 246, ${0.08 + i * 0.012})`
-        ctx.beginPath()
-        ctx.moveTo(sourceX + 5, wakeY)
-        ctx.bezierCurveTo(
-          sourceX + width * 0.12,
-          wakeY + turbulence,
-          sourceX + width * 0.3,
-          wakeY - turbulence * 0.7 + (i - 2.5) * 15,
-          sourceX + width * 0.47,
-          wakeY + turbulence * 0.45 + (i - 2.5) * 28,
-        )
-        ctx.stroke()
-      }
-      ctx.restore()
+      video.play().catch(() => {
+        // The poster remains visible when autoplay is unavailable.
+      })
     }
 
-    const drawDiffuser = (sourceX, sourceY) => {
-      const glow = ctx.createRadialGradient(sourceX, sourceY, 2, sourceX, sourceY, 34)
-      glow.addColorStop(0, 'rgba(217,243,255,.3)')
-      glow.addColorStop(0.45, 'rgba(137,191,226,.12)')
-      glow.addColorStop(1, 'rgba(137,191,226,0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(sourceX - 38, sourceY - 38, 76, 76)
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting
+        syncPlayback()
+      },
+      { threshold: 0.05 },
+    )
 
-      ctx.save()
-      ctx.translate(sourceX, sourceY)
-      ctx.rotate(-0.1)
-      ctx.fillStyle = 'rgba(4,16,31,.9)'
-      ctx.strokeStyle = 'rgba(177,223,246,.72)'
-      ctx.lineWidth = 1.2
-      ctx.beginPath()
-      ctx.roundRect(-22, -30, 24, 60, 9)
-      ctx.fill()
-      ctx.stroke()
-      ctx.strokeStyle = 'rgba(137,191,226,.4)'
-      for (let y = -18; y <= 18; y += 9) {
-        ctx.beginPath()
-        ctx.moveTo(-16, y)
-        ctx.lineTo(-5, y + 1.5)
-        ctx.stroke()
-      }
-      ctx.beginPath()
-      ctx.moveTo(-34, 0)
-      ctx.lineTo(-22, 0)
-      ctx.stroke()
-      ctx.restore()
-    }
-
-    const draw = (time) => {
-      const scrollProgress = scrollProgressRef?.current ?? 0
-      const sourceX = width * (width < 600 ? 0.42 : 0.31) + width * scrollProgress * 0.012
-      const sourceY = height * 0.54
-
-      const base = ctx.createLinearGradient(0, 0, width, height)
-      base.addColorStop(0, '#04101f')
-      base.addColorStop(0.48, '#06182e')
-      base.addColorStop(1, '#082041')
-      ctx.fillStyle = base
-      ctx.fillRect(0, 0, width, height)
-
-      const waterGlow = ctx.createLinearGradient(sourceX, sourceY, width, sourceY)
-      waterGlow.addColorStop(0, 'rgba(137,191,226,.04)')
-      waterGlow.addColorStop(0.42, 'rgba(137,191,226,.16)')
-      waterGlow.addColorStop(1, 'rgba(4,16,31,0)')
-      ctx.fillStyle = waterGlow
-      ctx.fillRect(0, 0, width, height)
-
-      drawWaterField(sourceX, sourceY, time)
-      drawDiffuser(sourceX, sourceY)
-
-      ctx.save()
-      ctx.globalCompositeOperation = 'screen'
-      for (let i = 0; i < bubbles.length; i += 1) {
-        const bubble = bubbles[i]
-        if (!reduceMotion.matches) bubble.t += bubble.speed
-        if (bubble.t > 1.05) bubbles[i] = randomBubble(false)
-
-        const t = Math.min(bubble.t, 1)
-        const eased = t * (1.18 - t * 0.18)
-        const x = sourceX + 4 + eased * (width * 0.74)
-        const spread = t ** 1.35 * height * 0.2
-        const y =
-          sourceY +
-          bubble.lane * spread +
-          Math.sin(bubble.wobble + time * 0.00075 + t * 9) * (2 + t * 8) -
-          t * height * 0.045
-        const radius = Math.max(0.45, bubble.radius * (1.15 - t * 0.64))
-        const alpha = bubble.opacity * (0.92 - t * 0.58)
-
-        ctx.beginPath()
-        ctx.arc(x, y, radius, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(137, 191, 226, ${alpha * 0.28})`
-        ctx.fill()
-        ctx.strokeStyle = `rgba(217, 243, 255, ${alpha})`
-        ctx.lineWidth = Math.max(0.45, radius * 0.34)
-        ctx.stroke()
-      }
-      ctx.restore()
-
-      if (scrollProgress > 0) {
-        ctx.fillStyle = `rgba(4, 16, 31, ${scrollProgress * 0.16})`
-        ctx.fillRect(0, 0, width, height)
-      }
-    }
-
-    const loop = (time) => {
-      if (isVisible) draw(time)
-      animationFrame = requestAnimationFrame(loop)
-    }
-
-    const observer = new IntersectionObserver(([entry]) => {
-      isVisible = entry.isIntersecting
-    })
-    observer.observe(canvas)
-    window.addEventListener('resize', resize)
-    resize()
-    animationFrame = requestAnimationFrame(loop)
+    observer.observe(video)
+    document.addEventListener('visibilitychange', syncPlayback)
+    reduceMotion.addEventListener('change', syncPlayback)
+    video.addEventListener('canplay', syncPlayback)
+    syncPlayback()
 
     return () => {
       observer.disconnect()
-      window.removeEventListener('resize', resize)
-      cancelAnimationFrame(animationFrame)
+      document.removeEventListener('visibilitychange', syncPlayback)
+      reduceMotion.removeEventListener('change', syncPlayback)
+      video.removeEventListener('canplay', syncPlayback)
+      video.pause()
     }
   }, [])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="ozone-canvas"
+    <video
+      ref={videoRef}
+      className="hero-video"
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      poster="/assets/hero-ozone-water-poster.webp"
       aria-hidden="true"
-      data-video-placeholder="public/media/hero-ozone-water.webm"
-    />
+      tabIndex={-1}
+      disablePictureInPicture
+    >
+      <source src="/assets/hero-ozone-water.webm" type="video/webm" />
+      <source src="/assets/hero-ozone-water.mp4" type="video/mp4" />
+    </video>
+  )
+}
+
+function MenuMark() {
+  return (
+    <svg className="menu-mark" viewBox="0 0 26 20" aria-hidden="true">
+      <path d="M1 2.5h24M1 10h24M1 17.5h24" />
+    </svg>
+  )
+}
+
+function CloseMark() {
+  return (
+    <svg className="close-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 3l18 18M21 3L3 21" />
+    </svg>
   )
 }
 
 function WaterSystemGraphic() {
   return (
-    <div className="system-graphic" aria-hidden="true">
-      <svg viewBox="0 0 760 540">
-        <defs>
-          <radialGradient id="systemGlow">
-            <stop offset="0" stopColor="#f7fbfd" />
-            <stop offset=".28" stopColor="#b1dff6" stopOpacity=".9" />
-            <stop offset="1" stopColor="#89bfe2" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <path className="system-line" d="M56 273h225c70 0 80-116 150-116h268" />
-        <path className="system-line soft" d="M56 273h225c70 0 80 116 150 116h268" />
-        <circle className="system-ring" cx="290" cy="273" r="88" />
-        <circle className="system-ring soft" cx="290" cy="273" r="52" />
-        <circle cx="290" cy="273" r="64" fill="url(#systemGlow)" />
-        <circle className="system-node" cx="290" cy="273" r="7" />
-        <circle className="system-node" cx="432" cy="157" r="5" />
-        <circle className="system-node" cx="432" cy="389" r="5" />
-        {Array.from({ length: 28 }).map((_, index) => (
-          <circle
-            key={index}
-            className="system-bubble"
-            cx={430 + ((index * 47) % 250)}
-            cy={210 + ((index * 83) % 150)}
-            r={2 + (index % 4)}
-          />
+    <ConceptPhoto
+      className="system-graphic product-photo"
+      src="/assets/photos/optimized/product-water-system-bg-1536.webp"
+      srcSet="/assets/photos/optimized/product-water-system-bg-768.webp 768w, /assets/photos/optimized/product-water-system-bg-1536.webp 1536w"
+      sizes="100vw"
+      mobileSrcSet="/assets/photos/optimized/product-water-system-bg-mobile-720.webp 720w"
+      width="1536"
+      height="864"
+    />
+  )
+}
+
+function SystemExplainer() {
+  const stages = [
+    {
+      title: 'Подготовка газа',
+      copy: 'К генератору подают очищенный и осушенный воздух либо кислород. Газовая часть подбирается под производительность и условия объекта.',
+    },
+    {
+      title: 'Получение озона',
+      copy: 'Электрический разряд преобразует часть кислорода O₂ в озон O₃. Озон получают на месте — непосредственно перед вводом в воду.',
+    },
+    {
+      title: 'Ввод и контакт',
+      copy: 'Газовую смесь передают в рассчитанный узел смешения. Контактный участок обеспечивает перенос озона в воду и необходимое время реакции.',
+    },
+    {
+      title: 'Контроль и безопасность',
+      copy: 'В проекте предусматривают контроль рабочих параметров, вентиляцию и обработку остаточного газа — в составе конкретной схемы объекта.',
+    },
+  ]
+
+  return (
+    <section
+      className="system-explainer section-pad"
+      aria-labelledby="system-explainer-title"
+      data-scroll-snap
+      data-text-emergence
+    >
+      <div className="system-explainer-head">
+        <h3 id="system-explainer-title" data-emergence-title>Как формируется система озонирования</h3>
+        <p data-emergence-copy>
+          Озон работает внутри рассчитанного технологического контура. Поэтому система — это не только
+          генератор, а последовательность взаимосвязанных узлов.
+        </p>
+      </div>
+
+      <ol className="system-flow" data-reveal="rise">
+        {stages.map((stage, index) => (
+          <li key={stage.title}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h4>{stage.title}</h4>
+            <p>{stage.copy}</p>
+          </li>
         ))}
-      </svg>
-    </div>
+      </ol>
+
+      <div className="system-inputs" data-reveal="rise">
+        <p>Для подбора нужны</p>
+        <ul>
+          <li>назначение контура</li>
+          <li>анализ исходной воды</li>
+          <li>расход и режим работы</li>
+          <li>существующая фильтрация</li>
+          <li>требования объекта</li>
+        </ul>
+        <small>
+          Это принципиальная схема. Состав оборудования и контрольные параметры определяются после
+          знакомства с задачей.
+        </small>
+      </div>
+    </section>
   )
 }
 
 function OilGraphic() {
   return (
-    <div className="oil-graphic" aria-hidden="true">
-      <svg viewBox="0 0 620 620">
-        <defs>
-          <clipPath id="oilDropClip">
-            <path d="M310 58C246 164 132 280 132 397c0 98 80 165 178 165s178-67 178-165C488 280 374 164 310 58Z" />
-          </clipPath>
-          <linearGradient id="oilFillGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#89bfe2" stopOpacity=".24" />
-            <stop offset="1" stopColor="#0b2b5a" stopOpacity=".48" />
-          </linearGradient>
-        </defs>
-        <g clipPath="url(#oilDropClip)">
-          <rect className="oil-fill" x="120" y="48" width="380" height="524" fill="url(#oilFillGradient)" />
-        </g>
-        <path
-          className="oil-drop"
-          d="M310 58C246 164 132 280 132 397c0 98 80 165 178 165s178-67 178-165C488 280 374 164 310 58Z"
-        />
-        <path className="oil-wave" d="M166 399c58-34 101 47 164 10 66-39 91 32 128 8" />
-        <path className="oil-wave delay" d="M176 443c54-30 93 36 151 9 61-29 86 23 121 10" />
-        <circle className="oil-orbit" cx="310" cy="310" r="238" />
-      </svg>
-    </div>
+    <ConceptPhoto
+      className="oil-graphic product-photo"
+      src="/assets/photos/optimized/product-ozonated-oils-bg-1536.webp"
+      srcSet="/assets/photos/optimized/product-ozonated-oils-bg-768.webp 768w, /assets/photos/optimized/product-ozonated-oils-bg-1536.webp 1536w"
+      sizes="100vw"
+      mobileSrcSet="/assets/photos/optimized/product-ozonated-oils-bg-mobile-720.webp 720w"
+      width="1536"
+      height="864"
+    />
   )
 }
 
 function HydrolatGraphic() {
   return (
-    <div className="hydrolat-graphic" aria-hidden="true">
-      <svg viewBox="0 0 760 540">
-        <path className="steam-path" d="M120 430c0-116 86-107 86-207 0-70-50-81-50-153" />
-        <path className="steam-path second" d="M284 430c0-101 78-119 78-208 0-61-34-96-34-152" />
-        <path className="steam-path third" d="M448 430c0-115 73-112 73-202 0-64-34-95-34-158" />
-        <path className="condenser" d="M100 430h485c42 0 70-30 70-68V236" />
-        <circle className="hydro-drop" cx="655" cy="220" r="12" />
-        <circle className="hydro-drop small" cx="655" cy="185" r="7" />
-        <path className="hydro-surface" d="M104 465c83-24 151 21 229 0 74-20 149 20 232 0" />
-      </svg>
-    </div>
+    <ConceptPhoto
+      className="hydrolat-graphic product-photo"
+      src="/assets/photos/optimized/product-hydrolats-bg-1536.webp"
+      srcSet="/assets/photos/optimized/product-hydrolats-bg-768.webp 768w, /assets/photos/optimized/product-hydrolats-bg-1536.webp 1536w"
+      sizes="100vw"
+      mobileSrcSet="/assets/photos/optimized/product-hydrolats-bg-mobile-720.webp 720w"
+      width="1536"
+      height="864"
+    />
   )
 }
 
 function ProcessDiagram() {
   return (
-    <div className="process-diagram" aria-hidden="true">
-      <svg viewBox="0 0 900 380">
-        <path className="process-path" d="M64 190h300c48 0 60-92 108-92h356" />
-        <path className="process-path dim" d="M64 190h300c48 0 60 92 108 92h356" />
-        <circle className="process-halo" cx="422" cy="190" r="114" />
-        <circle className="process-core" cx="422" cy="190" r="9" />
-        <rect className="process-terminal" x="62" y="151" width="88" height="78" />
-        <rect className="process-terminal" x="752" y="151" width="76" height="78" />
-      </svg>
-    </div>
+    <ConceptPhoto
+      className="process-diagram process-photo"
+      src="/assets/photos/optimized/process-installation-bg-1536.webp"
+      srcSet="/assets/photos/optimized/process-installation-bg-768.webp 768w, /assets/photos/optimized/process-installation-bg-1536.webp 1536w"
+      sizes="100vw"
+      mobileSrcSet="/assets/photos/optimized/process-installation-bg-mobile-720.webp 720w"
+      width="1536"
+      height="864"
+    />
   )
 }
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const pageRef = useRef(null)
-  const heroProgressRef = useRef(0)
   const menuRef = useRef(null)
   const menuToggleRef = useRef(null)
   const previousFocusRef = useRef(null)
   const restoreFocusRef = useRef(true)
 
-  usePageMotion(pageRef, heroProgressRef)
+  usePageMotion(pageRef)
 
   useEffect(() => {
     const nodes = document.querySelectorAll('[data-reveal]')
@@ -475,12 +410,12 @@ function App() {
   }
 
   return (
-    <div className="site-shell" ref={pageRef}>
+    <div className="site-shell" id="top" ref={pageRef}>
       <a className="skip-link" href="#main-content" data-menu-background>
         Перейти к содержанию
       </a>
 
-      <header className="site-header" id="top" data-menu-background>
+      <header className="site-header" data-menu-background>
         <Brand />
         <nav className="desktop-nav" aria-label="Основная навигация">
           {navItems.map(([label, href]) => (
@@ -493,11 +428,12 @@ function App() {
           ref={menuToggleRef}
           className="menu-toggle"
           type="button"
+          aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
           onClick={() => setMenuOpen((value) => !value)}
         >
-          {menuOpen ? 'Закрыть' : 'Меню'}
+          <MenuMark />
         </button>
       </header>
 
@@ -512,8 +448,8 @@ function App() {
       >
         <div className="mobile-menu-top">
           <Brand />
-          <button type="button" onClick={closeMenu}>
-            Закрыть
+          <button className="mobile-menu-close" type="button" aria-label="Закрыть меню" onClick={closeMenu}>
+            <CloseMark />
           </button>
         </div>
         <nav aria-label="Мобильная навигация">
@@ -527,8 +463,8 @@ function App() {
       </div>
 
       <main id="main-content" data-menu-background>
-        <section className="hero" aria-labelledby="hero-title">
-          <OzoneWaterCanvas scrollProgressRef={heroProgressRef} />
+        <section className="hero" aria-labelledby="hero-title" data-scroll-snap>
+          <HeroVideo />
           <div className="hero-vignette" aria-hidden="true" />
           <div className="hero-content">
             <h1 id="hero-title">
@@ -552,10 +488,10 @@ function App() {
           </p>
         </section>
 
-        <section className="opening-statement section-pad">
-          <div className="opening-title" data-reveal="clip">
-            <h2>Мы работаем с озоном — как с технологией.</h2>
-            <p>От собственного производства до монтажа на объекте.</p>
+        <section className="opening-statement section-pad" data-scroll-snap data-text-emergence>
+          <div className="opening-title">
+            <h2 data-emergence-title>Мы работаем с озоном — как с технологией.</h2>
+            <p data-emergence-copy>От собственного производства до монтажа на объекте.</p>
           </div>
           <div className="opening-flow" aria-hidden="true">
             <span />
@@ -565,60 +501,66 @@ function App() {
         </section>
 
         <section className="products" id="products" aria-labelledby="products-title">
-          <header className="section-lead section-pad" data-reveal="rise">
-            <h2 id="products-title">Три направления. Один подход к производству.</h2>
-            <p>Каждый продукт раскрываем отдельно — без смешения задач и обещаний.</p>
+          <header className="section-lead section-pad transition-scene" data-scroll-snap data-text-emergence>
+            <h2 id="products-title" data-transition-content data-emergence-title>
+              Три направления. Один подход к производству.
+            </h2>
+            <p data-emergence-copy>
+              Оборудование, масла и гидролаты выпускаем как отдельные направления — каждое со своей
+              задачей и подтверждающими документами. Изображения оборудования, процессов и отраслевых
+              сценариев ниже — концептуальные визуализации.
+            </p>
+            <div className="transition-current" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
           </header>
 
-          <article className="product product-system section-pad">
+          <SystemExplainer />
+
+          <article className="product product-system section-pad" data-scroll-snap data-text-emergence>
             <WaterSystemGraphic />
-            <div className="product-copy" data-reveal="clip">
-              <h3>Системы озонирования воды</h3>
-              <p>
+            <div className="product-copy">
+              <h3 data-emergence-title>Системы озонирования воды</h3>
+              <p data-emergence-copy>
                 Производим оборудование и монтируем его на объектах. Конфигурацию и
                 параметры будущей системы обсуждаем под конкретную задачу.
               </p>
-              <TextLink href="#contact">Обсудить объект</TextLink>
+              <TextLink href="#contact" data-emergence-copy>Получить консультацию</TextLink>
             </div>
           </article>
 
-          <article className="product product-oil section-pad">
-            <div className="product-copy" data-reveal="rise">
-              <h3>Озонированные масла</h3>
-              <p>
-                Производим отдельную линейку озонированных масел. Состав, форматы и
-                подтверждённые сценарии появятся здесь после согласования продуктовых данных.
+          <article className="product product-oil section-pad" data-scroll-snap data-text-emergence>
+            <div className="product-copy">
+              <h3 data-emergence-title>Озонированные масла</h3>
+              <p data-emergence-copy>
+                Производим косметические озонированные масла на растительной основе. Серийный
+                выпуск задекларирован по требованиям к парфюмерно-косметической продукции.
               </p>
-              <span className="quiet-note">Описание готовится</span>
+              <TextLink href="#documents" data-emergence-copy>Смотреть декларацию</TextLink>
             </div>
             <OilGraphic />
           </article>
 
-          <article className="product product-hydrolat section-pad">
+          <article className="product product-hydrolat section-pad" data-scroll-snap data-text-emergence>
             <HydrolatGraphic />
-            <div className="product-copy" data-reveal="clip">
-              <h3>Гидролаты</h3>
-              <p>
-                Водные продукты паровой или гидродистилляции растительного сырья. Производим
-                гидролаты и готовим подробное описание линейки.
+            <div className="product-copy">
+              <h3 data-emergence-title>Гидролаты</h3>
+              <p data-emergence-copy>
+                Производим гидролаты — цветочную воду и травяные вытяжки из растительного сырья.
+                Серийный выпуск продукции подтверждён декларацией соответствия.
               </p>
-              <a
-                className="source-link"
-                href="https://ru.wikipedia.org/wiki/Гидролат"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Что такое гидролат
-              </a>
+              <TextLink href="#documents" data-emergence-copy>Смотреть декларацию</TextLink>
             </div>
           </article>
         </section>
 
         <ContextsStory contexts={contexts} />
 
-        <section className="process section-pad" id="process" aria-labelledby="process-title">
-          <header className="process-head" data-reveal="clip">
-            <h2 id="process-title">От производства — к вашему объекту.</h2>
+        <section className="process section-pad" id="process" aria-labelledby="process-title" data-scroll-snap data-text-emergence>
+          <header className="process-head">
+            <h2 id="process-title" data-emergence-title>От производства — к вашему объекту.</h2>
           </header>
           <ProcessDiagram />
           <div className="process-acts">
@@ -639,41 +581,64 @@ function App() {
           </div>
         </section>
 
-        <section className="evidence section-pad" aria-labelledby="evidence-title">
+        <section className="evidence section-pad" id="documents" aria-labelledby="evidence-title" data-scroll-snap data-text-emergence>
           <div className="evidence-inner">
-            <h2 id="evidence-title">Технология — вместо обещаний.</h2>
-            <p>
-              Мы не подменяем инженерную работу громкими словами. Характеристики, режимы,
-              документы и эффекты публикуются только тогда, когда для них есть подтверждённые
-              данные.
+            <h2 id="evidence-title" data-emergence-title>Технология — вместо обещаний.</h2>
+            <p data-emergence-copy>
+              Показываем только то, что можно проверить. Генераторы озона, косметические масла и
+              гидролаты имеют действующие декларации соответствия Евразийского экономического
+              союза.
             </p>
+            <div className="evidence-documents" aria-label="Документы о соответствии">
+              {complianceDocuments.map((document) => (
+                <a className="evidence-document" href={document.href} key={document.href}>
+                  <div className="evidence-document-title">
+                    <span>{document.category}</span>
+                    <h3>{document.title}</h3>
+                  </div>
+                  <div className="evidence-document-meta">
+                    <p>{document.registration}</p>
+                    <span>{document.validUntil}</span>
+                  </div>
+                  <span className="evidence-document-action">
+                    <span>Открыть PDF</span>
+                    <ArrowMark />
+                  </span>
+                </a>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="contact section-pad" id="contact" aria-labelledby="contact-title">
+        <section className="contact section-pad" id="contact" aria-labelledby="contact-title" data-scroll-snap data-text-emergence>
           <div className="contact-top">
-            <h2 id="contact-title" data-reveal="clip">
-              Обсудим
+            <h2 id="contact-title" data-emergence-title>
+              Получить
               <br />
-              вашу задачу?
+              консультацию
             </h2>
             <Brand full />
           </div>
           <div className="contact-actions">
-            <div>
+            <div className="contact-company">
+              <span>Компания</span>
+              <p>«Дары Синергии»</p>
+              <small>ИП Бобко Роман Викторович</small>
+            </div>
+            <a href="mailto:sintez2016@gmail.com">
               <span>Электронная почта</span>
-              <p aria-label="Адрес электронной почты будет добавлен">Будет добавлена</p>
-            </div>
-            <div>
+              <p>sintez2016@gmail.com</p>
+            </a>
+            <a href="tel:+79060104066">
               <span>Телефон</span>
-              <p aria-label="Номер телефона будет добавлен">Будет добавлен</p>
-            </div>
+              <p>+7 (906) 010-40-66</p>
+            </a>
           </div>
         </section>
       </main>
 
       <footer className="site-footer" data-menu-background>
-        <p>© Дары Синергии</p>
+        <p>© 2026 «Дары Синергии» · ИП Бобко Роман Викторович</p>
         <nav aria-label="Навигация в подвале">
           {navItems.slice(0, 3).map(([label, href]) => (
             <a key={href} href={href}>

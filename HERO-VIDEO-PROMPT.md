@@ -40,4 +40,4 @@ outer space, galaxy, stars, nebula, comet, laser beam, electricity, lightning, p
 
 ## Интеграция
 
-Файл положить в `public/media/hero-ozone-water.webm`, резервный MP4 — в `public/media/hero-ozone-water.mp4`. Canvas-плейсхолдер в `src/App.jsx` после этого можно заменить на `<video>` без изменения текстовой композиции hero.
+При повторной генерации заменить `public/assets/hero-ozone-water.webm` и `public/assets/hero-ozone-water.mp4`, сохранив WebP-постер и существующий `<video>`-слой в `src/App.jsx`. Текстовую композицию hero не менять.

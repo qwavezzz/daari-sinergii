@@ -2,44 +2,123 @@ import { useEffect } from 'react'
 import { useGSAP } from '@gsap/react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { SplitText } from 'gsap/SplitText'
 import Lenis from 'lenis'
+import LenisSnap from 'lenis/snap'
 
-gsap.registerPlugin(ScrollTrigger, useGSAP)
+gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
 const DESKTOP_QUERY = '(min-width: 992px)'
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
-function prepareStroke(path) {
-  const length = path.getTotalLength?.()
-  if (!length) return null
-  gsap.set(path, {
-    strokeDasharray: length,
-    strokeDashoffset: length,
-  })
-  return length
-}
-
-export function usePageMotion(scopeRef, heroProgressRef) {
+export function usePageMotion(scopeRef) {
   useEffect(() => {
     const desktop = window.matchMedia(DESKTOP_QUERY)
     const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY)
     let lenis = null
+    let snap = null
+    let anchorSnapResumeTimer = 0
+    let mobileSnapTimer = 0
+    let mobileSnapReleaseTimer = 0
+    let mobileSnapActive = false
+    let mobileScrollDirection = 1
+    let lastMobileScrollY = window.scrollY
 
     const tick = (time) => {
       lenis?.raf(time * 1000)
     }
 
     const destroyLenis = () => {
+      snap?.destroy()
+      snap = null
       if (!lenis) return
       lenis.off('scroll', ScrollTrigger.update)
       lenis.destroy()
       lenis = null
-      document.documentElement.classList.remove('has-smooth-scroll')
+      document.documentElement.classList.remove('has-smooth-scroll', 'has-section-snap')
+    }
+
+    const getMobileSnapTargets = () =>
+      [...(scopeRef.current?.querySelectorAll('[data-scroll-snap]') ?? [])].filter(
+        (element) => element.offsetHeight > 1 && element.getClientRects().length > 0,
+      )
+
+    const releaseMobileSnap = () => {
+      mobileSnapActive = false
+      document.documentElement.classList.remove('is-mobile-snapping')
+    }
+
+    const snapMobileInDirection = () => {
+      if (
+        desktop.matches ||
+        reducedMotion.matches ||
+        mobileSnapActive ||
+        document.body.classList.contains('menu-lock')
+      ) {
+        return
+      }
+
+      const threshold = Math.min(560, window.innerHeight * 0.68)
+      const candidate = getMobileSnapTargets()
+        .map((element) => ({ element, top: element.getBoundingClientRect().top }))
+        .filter(({ top }) =>
+          mobileScrollDirection > 0
+            ? top > 2 && top <= threshold
+            : top < -2 && Math.abs(top) <= threshold,
+        )
+        .sort((a, b) => Math.abs(a.top) - Math.abs(b.top))[0]
+
+      if (!candidate) return
+
+      mobileSnapActive = true
+      document.documentElement.classList.add('is-mobile-snapping')
+      window.scrollTo({
+        top: Math.max(0, window.scrollY + candidate.top),
+        behavior: 'smooth',
+      })
+
+      window.clearTimeout(mobileSnapReleaseTimer)
+      mobileSnapReleaseTimer = window.setTimeout(releaseMobileSnap, 720)
+    }
+
+    const handleMobileScroll = () => {
+      const currentScrollY = window.scrollY
+      const delta = currentScrollY - lastMobileScrollY
+      if (Math.abs(delta) > 1) mobileScrollDirection = delta > 0 ? 1 : -1
+      lastMobileScrollY = currentScrollY
+
+      if (mobileSnapActive) return
+      window.clearTimeout(mobileSnapTimer)
+      mobileSnapTimer = window.setTimeout(snapMobileInDirection, 150)
+    }
+
+    const startMobileSnap = () => {
+      lastMobileScrollY = window.scrollY
+      window.addEventListener('scroll', handleMobileScroll, { passive: true })
+      document.documentElement.classList.add('has-mobile-section-snap')
+    }
+
+    const stopMobileSnap = () => {
+      window.clearTimeout(mobileSnapTimer)
+      window.clearTimeout(mobileSnapReleaseTimer)
+      window.removeEventListener('scroll', handleMobileScroll)
+      mobileSnapActive = false
+      document.documentElement.classList.remove('has-mobile-section-snap', 'is-mobile-snapping')
     }
 
     const configureLenis = () => {
       destroyLenis()
-      if (!desktop.matches || reducedMotion.matches) return
+      stopMobileSnap()
+      if (reducedMotion.matches) {
+        requestAnimationFrame(() => ScrollTrigger.refresh())
+        return
+      }
+
+      if (!desktop.matches) {
+        startMobileSnap()
+        requestAnimationFrame(() => ScrollTrigger.refresh())
+        return
+      }
 
       lenis = new Lenis({
         duration: 1,
@@ -49,9 +128,43 @@ export function usePageMotion(scopeRef, heroProgressRef) {
         wheelMultiplier: 0.9,
       })
       lenis.on('scroll', ScrollTrigger.update)
+      snap = new LenisSnap(lenis, {
+        type: 'lock',
+        duration: 1.04,
+        debounce: 40,
+        distanceThreshold: '200%',
+        easing: (value) => 1 - (1 - value) ** 4,
+      })
+      snap.addElements([...scopeRef.current.querySelectorAll('[data-scroll-snap]')], {
+        align: 'start',
+        ignoreSticky: true,
+        ignoreTransform: true,
+      })
       document.documentElement.classList.add('has-smooth-scroll')
+      document.documentElement.classList.add('has-section-snap')
       ScrollTrigger.refresh()
+      requestAnimationFrame(() => snap?.resize())
     }
+
+    const header = scopeRef.current?.querySelector('.site-header')
+    const activeLightSections = new Set()
+    const syncHeaderContrast = () => {
+      header?.classList.toggle('is-on-light', activeLightSections.size > 0)
+    }
+    const lightHeaderTriggers = gsap.utils
+      .toArray('.evidence', scopeRef.current)
+      .map((section) =>
+        ScrollTrigger.create({
+          trigger: section,
+          start: 'top 56px',
+          end: 'bottom 56px',
+          onToggle: (self) => {
+            if (self.isActive) activeLightSections.add(section)
+            else activeLightSections.delete(section)
+            syncHeaderContrast()
+          },
+        }),
+      )
 
     const handleAnchor = (event) => {
       const link = event.target.closest('a[href^="#"]')
@@ -59,7 +172,22 @@ export function usePageMotion(scopeRef, heroProgressRef) {
       const target = document.querySelector(link.getAttribute('href'))
       if (!target) return
       event.preventDefault()
-      lenis.scrollTo(target, { duration: 1.05 })
+
+      window.clearTimeout(anchorSnapResumeTimer)
+      snap?.stop()
+      const resumeSnap = () => {
+        window.clearTimeout(anchorSnapResumeTimer)
+        snap?.start()
+      }
+      anchorSnapResumeTimer = window.setTimeout(resumeSnap, 1400)
+
+      lenis.scrollTo(target, {
+        duration: 1.05,
+        lock: true,
+        force: true,
+        userData: { initiator: 'anchor' },
+        onComplete: resumeSnap,
+      })
       window.history.replaceState(null, '', link.getAttribute('href'))
     }
 
@@ -71,6 +199,10 @@ export function usePageMotion(scopeRef, heroProgressRef) {
     document.addEventListener('click', handleAnchor)
 
     return () => {
+      window.clearTimeout(anchorSnapResumeTimer)
+      lightHeaderTriggers.forEach((trigger) => trigger.kill())
+      header?.classList.remove('is-on-light')
+      stopMobileSnap()
       destroyLenis()
       gsap.ticker.remove(tick)
       desktop.removeEventListener('change', configureLenis)
@@ -83,6 +215,97 @@ export function usePageMotion(scopeRef, heroProgressRef) {
     () => {
       const motion = gsap.matchMedia()
 
+      const createTextEmergence = () => {
+        const splits = []
+        const isDesktop = window.matchMedia(DESKTOP_QUERY).matches
+
+        gsap.utils.toArray('[data-text-emergence]', scopeRef.current).forEach((scene) => {
+          const title = scene.querySelector('[data-emergence-title]')
+          if (!title) return
+
+          const split = SplitText.create(title, {
+            type: 'words,chars',
+            mask: 'chars',
+            wordsClass: 'emergence-word',
+            charsClass: 'emergence-char',
+            aria: 'auto',
+          })
+          const supportingCopy = scene.querySelectorAll('[data-emergence-copy]')
+          const timeline = gsap.timeline({
+              scrollTrigger: {
+                trigger: scene,
+                start: isDesktop ? 'top 38%' : 'top 88%',
+                end: 'top top',
+              scrub: true,
+              invalidateOnRefresh: true,
+            },
+          })
+
+          if (isDesktop) {
+            timeline.fromTo(
+              title,
+              {
+                y: () => Math.min(160, window.innerHeight * 0.18),
+                scaleY: 0.78,
+                filter: 'blur(6px)',
+                transformOrigin: '50% 100%',
+              },
+              {
+                y: 0,
+                scaleY: 1,
+                filter: 'blur(0px)',
+                duration: 1,
+                ease: 'power2.out',
+                force3D: true,
+              },
+              0,
+            )
+          }
+
+          timeline.fromTo(
+            split.chars,
+            { yPercent: isDesktop ? 146 : 118 },
+            {
+              yPercent: 0,
+              duration: isDesktop ? 0.42 : 0.82,
+              stagger: {
+                amount: isDesktop ? 0.34 : 0.18,
+                from: 'start',
+                ease: 'power1.in',
+              },
+              ease: 'power4.out',
+              force3D: true,
+            },
+            0,
+          )
+
+          if (supportingCopy.length) {
+            timeline.fromTo(
+              supportingCopy,
+              {
+                y: () => Math.min(isDesktop ? 124 : 78, window.innerHeight * (isDesktop ? 0.14 : 0.09)),
+                clipPath: 'inset(100% 0 0 0)',
+              },
+              {
+                y: 0,
+                clipPath: 'inset(0% 0 0 0)',
+                duration: 0.72,
+                stagger: { amount: 0.08 },
+                  ease: isDesktop ? 'power2.out' : 'power3.out',
+                  force3D: true,
+                },
+                isDesktop ? 0.2 : 0.18,
+              )
+          }
+
+          splits.push(split)
+        })
+
+        return () => splits.forEach((split) => split.revert())
+      }
+
+      motion.add('(prefers-reduced-motion: no-preference)', createTextEmergence)
+
       motion.add(
         {
           desktop: DESKTOP_QUERY,
@@ -92,9 +315,6 @@ export function usePageMotion(scopeRef, heroProgressRef) {
           if (context.conditions.reduce) return undefined
 
           const hero = scopeRef.current?.querySelector('.hero')
-          const header = scopeRef.current?.querySelector('.site-header')
-          const evidence = scopeRef.current?.querySelector('.evidence')
-          const contact = scopeRef.current?.querySelector('.contact')
 
           if (hero) {
             gsap
@@ -105,12 +325,9 @@ export function usePageMotion(scopeRef, heroProgressRef) {
                   end: 'bottom top',
                   scrub: 0.45,
                   invalidateOnRefresh: true,
-                  onUpdate: (self) => {
-                    heroProgressRef.current = self.progress
-                  },
                 },
               })
-              .to('.ozone-canvas', { yPercent: -4.5, scale: 1.035, ease: 'none' }, 0)
+              .to('.hero-video', { yPercent: -3.5, scale: 1.04, ease: 'none' }, 0)
               .to('.hero-content', { yPercent: -4, opacity: 0.76, ease: 'none' }, 0)
               .to('.hero-vignette', { opacity: 0.84, ease: 'none' }, 0)
           }
@@ -134,90 +351,40 @@ export function usePageMotion(scopeRef, heroProgressRef) {
             )
           }
 
-          scopeRef.current?.querySelectorAll('.system-line').forEach((path) => {
-            const length = prepareStroke(path)
-            if (!length) return
-            gsap.to(path, {
-              strokeDashoffset: 0,
-              duration: 1.25,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: '.product-system',
-                start: 'top 68%',
-                toggleActions: 'play none none reverse',
-              },
+          if (context.conditions.desktop) {
+            gsap.utils.toArray('.transition-scene').forEach((scene) => {
+              const currentLines = scene.querySelectorAll('.transition-current span')
+
+              gsap.fromTo(
+                currentLines,
+                { scaleX: 0.12, opacity: 0.18 },
+                {
+                  scaleX: 1,
+                  opacity: 0.82,
+                  stagger: 0.045,
+                  transformOrigin: '0 50%',
+                  ease: 'none',
+                  scrollTrigger: {
+                    trigger: scene,
+                    start: 'top 82%',
+                    end: 'top 12%',
+                    scrub: 0.42,
+                    invalidateOnRefresh: true,
+                  },
+                },
+              )
             })
-          })
-
-          gsap.from('.system-bubble', {
-            x: -18,
-            opacity: 0.08,
-            duration: 1.1,
-            stagger: { each: 0.018, from: 'random' },
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: '.product-system',
-              start: 'top 62%',
-              toggleActions: 'play none none reverse',
-            },
-          })
-
-          gsap.fromTo(
-            '.oil-fill',
-            { scaleY: 0 },
-            {
-              scaleY: 1,
-              duration: 1.35,
-              ease: 'power3.out',
-              transformOrigin: '50% 100%',
-              scrollTrigger: {
-                trigger: '.product-oil',
-                start: 'top 68%',
-                toggleActions: 'play none none reverse',
-              },
-            },
-          )
-
-          scopeRef.current?.querySelectorAll('.steam-path, .condenser').forEach((path) => {
-            const length = prepareStroke(path)
-            if (!length) return
-            gsap.to(path, {
-              strokeDashoffset: 0,
-              duration: 1.4,
-              ease: 'power2.out',
-              scrollTrigger: {
-                trigger: '.product-hydrolat',
-                start: 'top 68%',
-                toggleActions: 'play none none reverse',
-              },
-            })
-          })
-
-          const processPaths = scopeRef.current?.querySelectorAll('.process-path') ?? []
-          processPaths.forEach((path) => {
-            const length = prepareStroke(path)
-            if (!length) return
-            gsap.to(path, {
-              strokeDashoffset: 0,
-              ease: 'none',
-              scrollTrigger: {
-                trigger: '.process-diagram',
-                start: 'top 78%',
-                end: 'bottom 42%',
-                scrub: 0.5,
-              },
-            })
-          })
+          }
 
           gsap.from('.process-acts article', {
             y: 22,
-            opacity: 0.42,
+            opacity: 0.56,
             duration: 0.72,
             stagger: 0.1,
             ease: 'power3.out',
             scrollTrigger: {
-              trigger: '.process-acts',
-              start: 'top 78%',
+              trigger: '.process',
+              start: 'top 64%',
               toggleActions: 'play none none reverse',
             },
           })
@@ -246,32 +413,7 @@ export function usePageMotion(scopeRef, heroProgressRef) {
             },
           })
 
-          if (header && evidence) {
-            ScrollTrigger.create({
-              trigger: evidence,
-              start: 'top 56px',
-              end: 'bottom 56px',
-              onEnter: () => header.classList.add('is-on-light'),
-              onEnterBack: () => header.classList.add('is-on-light'),
-              onLeave: () => header.classList.remove('is-on-light'),
-              onLeaveBack: () => header.classList.remove('is-on-light'),
-            })
-          }
-
-          if (header && contact) {
-            ScrollTrigger.create({
-              trigger: contact,
-              start: 'top 74px',
-              onEnter: () => header.classList.add('is-concealed'),
-              onLeaveBack: () => header.classList.remove('is-concealed'),
-            })
-          }
-
-          return () => {
-            heroProgressRef.current = 0
-            header?.classList.remove('is-on-light')
-            header?.classList.remove('is-concealed')
-          }
+          return undefined
         },
       )
 

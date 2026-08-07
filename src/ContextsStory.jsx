@@ -1,81 +1,6 @@
 import { useRef } from 'react'
+import ConceptPhoto from './ConceptPhoto.jsx'
 import { gsap, useGSAP } from './motion.js'
-
-function ContextField({ mode }) {
-  const common = (
-    <>
-      <circle className="context-field-halo" cx="360" cy="360" r="238" />
-      <circle className="context-field-core" cx="360" cy="360" r="7" />
-    </>
-  )
-
-  const fields = {
-    directed: (
-      <>
-        {common}
-        <path className="context-field-line" pathLength="1" d="M58 430c128 0 164-140 298-140 112 0 154 72 306 72" />
-        <path className="context-field-line is-soft" pathLength="1" d="M58 470c146 0 174-110 302-110 118 0 160 64 302 64" />
-        <path className="context-field-line is-faint" pathLength="1" d="M58 510c168 0 188-80 306-80 118 0 166 54 298 54" />
-        {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
-          <circle
-            key={index}
-            className="context-field-particle"
-            cx={392 + index * 32}
-            cy={314 + ((index * 29) % 96)}
-            r={3 + (index % 3)}
-          />
-        ))}
-      </>
-    ),
-    concentric: (
-      <>
-        {common}
-        <ellipse className="context-field-line" pathLength="1" cx="360" cy="360" rx="264" ry="150" />
-        <ellipse className="context-field-line is-soft" pathLength="1" cx="360" cy="360" rx="196" ry="112" />
-        <ellipse className="context-field-line is-faint" pathLength="1" cx="360" cy="360" rx="128" ry="72" />
-        <path className="context-field-line is-soft" pathLength="1" d="M82 360h556" />
-      </>
-    ),
-    layered: (
-      <>
-        {common}
-        <path className="context-field-line" pathLength="1" d="M68 252c92-42 174 42 268 0 90-40 170 42 316 0" />
-        <path className="context-field-line is-soft" pathLength="1" d="M68 326c92-42 174 42 268 0 90-40 170 42 316 0" />
-        <path className="context-field-line is-soft" pathLength="1" d="M68 400c92-42 174 42 268 0 90-40 170 42 316 0" />
-        <path className="context-field-line is-faint" pathLength="1" d="M68 474c92-42 174 42 268 0 90-40 170 42 316 0" />
-      </>
-    ),
-    local: (
-      <>
-        {common}
-        <circle className="context-field-line" pathLength="1" cx="360" cy="360" r="184" />
-        <circle className="context-field-line is-soft" pathLength="1" cx="360" cy="360" r="116" />
-        <path className="context-field-line is-faint" pathLength="1" d="M360 118v484M118 360h484" />
-        <circle className="context-field-particle" cx="360" cy="176" r="7" />
-        <circle className="context-field-particle" cx="518" cy="454" r="5" />
-        <circle className="context-field-particle" cx="250" cy="488" r="4" />
-      </>
-    ),
-    branching: (
-      <>
-        {common}
-        <path className="context-field-line" pathLength="1" d="M54 360h230c78 0 64-150 142-150h236" />
-        <path className="context-field-line is-soft" pathLength="1" d="M284 360c78 0 64 0 142 0h236" />
-        <path className="context-field-line is-faint" pathLength="1" d="M284 360c78 0 64 150 142 150h236" />
-        <circle className="context-field-particle" cx="284" cy="360" r="7" />
-        <circle className="context-field-particle" cx="426" cy="210" r="5" />
-        <circle className="context-field-particle" cx="426" cy="360" r="5" />
-        <circle className="context-field-particle" cx="426" cy="510" r="5" />
-      </>
-    ),
-  }
-
-  return (
-    <svg className="context-field" viewBox="0 0 720 720" aria-hidden="true">
-      {fields[mode]}
-    </svg>
-  )
-}
 
 function ContextPanel({ context, index, total }) {
   return (
@@ -88,10 +13,24 @@ function ContextPanel({ context, index, total }) {
       <div className="context-panel-title">
         <h3>{context.title}</h3>
       </div>
-      <div className="context-panel-visual">
-        <ContextField mode={context.visualMode} />
+      <ConceptPhoto
+        className="context-panel-visual context-panel-photo"
+        src={`/assets/photos/optimized/context-${context.id}-bg-1536.webp`}
+        srcSet={`/assets/photos/optimized/context-${context.id}-bg-768.webp 768w, /assets/photos/optimized/context-${context.id}-bg-1536.webp 1536w`}
+        sizes="100vw"
+        mobileSrcSet={`/assets/photos/optimized/context-${context.id}-bg-mobile-720.webp 720w`}
+        width="1536"
+        height="864"
+      />
+      <div className="context-panel-copy">
+        <p className="context-panel-caption">{context.caption}</p>
+        <a className="context-panel-action" href="#contact">
+          <span>Получить консультацию</span>
+          <svg viewBox="0 0 18 18" aria-hidden="true">
+            <path d="M3 9h11M10 4l5 5-5 5" />
+          </svg>
+        </a>
       </div>
-      <p className="context-panel-caption">{context.caption}</p>
     </article>
   )
 }
@@ -105,20 +44,18 @@ export default function ContextsStory({ contexts }) {
     () => {
       const media = gsap.matchMedia()
 
-      media.add('(min-width: 992px) and (prefers-reduced-motion: no-preference)', () => {
+      const createStackedStory = () => {
         const panels = gsap.utils.toArray('.context-panel')
         if (!panels.length) return undefined
 
         panels.slice(1).forEach((panel) => gsap.set(panel, { yPercent: 100 }))
-        gsap.set('.context-field-line', { strokeDashoffset: 1 })
-        gsap.set('.context-field-particle', { scale: 0.64, opacity: 0.16, transformOrigin: '50% 50%' })
 
         const timeline = gsap.timeline({
           scrollTrigger: {
             trigger: trackRef.current,
             start: 'top top',
             end: 'bottom bottom',
-            scrub: 0.62,
+            scrub: 0.14,
             pin: stageRef.current,
             pinSpacing: false,
             anticipatePin: 1,
@@ -126,42 +63,18 @@ export default function ContextsStory({ contexts }) {
           },
         })
 
-        const firstPanel = panels[0]
-        timeline
-          .to(firstPanel.querySelectorAll('.context-field-line'), {
-            strokeDashoffset: 0,
-            duration: 0.42,
-            stagger: 0.035,
-            ease: 'none',
-          })
-          .to(
-            firstPanel.querySelectorAll('.context-field-particle'),
-            { scale: 1, opacity: 0.72, duration: 0.28, stagger: 0.025, ease: 'power2.out' },
-            '<0.08',
-          )
-          .to({}, { duration: 0.34 })
+        panels.slice(1).forEach((panel, index) => {
+          const segmentStart = index
 
-        panels.slice(1).forEach((panel) => {
-          const lines = panel.querySelectorAll('.context-field-line')
-          const particles = panel.querySelectorAll('.context-field-particle')
-
-          timeline
-            .to(panel, { yPercent: 0, duration: 0.62, ease: 'none' })
-            .to(lines, { strokeDashoffset: 0, duration: 0.36, stagger: 0.025, ease: 'none' }, '<0.18')
-
-          if (particles.length) {
-            timeline.to(
-              particles,
-              { scale: 1, opacity: 0.72, duration: 0.25, stagger: 0.022, ease: 'power2.out' },
-              '<0.04',
-            )
-          }
-
-          timeline.to({}, { duration: 0.38 })
+          timeline.to(panel, { yPercent: 0, duration: 0.58, ease: 'power2.inOut' }, segmentStart)
+          timeline.to({}, { duration: 0.1 }, segmentStart + 0.9)
         })
 
         return () => timeline.kill()
-      })
+      }
+
+      media.add('(min-width: 992px) and (prefers-reduced-motion: no-preference)', createStackedStory)
+      media.add('(max-width: 991px) and (prefers-reduced-motion: no-preference)', createStackedStory)
 
       return () => media.revert()
     },
@@ -170,16 +83,34 @@ export default function ContextsStory({ contexts }) {
 
   return (
     <section className="contexts" id="contexts" aria-labelledby="contexts-title" ref={sectionRef}>
-      <div className="contexts-intro section-pad">
-        <div className="contexts-head" data-reveal="rise">
-          <h2 id="contexts-title">Одна технология. Разные контексты.</h2>
-          <p>
-            Мы показываем направления без выдуманных кейсов. Детали каждого сценария уточняются в диалоге.
+      <div className="contexts-intro section-pad transition-scene" data-scroll-snap data-text-emergence>
+        <div className="contexts-head">
+          <h2 id="contexts-title" data-transition-content data-emergence-title>
+            Одна технология. Разные контексты.
+          </h2>
+          <p data-emergence-copy>
+            Сначала определяем задачу и параметры воды, затем подбираем контур, режим работы и
+            место системы в существующей инфраструктуре.
           </p>
+        </div>
+        <div className="transition-current" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </div>
       </div>
 
       <div className="contexts-track" ref={trackRef}>
+        <div className="context-snap-range" aria-hidden="true">
+          {contexts.map((context, index) => (
+            <span
+              className="context-snap-marker"
+              data-scroll-snap
+              key={context.id}
+              style={{ top: `${(index / Math.max(contexts.length - 1, 1)) * 100}%` }}
+            />
+          ))}
+        </div>
         <div className="contexts-stage" ref={stageRef}>
           <p className="contexts-stage-label">Применение</p>
           <div className="context-panels">
