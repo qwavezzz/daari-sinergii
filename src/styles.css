@@ -2338,3 +2338,52 @@ svg {
     height: auto;
   }
 }
+
+@media (max-width: 767px) {
+  html.is-ios-26 {
+    scroll-behavior: auto;
+  }
+
+  html.is-ios-26 .opening-statement {
+    min-height: clamp(720px, 190vw, 840px);
+  }
+
+  html.is-ios-26 .product {
+    min-height: clamp(760px, 215vw, 940px);
+  }
+
+  html.is-ios-26 .product + .product {
+    margin-top: 80px;
+  }
+
+  html.is-ios-26 .product::before {
+    background:
+      linear-gradient(0deg, rgba(4, 16, 31, 1) 0%, rgba(4, 16, 31, .96) 14%, rgba(4, 16, 31, .78) 32%, rgba(4, 16, 31, .18) 64%, rgba(4, 16, 31, .82) 100%),
+      linear-gradient(90deg, rgba(4, 16, 31, .5) 0%, transparent 50%, rgba(4, 16, 31, .34) 100%);
+  }
+
+  html.is-ios-26 .contexts-story-intro {
+    min-height: clamp(720px, 195vw, 860px);
+  }
+
+  html.is-ios-26 .context-panel {
+    min-height: clamp(820px, 230vw, 1000px);
+  }
+
+  html.is-ios-26 .context-panel + .context-panel {
+    margin-top: 96px;
+    border-top: 0;
+  }
+
+  html.is-ios-26 .contexts-mobile-outro {
+    min-height: clamp(560px, 150vw, 680px);
+  }
+
+  html.is-ios-26 .process {
+    min-height: clamp(820px, 225vw, 980px);
+  }
+
+  html.is-ios-26 .contact {
+    min-height: clamp(760px, 210vw, 940px);
+  }
+}

@@ -9,7 +9,12 @@ import LenisSnap from 'lenis/snap'
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
 const DESKTOP_QUERY = '(min-width: 992px)'
+const PHONE_QUERY = '(max-width: 767px)'
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+function isIOS26Phone() {
+  return document.documentElement.classList.contains('is-ios-26') && window.matchMedia(PHONE_QUERY).matches
+}
 
 export function usePageMotion(scopeRef) {
   useEffect(() => {
@@ -71,20 +76,22 @@ export function usePageMotion(scopeRef) {
     const syncHeaderContrast = () => {
       header?.classList.toggle('is-on-light', activeLightSections.size > 0)
     }
-    const lightHeaderTriggers = gsap.utils
-      .toArray('.evidence', scopeRef.current)
-      .map((section) =>
-        ScrollTrigger.create({
-          trigger: section,
-          start: 'top 56px',
-          end: 'bottom 56px',
-          onToggle: (self) => {
-            if (self.isActive) activeLightSections.add(section)
-            else activeLightSections.delete(section)
-            syncHeaderContrast()
-          },
-        }),
-      )
+    const lightHeaderTriggers = isIOS26Phone()
+      ? []
+      : gsap.utils
+          .toArray('.evidence', scopeRef.current)
+          .map((section) =>
+            ScrollTrigger.create({
+              trigger: section,
+              start: 'top 56px',
+              end: 'bottom 56px',
+              onToggle: (self) => {
+                if (self.isActive) activeLightSections.add(section)
+                else activeLightSections.delete(section)
+                syncHeaderContrast()
+              },
+            }),
+          )
 
     const handleAnchor = (event) => {
       const link = event.target.closest('a[href^="#"]')
@@ -135,6 +142,8 @@ export function usePageMotion(scopeRef) {
       const motion = gsap.matchMedia()
 
       const createTextEmergence = () => {
+        if (isIOS26Phone()) return undefined
+
         const splits = []
         const isDesktop = window.matchMedia(DESKTOP_QUERY).matches
 
@@ -233,9 +242,10 @@ export function usePageMotion(scopeRef) {
         (context) => {
           if (context.conditions.reduce) return undefined
 
+          const quietIOS26 = isIOS26Phone()
           const hero = scopeRef.current?.querySelector('.hero')
 
-          if (hero) {
+          if (hero && !quietIOS26) {
             gsap
               .timeline({
                 scrollTrigger: {
@@ -252,7 +262,7 @@ export function usePageMotion(scopeRef) {
           }
 
           const openingFlow = gsap.utils.toArray('.opening-flow span')
-          if (openingFlow.length) {
+          if (openingFlow.length && !quietIOS26) {
             gsap.fromTo(
               openingFlow,
               { clipPath: 'inset(0 100% 0 0)' },
@@ -304,7 +314,7 @@ export function usePageMotion(scopeRef) {
             scrollTrigger: {
               trigger: '.process',
               start: 'top 64%',
-              toggleActions: 'play none none reverse',
+              toggleActions: quietIOS26 ? 'play none none none' : 'play none none reverse',
             },
           })
 
@@ -316,7 +326,7 @@ export function usePageMotion(scopeRef) {
             scrollTrigger: {
               trigger: '.contact',
               start: 'top 62%',
-              toggleActions: 'play none none reverse',
+              toggleActions: quietIOS26 ? 'play none none none' : 'play none none reverse',
             },
           })
 
@@ -328,7 +338,7 @@ export function usePageMotion(scopeRef) {
             scrollTrigger: {
               trigger: '.contact-actions',
               start: 'top 88%',
-              toggleActions: 'play none none reverse',
+              toggleActions: quietIOS26 ? 'play none none none' : 'play none none reverse',
             },
           })
 
