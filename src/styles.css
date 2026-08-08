@@ -1451,6 +1451,35 @@ svg {
   :root {
     --mobile-scene-height: 100vh;
     --mobile-browser-chrome: env(safe-area-inset-bottom, 0px);
+    --mobile-safe-top: env(safe-area-inset-top, 0px);
+    --mobile-guard-surface: var(--ink-deep);
+  }
+
+  :root.is-on-light-section {
+    --mobile-guard-surface: var(--energy-bright);
+  }
+
+  html.has-measured-mobile-viewport body::before,
+  html.has-measured-mobile-viewport body::after {
+    position: fixed;
+    z-index: 25;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    content: '';
+  }
+
+  html.has-measured-mobile-viewport body::before {
+    top: 0;
+    height: var(--mobile-safe-top);
+    background: var(--ink-deep);
+  }
+
+  html.has-measured-mobile-viewport body::after {
+    bottom: 0;
+    height: var(--mobile-browser-chrome);
+    background: var(--mobile-guard-surface);
+    transition: background-color 240ms var(--ease-out);
   }
 }
 
@@ -1462,6 +1491,14 @@ svg {
         env(safe-area-inset-bottom, 0px),
         calc(100lvh - 100dvh)
       );
+    }
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    :root {
+      --mobile-safe-top: max(env(safe-area-inset-top, 0px), 44px);
     }
   }
 }
@@ -1487,6 +1524,16 @@ svg {
 @media (max-width: 991px) {
   .site-header {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding-top: calc(20px + var(--mobile-safe-top));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+  }
+
+  .mobile-menu {
+    padding-top: calc(20px + var(--mobile-safe-top));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
   }
 
   .brand {
@@ -1631,7 +1678,7 @@ svg {
   }
 
   .contexts-stage-label {
-    top: 76px;
+    top: calc(76px + var(--mobile-safe-top));
   }
 
   .context-panels {
@@ -1739,7 +1786,7 @@ svg {
 
   .opening-statement {
     min-height: var(--mobile-scene-height);
-    padding-top: 60px;
+    padding-top: calc(60px + var(--mobile-safe-top));
   }
 
   .opening-title h2 {
@@ -1760,8 +1807,8 @@ svg {
 
   .section-lead {
     min-height: var(--mobile-scene-height);
-    padding-top: 100px;
-    padding-bottom: 100px;
+    padding-top: calc(100px + var(--mobile-safe-top));
+    padding-bottom: calc(100px + var(--mobile-browser-chrome));
   }
 
   .section-lead h2,
@@ -1778,7 +1825,7 @@ svg {
   .product {
     min-height: var(--mobile-scene-height);
     gap: 60px 20px;
-    padding-top: 100px;
+    padding-top: calc(100px + var(--mobile-safe-top));
     padding-bottom: calc(110px + var(--mobile-browser-chrome));
   }
 
@@ -1932,8 +1979,8 @@ svg {
 
   .contexts-intro {
     min-height: var(--mobile-scene-height);
-    padding-top: 120px;
-    padding-bottom: 120px;
+    padding-top: calc(120px + var(--mobile-safe-top));
+    padding-bottom: calc(120px + var(--mobile-browser-chrome));
   }
 
   .context-panel {
@@ -1942,8 +1989,12 @@ svg {
     flex-direction: column;
     justify-content: space-between;
     gap: 40px;
-    padding-top: 116px;
+    padding-top: calc(116px + var(--mobile-safe-top));
     padding-bottom: calc(52px + var(--mobile-browser-chrome));
+  }
+
+  .context-panel-meta {
+    top: calc(84px + var(--mobile-safe-top));
   }
 
   .context-panel::before {
@@ -1977,7 +2028,7 @@ svg {
 
   .process {
     min-height: var(--mobile-scene-height);
-    padding-top: 72px;
+    padding-top: calc(72px + var(--mobile-safe-top));
     padding-bottom: calc(64px + var(--mobile-browser-chrome));
   }
 
@@ -2054,7 +2105,7 @@ svg {
 
   .contact {
     min-height: var(--mobile-scene-height);
-    padding-top: 90px;
+    padding-top: calc(90px + var(--mobile-safe-top));
     padding-bottom: calc(32px + var(--mobile-browser-chrome));
   }
 
@@ -2099,13 +2150,13 @@ svg {
 @media (max-width: 767px) and (max-height: 760px) {
   .context-panel {
     gap: 24px;
-    padding-top: 96px;
+    padding-top: calc(96px + var(--mobile-safe-top));
     padding-bottom: calc(28px + var(--mobile-browser-chrome));
   }
 
   .context-panel-meta,
   .contexts-stage-label {
-    top: 68px;
+    top: calc(68px + var(--mobile-safe-top));
   }
 
   .context-panel-title h3 {

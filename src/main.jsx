@@ -4,7 +4,10 @@ import '@fontsource-variable/manrope'
 import '@fontsource/ibm-plex-mono/400.css'
 import 'lenis/dist/lenis.css'
 import App from './App.jsx'
+import { syncMobileViewport } from './mobileViewport.js'
 import './styles.css'
+
+syncMobileViewport()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
