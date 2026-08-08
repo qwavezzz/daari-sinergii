@@ -13,6 +13,50 @@
   --page: 20px;
   --ease-smooth: cubic-bezier(.32, .72, 0, 1);
   --ease-out: cubic-bezier(.17, 1, .35, .96);
+  --type-brand: 15px;
+  --type-navigation: 13px;
+  --type-action: 14px;
+  --type-label: 11px;
+  --type-micro: 10px;
+  --type-fine: 12px;
+  --type-body-compact: 15px;
+  --type-body-support: 16px;
+  --type-body: 17px;
+  --type-menu-display: clamp(46px, 13vw, 76px);
+  --type-hero-display: clamp(64px, 7vw, 96px);
+  --type-hero-copy: clamp(15px, 1.15vw, 18px);
+  --type-opening-display: clamp(58px, 7vw, 96px);
+  --type-opening-lead: clamp(24px, 3vw, 46px);
+  --type-section-display: clamp(52px, 6vw, 88px);
+  --type-title: clamp(44px, 5vw, 76px);
+  --type-system-display: clamp(48px, min(5.6vw, 8.2svh), 82px);
+  --type-system-title: clamp(20px, 1.7vw, 28px);
+  --type-context-display: clamp(54px, 6.4vw, 92px);
+  --type-context-title: clamp(48px, 5.4vw, 84px);
+  --type-context-copy: clamp(15px, 1.25vw, 18px);
+  --type-process-display: clamp(50px, min(5.6vw, 8.2svh), 82px);
+  --type-process-title: clamp(34px, min(3.6vw, 6svh), 54px);
+  --type-evidence-display: clamp(50px, min(6.5vw, 8.4svh), 88px);
+  --type-evidence-lead: clamp(16px, min(1.4vw, 2.4svh), 21px);
+  --type-evidence-title: clamp(22px, min(2vw, 4svh), 34px);
+  --type-contact-display: clamp(62px, 9vw, 96px);
+  --type-contact-value: clamp(22px, 2.4vw, 38px);
+  --type-mobile-hero-display: clamp(58px, 17vw, 76px);
+  --type-mobile-opening-display: clamp(48px, 14vw, 72px);
+  --type-mobile-opening-lead: 26px;
+  --type-mobile-section-display: clamp(44px, 11.5vw, 58px);
+  --type-mobile-system-display: clamp(40px, 11vw, 52px);
+  --type-mobile-system-title: clamp(22px, 6.2vw, 26px);
+  --type-mobile-product-title: clamp(42px, 12vw, 62px);
+  --type-mobile-context-title: clamp(46px, 13vw, 68px);
+  --type-mobile-action-display: clamp(44px, 12.5vw, 76px);
+  --type-mobile-process-display: clamp(44px, 13vw, 58px);
+  --type-mobile-process-title: clamp(32px, 9.5vw, 42px);
+  --type-mobile-evidence-display: clamp(52px, 15vw, 72px);
+  --type-mobile-contact-display: clamp(48px, 13vw, 78px);
+  --type-mobile-context-short: clamp(38px, 12vw, 52px);
+  --type-narrow-hero-display: clamp(56px, 16.5vw, 68px);
+  --type-narrow-opening-display: 48px;
   font-family: 'Manrope Variable', Arial, sans-serif;
   color: var(--text);
   background: var(--ink-deep);
@@ -159,7 +203,7 @@ svg {
   width: max-content;
   color: inherit;
   text-decoration: none;
-  font-size: 15px;
+  font-size: var(--type-brand);
   font-weight: 650;
   line-height: 1;
   letter-spacing: -.025em;
@@ -193,7 +237,7 @@ svg {
   align-items: center;
   justify-content: flex-end;
   gap: 28px;
-  font-size: 13px;
+  font-size: var(--type-navigation);
 }
 
 .desktop-nav a,
@@ -243,7 +287,7 @@ svg {
   align-self: center;
   cursor: pointer;
   color: inherit;
-  font-size: 14px;
+  font-size: var(--type-action);
 }
 
 .menu-toggle svg,
@@ -315,7 +359,7 @@ svg {
   justify-content: center;
   cursor: pointer;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-action);
 }
 
 .mobile-menu nav {
@@ -328,7 +372,7 @@ svg {
 .mobile-menu nav a {
   transform: translateY(30px);
   opacity: 0;
-  font-size: clamp(46px, 13vw, 76px);
+  font-size: var(--type-menu-display);
   font-weight: 500;
   line-height: .98;
   letter-spacing: -.035em;
@@ -350,7 +394,7 @@ svg {
 .mobile-menu > p {
   max-width: 36ch;
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: var(--type-action);
   line-height: 1.3;
 }
 
@@ -394,7 +438,7 @@ svg {
 
 .hero h1 {
   max-width: 6.2ch;
-  font-size: clamp(64px, 7vw, 96px);
+  font-size: var(--type-hero-display);
   line-height: .88;
   letter-spacing: -.04em;
 }
@@ -403,7 +447,7 @@ svg {
   max-width: 44ch;
   margin-top: 24px;
   color: var(--text-soft);
-  font-size: clamp(15px, 1.15vw, 18px);
+  font-size: var(--type-hero-copy);
   line-height: 1.3;
   letter-spacing: -.02em;
 }
@@ -416,7 +460,7 @@ svg {
   margin-top: 30px;
   color: inherit;
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--type-action);
   font-weight: 560;
 }
 
@@ -465,7 +509,7 @@ svg {
   gap: 38px;
   color: rgba(217, 243, 255, .74);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   line-height: 1.3;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -497,7 +541,7 @@ svg {
   transform-origin: right top;
   color: rgba(177, 223, 246, .44);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   letter-spacing: .08em;
 }
 
@@ -521,7 +565,7 @@ svg {
 .opening-title h2 {
   grid-column: 1 / -1;
   max-width: 1280px;
-  font-size: clamp(58px, 7vw, 96px);
+  font-size: var(--type-opening-display);
   line-height: .9;
   letter-spacing: -.04em;
 }
@@ -531,7 +575,7 @@ svg {
   max-width: 620px;
   margin-top: 48px;
   color: var(--text-muted);
-  font-size: clamp(24px, 3vw, 46px);
+  font-size: var(--type-opening-lead);
   line-height: 1.3;
   letter-spacing: -.03em;
 }
@@ -579,7 +623,7 @@ svg {
   position: relative;
   z-index: 1;
   grid-column: 1 / span 9;
-  font-size: clamp(52px, 6vw, 88px);
+  font-size: var(--type-section-display);
   line-height: .9;
   letter-spacing: -.04em;
 }
@@ -591,7 +635,7 @@ svg {
   align-self: end;
   max-width: 45ch;
   color: var(--text-soft);
-  font-size: 16px;
+  font-size: var(--type-body-support);
   line-height: 1.35;
 }
 
@@ -639,7 +683,7 @@ svg {
 }
 
 .product-copy h3 {
-  font-size: clamp(44px, 5vw, 76px);
+  font-size: var(--type-title);
   line-height: .92;
   letter-spacing: -.035em;
 }
@@ -647,7 +691,7 @@ svg {
 .product-copy p {
   max-width: 54ch;
   margin-top: 26px;
-  font-size: 17px;
+  font-size: var(--type-body);
   line-height: 1.45;
   letter-spacing: -.018em;
 }
@@ -721,7 +765,7 @@ svg {
 .system-explainer-head h3 {
   grid-column: 1 / span 8;
   max-width: 12ch;
-  font-size: clamp(48px, min(5.6vw, 8.2svh), 82px);
+  font-size: var(--type-system-display);
   line-height: .92;
   letter-spacing: -.04em;
 }
@@ -730,7 +774,7 @@ svg {
   grid-column: 9 / -1;
   max-width: 44ch;
   color: var(--text-soft);
-  font-size: 16px;
+  font-size: var(--type-body-support);
   line-height: 1.45;
 }
 
@@ -759,7 +803,7 @@ svg {
 .system-inputs > p {
   color: var(--text-muted);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   line-height: 1;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -767,7 +811,7 @@ svg {
 
 .system-flow h4 {
   margin-top: 42px;
-  font-size: clamp(20px, 1.7vw, 28px);
+  font-size: var(--type-system-title);
   font-weight: 500;
   line-height: 1.05;
   letter-spacing: -.025em;
@@ -777,7 +821,7 @@ svg {
   max-width: 34ch;
   margin-top: 18px;
   color: var(--text-soft);
-  font-size: 15px;
+  font-size: var(--type-body-compact);
   line-height: 1.45;
 }
 
@@ -806,7 +850,7 @@ svg {
 
 .system-inputs li {
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-action);
   line-height: 1.35;
 }
 
@@ -819,7 +863,7 @@ svg {
 .system-inputs small {
   grid-column: 9 / -1;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--type-fine);
   line-height: 1.45;
 }
 
@@ -892,7 +936,7 @@ svg {
 
 .contexts-head h2 {
   grid-column: 1 / span 8;
-  font-size: clamp(54px, 6.4vw, 92px);
+  font-size: var(--type-context-display);
   line-height: .9;
   letter-spacing: -.04em;
 }
@@ -902,7 +946,7 @@ svg {
   align-self: end;
   max-width: 44ch;
   color: var(--text-soft);
-  font-size: 16px;
+  font-size: var(--type-body-support);
   line-height: 1.4;
 }
 
@@ -943,7 +987,7 @@ svg {
   left: 20px;
   color: rgba(217, 243, 255, .66);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   line-height: 1.2;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -998,7 +1042,7 @@ svg {
   gap: 7px;
   color: rgba(217, 243, 255, .66);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   line-height: 1.2;
   letter-spacing: .06em;
 }
@@ -1011,7 +1055,7 @@ svg {
 
 .context-panel-title h3 {
   max-width: 8ch;
-  font-size: clamp(48px, 5.4vw, 84px);
+  font-size: var(--type-context-title);
   line-height: .9;
   letter-spacing: -.04em;
 }
@@ -1039,7 +1083,7 @@ svg {
 
 .context-panel-caption {
   color: var(--text-soft);
-  font-size: clamp(15px, 1.25vw, 18px);
+  font-size: var(--type-context-copy);
   line-height: 1.45;
 }
 
@@ -1051,7 +1095,7 @@ svg {
   margin-top: 22px;
   color: var(--text);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--type-action);
   font-weight: 560;
 }
 
@@ -1138,7 +1182,7 @@ svg {
 
 .process-head h2 {
   max-width: 15ch;
-  font-size: clamp(50px, min(5.6vw, 8.2svh), 82px);
+  font-size: var(--type-process-display);
   line-height: .88;
   letter-spacing: -.04em;
 }
@@ -1171,7 +1215,7 @@ svg {
 }
 
 .process-acts h3 {
-  font-size: clamp(34px, min(3.6vw, 6svh), 54px);
+  font-size: var(--type-process-title);
   line-height: .95;
   letter-spacing: -.03em;
 }
@@ -1180,7 +1224,7 @@ svg {
   max-width: 46ch;
   margin-top: 14px;
   color: var(--text-soft);
-  font-size: 16px;
+  font-size: var(--type-body-support);
   line-height: 1.45;
 }
 
@@ -1202,7 +1246,7 @@ svg {
 .evidence h2 {
   grid-column: 1 / span 5;
   max-width: 10ch;
-  font-size: clamp(50px, min(6.5vw, 8.4svh), 88px);
+  font-size: var(--type-evidence-display);
   line-height: .88;
   letter-spacing: -.04em;
 }
@@ -1213,7 +1257,7 @@ svg {
   max-width: 58ch;
   margin: 0;
   color: var(--surface-strong);
-  font-size: clamp(16px, min(1.4vw, 2.4svh), 21px);
+  font-size: var(--type-evidence-lead);
   line-height: 1.35;
 }
 
@@ -1249,7 +1293,7 @@ svg {
 .evidence-document-meta > span {
   color: var(--surface-strong);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   line-height: 1.35;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -1258,7 +1302,7 @@ svg {
 .evidence-document h3 {
   max-width: 24ch;
   margin-top: 14px;
-  font-size: clamp(22px, min(2vw, 4svh), 34px);
+  font-size: var(--type-evidence-title);
   line-height: 1.05;
   letter-spacing: -.03em;
 }
@@ -1272,7 +1316,7 @@ svg {
   margin: 0 0 12px;
   color: var(--ink-deep);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 13px;
+  font-size: var(--type-navigation);
   line-height: 1.45;
   letter-spacing: 0;
 }
@@ -1284,7 +1328,7 @@ svg {
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  font-size: 14px;
+  font-size: var(--type-action);
   font-weight: 560;
 }
 
@@ -1326,7 +1370,7 @@ svg {
 .contact h2 {
   grid-column: 1 / span 9;
   color: var(--text-muted);
-  font-size: clamp(62px, 9vw, 96px);
+  font-size: var(--type-contact-display);
   line-height: .87;
   letter-spacing: -.04em;
 }
@@ -1365,7 +1409,7 @@ svg {
 .contact-actions span {
   color: var(--text-muted);
   font-family: 'IBM Plex Mono', Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--type-label);
   line-height: 1.3;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -1375,7 +1419,7 @@ svg {
   margin-top: 14px;
   color: var(--text-soft);
   overflow-wrap: anywhere;
-  font-size: clamp(22px, 2.4vw, 38px);
+  font-size: var(--type-contact-value);
   line-height: 1.12;
   letter-spacing: -.03em;
 }
@@ -1385,7 +1429,7 @@ svg {
   max-width: 34ch;
   margin-top: 12px;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: var(--type-brand);
   line-height: 1.4;
 }
 
@@ -1412,7 +1456,7 @@ svg {
   border-top: 1px solid rgba(137, 191, 226, .15);
   color: var(--text-muted);
   background: var(--ink-deep);
-  font-size: 13px;
+  font-size: var(--type-navigation);
 }
 
 .site-footer > p {
@@ -1458,7 +1502,7 @@ svg {
 @media (max-width: 991px) {
   :root {
     --mobile-scene-height: 100svh;
-    --mobile-browser-chrome: env(safe-area-inset-bottom, 0px);
+    --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
     --mobile-section-space: clamp(88px, 14svh, 124px);
     --mobile-scene-floor: 720px;
   }
@@ -1666,27 +1710,27 @@ svg {
 
   .hero-content {
     right: 20px;
-    bottom: calc(148px + var(--mobile-browser-chrome));
+    bottom: calc(148px + var(--mobile-safe-bottom));
     width: auto;
   }
 
   .hero h1 {
-    font-size: clamp(58px, 17vw, 76px);
+    font-size: var(--type-mobile-hero-display);
   }
 
   .hero-content > p {
     max-width: 37ch;
-    font-size: 14px;
+    font-size: var(--type-action);
   }
 
   .hero-products {
     right: 20px;
-    bottom: calc(20px + var(--mobile-browser-chrome));
+    bottom: calc(20px + var(--mobile-safe-bottom));
     left: 20px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
-    font-size: 11px;
+    font-size: var(--type-label);
   }
 
   .hero-products span {
@@ -1708,7 +1752,7 @@ svg {
     align-content: end;
     align-items: end;
     padding-top: 112px;
-    padding-bottom: max(112px, calc(88px + var(--mobile-browser-chrome)));
+    padding-bottom: max(112px, calc(88px + var(--mobile-safe-bottom)));
   }
 
   .product::before {
@@ -1732,13 +1776,13 @@ svg {
   }
 
   .opening-title h2 {
-    font-size: clamp(48px, 14vw, 72px);
+    font-size: var(--type-mobile-opening-display);
   }
 
   .opening-title p {
     grid-column: 1 / -1;
     margin-top: 52px;
-    font-size: 26px;
+    font-size: var(--type-mobile-opening-lead);
   }
 
   .opening-flow {
@@ -1755,7 +1799,7 @@ svg {
 
   .section-lead h2,
   .contexts-head h2 {
-    font-size: clamp(44px, 11.5vw, 58px);
+    font-size: var(--type-mobile-section-display);
   }
 
   .section-lead p,
@@ -1768,7 +1812,7 @@ svg {
     min-height: max(var(--mobile-scene-floor), 108svh);
     gap: 60px 20px;
     padding-top: 100px;
-    padding-bottom: max(124px, calc(96px + var(--mobile-browser-chrome)));
+    padding-bottom: max(124px, calc(96px + var(--mobile-safe-bottom)));
   }
 
   .product-hydrolat {
@@ -1788,14 +1832,14 @@ svg {
 
   .system-explainer-head h3 {
     max-width: 11ch;
-    font-size: clamp(40px, 11vw, 52px);
+    font-size: var(--type-mobile-system-display);
     line-height: .94;
   }
 
   .system-explainer-head > p {
     max-width: 38ch;
     margin-top: 30px;
-    font-size: 16px;
+    font-size: var(--type-body-support);
     line-height: 1.5;
   }
 
@@ -1841,13 +1885,13 @@ svg {
     border: 1px solid rgba(137, 191, 226, .62);
     border-radius: 50%;
     color: var(--energy-bright);
-    font-size: 10px;
+    font-size: var(--type-micro);
   }
 
   .system-flow h4 {
     grid-column: 2;
     margin-top: 3px;
-    font-size: clamp(22px, 6.2vw, 26px);
+    font-size: var(--type-mobile-system-title);
     line-height: 1.08;
   }
 
@@ -1855,7 +1899,7 @@ svg {
     grid-column: 2;
     max-width: 42ch;
     margin-top: 14px;
-    font-size: 15px;
+    font-size: var(--type-body-compact);
     line-height: 1.5;
   }
 
@@ -1878,7 +1922,7 @@ svg {
     position: relative;
     padding: 12px 0 12px 18px;
     border-bottom: 1px solid rgba(137, 191, 226, .18);
-    font-size: 15px;
+    font-size: var(--type-body-compact);
   }
 
   .system-inputs li::before {
@@ -1901,7 +1945,7 @@ svg {
     display: block;
     max-width: 46ch;
     margin-top: 24px;
-    font-size: 13px;
+    font-size: var(--type-navigation);
     line-height: 1.5;
   }
 
@@ -1912,11 +1956,11 @@ svg {
   }
 
   .product-copy h3 {
-    font-size: clamp(42px, 12vw, 62px);
+    font-size: var(--type-mobile-product-title);
   }
 
   .product-copy p {
-    font-size: 15px;
+    font-size: var(--type-body-compact);
   }
 
   .contexts-intro {
@@ -1968,7 +2012,7 @@ svg {
     justify-content: space-between;
     gap: 40px;
     padding-top: 116px;
-    padding-bottom: max(140px, calc(112px + var(--mobile-browser-chrome)));
+    padding-bottom: max(140px, calc(112px + var(--mobile-safe-bottom)));
   }
 
   .context-panel::before {
@@ -1990,7 +2034,7 @@ svg {
 
   .context-panel-title h3 {
     max-width: 9ch;
-    font-size: clamp(46px, 13vw, 68px);
+    font-size: var(--type-mobile-context-title);
   }
 
   .context-panel-copy {
@@ -2005,7 +2049,7 @@ svg {
   }
 
   .context-panel-caption {
-    font-size: 15px;
+    font-size: var(--type-body-compact);
   }
 
   .contexts-mobile-outro {
@@ -2015,7 +2059,7 @@ svg {
     align-content: center;
     overflow: hidden;
     padding-top: var(--mobile-section-space);
-    padding-bottom: max(140px, calc(112px + var(--mobile-browser-chrome)));
+    padding-bottom: max(140px, calc(112px + var(--mobile-safe-bottom)));
     background: #050e1a;
   }
 
@@ -2054,7 +2098,7 @@ svg {
 
   .contexts-mobile-action span {
     max-width: 9ch;
-    font-size: clamp(44px, 12.5vw, 76px);
+    font-size: var(--type-mobile-action-display);
     font-weight: 500;
     line-height: .94;
     letter-spacing: -.04em;
@@ -2072,7 +2116,7 @@ svg {
   .process {
     min-height: max(var(--mobile-scene-floor), 108svh);
     padding-top: 96px;
-    padding-bottom: max(116px, calc(88px + var(--mobile-browser-chrome)));
+    padding-bottom: max(116px, calc(88px + var(--mobile-safe-bottom)));
   }
 
   .process::before {
@@ -2082,7 +2126,7 @@ svg {
   }
 
   .process-head h2 {
-    font-size: clamp(44px, 13vw, 58px);
+    font-size: var(--type-mobile-process-display);
   }
 
   .process-acts {
@@ -2096,12 +2140,12 @@ svg {
   }
 
   .process-acts h3 {
-    font-size: clamp(32px, 9.5vw, 42px);
+    font-size: var(--type-mobile-process-title);
   }
 
   .process-acts p {
     margin-top: 10px;
-    font-size: 15px;
+    font-size: var(--type-body-compact);
     line-height: 1.4;
   }
 
@@ -2112,12 +2156,12 @@ svg {
   }
 
   .evidence h2 {
-    font-size: clamp(52px, 15vw, 72px);
+    font-size: var(--type-mobile-evidence-display);
   }
 
   .evidence p {
     margin-top: 40px;
-    font-size: 17px;
+    font-size: var(--type-body);
   }
 
   .evidence-documents {
@@ -2149,12 +2193,12 @@ svg {
   .contact {
     min-height: max(var(--mobile-scene-floor), 108svh);
     padding-top: 112px;
-    padding-bottom: max(96px, calc(68px + var(--mobile-browser-chrome)));
+    padding-bottom: max(96px, calc(68px + var(--mobile-safe-bottom)));
   }
 
   .contact h2 {
     grid-column: 1 / -1;
-    font-size: clamp(48px, 13vw, 78px);
+    font-size: var(--type-mobile-contact-display);
   }
 
   .brand-full {
@@ -2180,7 +2224,7 @@ svg {
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 26px;
-    padding-bottom: calc(20px + var(--mobile-browser-chrome));
+    padding-bottom: calc(20px + var(--mobile-safe-bottom));
   }
 
   .site-footer nav {
@@ -2194,7 +2238,7 @@ svg {
   .context-panel {
     gap: 24px;
     padding-top: 96px;
-    padding-bottom: max(112px, calc(84px + var(--mobile-browser-chrome)));
+    padding-bottom: max(112px, calc(84px + var(--mobile-safe-bottom)));
   }
 
   .context-panel-meta,
@@ -2203,11 +2247,11 @@ svg {
   }
 
   .context-panel-title h3 {
-    font-size: clamp(38px, 12vw, 52px);
+    font-size: var(--type-mobile-context-short);
   }
 
   .context-panel-caption {
-    font-size: 14px;
+    font-size: var(--type-action);
     line-height: 1.4;
   }
 
@@ -2225,7 +2269,7 @@ svg {
   }
 
   .brand {
-    font-size: 13px;
+    font-size: var(--type-navigation);
   }
 
   .brand-mark {
@@ -2235,11 +2279,11 @@ svg {
   }
 
   .hero-content {
-    bottom: calc(162px + var(--mobile-browser-chrome));
+    bottom: calc(162px + var(--mobile-safe-bottom));
   }
 
   .hero h1 {
-    font-size: clamp(56px, 16.5vw, 68px);
+    font-size: var(--type-narrow-hero-display);
   }
 
   .hero-content > p {
@@ -2257,7 +2301,7 @@ svg {
   }
 
   .opening-title h2 {
-    font-size: 48px;
+    font-size: var(--type-narrow-opening-display);
   }
 }
 
@@ -2267,20 +2311,27 @@ svg {
     scroll-snap-type: none;
   }
 
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-  }
-
   [data-reveal] {
     transform: none;
     clip-path: none;
     opacity: 1;
     filter: none;
+  }
+
+  .mobile-menu,
+  .mobile-menu nav a,
+  .text-link span::after,
+  .text-link svg,
+  .desktop-nav a::after,
+  .site-footer a::after,
+  .context-panel-action svg,
+  .evidence-document-action svg {
+    transition: none;
+  }
+
+  .mobile-menu nav a {
+    transform: translateY(0);
+    opacity: 1;
   }
 
   .hero-video {
@@ -2340,50 +2391,101 @@ svg {
 }
 
 @media (max-width: 767px) {
-  html.is-ios-26 {
+  html.is-iphone-safari-26 {
     scroll-behavior: auto;
   }
 
-  html.is-ios-26 .opening-statement {
-    min-height: clamp(720px, 190vw, 840px);
+  html.is-iphone-safari-26 .site-header {
+    position: fixed;
+    padding-top: max(16px, env(safe-area-inset-top, 0px));
+    padding-bottom: 18px;
+    background: linear-gradient(180deg, rgba(4, 16, 31, .88) 0%, rgba(4, 16, 31, .52) 58%, transparent 100%);
   }
 
-  html.is-ios-26 .product {
-    min-height: clamp(760px, 215vw, 940px);
+  html.is-iphone-safari-26 #products,
+  html.is-iphone-safari-26 #contexts,
+  html.is-iphone-safari-26 #process,
+  html.is-iphone-safari-26 #documents,
+  html.is-iphone-safari-26 #contact {
+    scroll-margin-top: 84px;
   }
 
-  html.is-ios-26 .product + .product {
-    margin-top: 80px;
+  html.is-iphone-safari-26 .opening-statement {
+    min-height: auto;
+    padding-top: 132px;
+    padding-bottom: 168px;
   }
 
-  html.is-ios-26 .product::before {
+  html.is-iphone-safari-26 .product {
+    min-height: auto;
+    padding-top: clamp(360px, 108vw, 460px);
+    padding-bottom: max(108px, calc(84px + var(--mobile-safe-bottom)));
+  }
+
+  html.is-iphone-safari-26 .product + .product {
+    margin-top: 0;
+  }
+
+  html.is-iphone-safari-26 .product::before {
     background:
-      linear-gradient(0deg, rgba(4, 16, 31, 1) 0%, rgba(4, 16, 31, .96) 14%, rgba(4, 16, 31, .78) 32%, rgba(4, 16, 31, .18) 64%, rgba(4, 16, 31, .82) 100%),
+      linear-gradient(0deg, rgba(4, 16, 31, 1) 0%, rgba(4, 16, 31, .94) 18%, rgba(4, 16, 31, .72) 38%, rgba(4, 16, 31, .16) 68%, rgba(4, 16, 31, .78) 100%),
       linear-gradient(90deg, rgba(4, 16, 31, .5) 0%, transparent 50%, rgba(4, 16, 31, .34) 100%);
   }
 
-  html.is-ios-26 .contexts-story-intro {
-    min-height: clamp(720px, 195vw, 860px);
+  html.is-iphone-safari-26 .contexts-intro-desktop {
+    display: none;
   }
 
-  html.is-ios-26 .context-panel {
-    min-height: clamp(820px, 230vw, 1000px);
+  html.is-iphone-safari-26 .contexts-story-intro {
+    display: flex;
+    min-height: auto;
+    padding-top: 144px;
+    padding-bottom: 172px;
   }
 
-  html.is-ios-26 .context-panel + .context-panel {
-    margin-top: 96px;
+  html.is-iphone-safari-26 .context-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    justify-content: flex-start;
+    gap: 0;
+    padding-top: 112px;
+    padding-bottom: max(112px, calc(88px + var(--mobile-safe-bottom)));
+  }
+
+  html.is-iphone-safari-26 .context-panel-title {
+    margin-bottom: clamp(220px, 62vw, 280px);
+  }
+
+  html.is-iphone-safari-26 .context-panel + .context-panel {
+    margin-top: 0;
     border-top: 0;
   }
 
-  html.is-ios-26 .contexts-mobile-outro {
-    min-height: clamp(560px, 150vw, 680px);
+  html.is-iphone-safari-26 .contexts-mobile-outro {
+    display: grid;
+    min-height: auto;
+    padding-top: 168px;
+    padding-bottom: max(176px, calc(148px + var(--mobile-safe-bottom)));
   }
 
-  html.is-ios-26 .process {
-    min-height: clamp(820px, 225vw, 980px);
+  html.is-iphone-safari-26 .process {
+    min-height: auto;
+    padding-top: 112px;
+    padding-bottom: max(112px, calc(88px + var(--mobile-safe-bottom)));
   }
 
-  html.is-ios-26 .contact {
-    min-height: clamp(760px, 210vw, 940px);
+  html.is-iphone-safari-26 .process-head {
+    margin-bottom: clamp(320px, 88vw, 400px);
+  }
+
+  html.is-iphone-safari-26 .contact {
+    min-height: auto;
+    padding-top: 128px;
+    padding-bottom: max(104px, calc(80px + var(--mobile-safe-bottom)));
+  }
+
+  html.is-iphone-safari-26 .contact-top {
+    margin-bottom: clamp(160px, 42vw, 220px);
   }
 }
