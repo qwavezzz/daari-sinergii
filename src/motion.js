@@ -5,7 +5,6 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import Lenis from 'lenis'
 import LenisSnap from 'lenis/snap'
-import { installMobileViewport } from './mobileViewport.js'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
@@ -14,7 +13,6 @@ const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
 export function usePageMotion(scopeRef) {
   useEffect(() => {
-    const destroyMobileViewport = installMobileViewport()
     const desktop = window.matchMedia(DESKTOP_QUERY)
     const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY)
     let lenis = null
@@ -71,9 +69,7 @@ export function usePageMotion(scopeRef) {
     const header = scopeRef.current?.querySelector('.site-header')
     const activeLightSections = new Set()
     const syncHeaderContrast = () => {
-      const isOnLight = activeLightSections.size > 0
-      header?.classList.toggle('is-on-light', isOnLight)
-      document.documentElement.classList.toggle('is-on-light-section', isOnLight)
+      header?.classList.toggle('is-on-light', activeLightSections.size > 0)
     }
     const lightHeaderTriggers = gsap.utils
       .toArray('.evidence', scopeRef.current)
@@ -126,8 +122,6 @@ export function usePageMotion(scopeRef) {
       window.clearTimeout(anchorSnapResumeTimer)
       lightHeaderTriggers.forEach((trigger) => trigger.kill())
       header?.classList.remove('is-on-light')
-      document.documentElement.classList.remove('is-on-light-section')
-      destroyMobileViewport()
       destroyLenis()
       gsap.ticker.remove(tick)
       desktop.removeEventListener('change', configureLenis)
