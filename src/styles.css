@@ -877,6 +877,10 @@ svg {
   display: none;
 }
 
+.contexts-mobile-outro {
+  display: none;
+}
+
 .contexts-head {
   position: relative;
   z-index: 1;
@@ -1455,6 +1459,8 @@ svg {
   :root {
     --mobile-scene-height: 100svh;
     --mobile-browser-chrome: env(safe-area-inset-bottom, 0px);
+    --mobile-section-space: clamp(88px, 14svh, 124px);
+    --mobile-scene-floor: 720px;
   }
 }
 
@@ -1644,6 +1650,10 @@ svg {
     display: none;
   }
 
+  .site-header {
+    position: absolute;
+  }
+
   .hero {
     min-height: var(--mobile-scene-height);
   }
@@ -1698,7 +1708,7 @@ svg {
     align-content: end;
     align-items: end;
     padding-top: 112px;
-    padding-bottom: 72px;
+    padding-bottom: max(112px, calc(88px + var(--mobile-browser-chrome)));
   }
 
   .product::before {
@@ -1716,8 +1726,9 @@ svg {
   }
 
   .opening-statement {
-    min-height: var(--mobile-scene-height);
-    padding-top: 60px;
+    min-height: max(var(--mobile-scene-floor), 92svh);
+    padding-top: 88px;
+    padding-bottom: var(--mobile-section-space);
   }
 
   .opening-title h2 {
@@ -1737,9 +1748,9 @@ svg {
   }
 
   .section-lead {
-    min-height: var(--mobile-scene-height);
-    padding-top: 100px;
-    padding-bottom: 100px;
+    min-height: 0;
+    padding-top: calc(var(--mobile-section-space) + 20px);
+    padding-bottom: var(--mobile-section-space);
   }
 
   .section-lead h2,
@@ -1754,14 +1765,14 @@ svg {
   }
 
   .product {
-    min-height: var(--mobile-scene-height);
+    min-height: max(var(--mobile-scene-floor), 108svh);
     gap: 60px 20px;
     padding-top: 100px;
-    padding-bottom: calc(110px + var(--mobile-browser-chrome));
+    padding-bottom: max(124px, calc(96px + var(--mobile-browser-chrome)));
   }
 
   .product-hydrolat {
-    min-height: var(--mobile-scene-height);
+    min-height: max(var(--mobile-scene-floor), 108svh);
   }
 
   .system-explainer {
@@ -1909,32 +1920,31 @@ svg {
   }
 
   .contexts-intro {
-    min-height: var(--mobile-scene-height);
+    min-height: max(var(--mobile-scene-floor), 92svh);
     padding-top: 120px;
     padding-bottom: 120px;
   }
 
   .contexts-track {
-    height: 720svh;
+    height: auto;
   }
 
   .contexts-stage {
-    position: sticky;
-    top: 0;
+    position: relative;
+    top: auto;
     isolation: isolate;
-    height: 100svh;
-    overflow: hidden;
-    overflow: clip;
+    height: auto;
+    overflow: visible;
   }
 
   .contexts-story-intro {
-    position: absolute;
+    position: relative;
     z-index: 3;
-    inset: 0;
     display: flex;
+    min-height: max(var(--mobile-scene-floor), 92svh);
     align-items: center;
     padding-top: 120px;
-    padding-bottom: 120px;
+    padding-bottom: 148px;
     overflow: hidden;
     background: #050e1a;
   }
@@ -1944,27 +1954,31 @@ svg {
   }
 
   .context-panels {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    inset: auto;
   }
 
   .context-panel {
-    position: absolute;
-    inset: 0;
-    height: 100%;
-    min-height: 0;
+    position: relative;
+    inset: auto;
+    height: auto;
+    min-height: max(var(--mobile-scene-floor), 112svh);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 40px;
     padding-top: 116px;
-    padding-bottom: calc(52px + var(--mobile-browser-chrome));
+    padding-bottom: max(140px, calc(112px + var(--mobile-browser-chrome)));
   }
 
   .context-panel::before {
     background:
-      linear-gradient(0deg, rgba(4, 16, 31, .96) 0%, rgba(4, 16, 31, .78) 30%, rgba(4, 16, 31, .22) 56%, rgba(4, 16, 31, .76) 100%),
+      linear-gradient(0deg, rgba(4, 16, 31, 1) 0%, rgba(4, 16, 31, .9) 16%, rgba(4, 16, 31, .68) 32%, rgba(4, 16, 31, .18) 58%, rgba(4, 16, 31, .78) 100%),
       linear-gradient(90deg, rgba(4, 16, 31, .44) 0%, transparent 52%, rgba(4, 16, 31, .32) 100%);
+  }
+
+  .context-panel + .context-panel {
+    border-top: 1px solid rgba(137, 191, 226, .16);
   }
 
   .context-panel-title {
@@ -1986,14 +2000,79 @@ svg {
     padding-bottom: 0;
   }
 
+  .context-panel-action {
+    display: none;
+  }
+
   .context-panel-caption {
     font-size: 15px;
   }
 
+  .contexts-mobile-outro {
+    position: relative;
+    display: grid;
+    min-height: max(560px, 72svh);
+    align-content: center;
+    overflow: hidden;
+    padding-top: var(--mobile-section-space);
+    padding-bottom: max(140px, calc(112px + var(--mobile-browser-chrome)));
+    background: #050e1a;
+  }
+
+  .contexts-mobile-outro::before,
+  .contexts-mobile-outro::after {
+    position: absolute;
+    right: 20px;
+    left: 20px;
+    height: 1px;
+    content: '';
+    transform: rotate(-3deg);
+    transform-origin: left;
+    background: linear-gradient(90deg, transparent, rgba(137, 191, 226, .74), transparent);
+  }
+
+  .contexts-mobile-outro::before {
+    top: 22%;
+  }
+
+  .contexts-mobile-outro::after {
+    bottom: 20%;
+    transform: rotate(2.5deg);
+    opacity: .48;
+  }
+
+  .contexts-mobile-action {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 20px;
+    align-items: end;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .contexts-mobile-action span {
+    max-width: 9ch;
+    font-size: clamp(44px, 12.5vw, 76px);
+    font-weight: 500;
+    line-height: .94;
+    letter-spacing: -.04em;
+  }
+
+  .contexts-mobile-action svg {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 6px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.25;
+  }
+
   .process {
-    min-height: var(--mobile-scene-height);
-    padding-top: 72px;
-    padding-bottom: calc(64px + var(--mobile-browser-chrome));
+    min-height: max(var(--mobile-scene-floor), 108svh);
+    padding-top: 96px;
+    padding-bottom: max(116px, calc(88px + var(--mobile-browser-chrome)));
   }
 
   .process::before {
@@ -2068,9 +2147,9 @@ svg {
   }
 
   .contact {
-    min-height: var(--mobile-scene-height);
-    padding-top: 90px;
-    padding-bottom: calc(32px + var(--mobile-browser-chrome));
+    min-height: max(var(--mobile-scene-floor), 108svh);
+    padding-top: 112px;
+    padding-bottom: max(96px, calc(68px + var(--mobile-browser-chrome)));
   }
 
   .contact h2 {
@@ -2115,7 +2194,7 @@ svg {
   .context-panel {
     gap: 24px;
     padding-top: 96px;
-    padding-bottom: calc(28px + var(--mobile-browser-chrome));
+    padding-bottom: max(112px, calc(84px + var(--mobile-browser-chrome)));
   }
 
   .context-panel-meta,
@@ -2248,7 +2327,7 @@ svg {
   .contexts-story-intro {
     position: relative;
     inset: auto;
-    min-height: 100svh;
+    min-height: max(var(--mobile-scene-floor), 92svh);
   }
 
   .contexts-stage-label {

@@ -74,67 +74,7 @@ export default function ContextsStory({ contexts }) {
         return () => timeline.kill()
       }
 
-      const createMobileStory = () => {
-        const intro = stageRef.current?.querySelector('.contexts-story-intro')
-        const label = stageRef.current?.querySelector('.contexts-stage-label')
-        const panels = gsap.utils.toArray('.context-panel')
-        if (!intro || !label || !panels.length) return undefined
-
-        const states = [intro, ...panels]
-        let activeState = -1
-
-        const setActiveState = (nextState) => {
-          if (nextState === activeState) return
-          activeState = nextState
-          states.forEach((state, index) => {
-            const isActive = index === activeState
-            state.inert = !isActive
-            state.setAttribute('aria-hidden', String(!isActive))
-          })
-        }
-
-        setActiveState(0)
-        gsap.set(intro, { autoAlpha: 1, yPercent: 0 })
-        gsap.set(label, { autoAlpha: 0 })
-        gsap.set(panels, { autoAlpha: 1, yPercent: 100 })
-
-        const timeline = gsap.timeline({
-          scrollTrigger: {
-            trigger: trackRef.current,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 0.18,
-            invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              setActiveState(Math.round(self.progress * (states.length - 1)))
-            },
-          },
-        })
-
-        timeline
-          .to({}, { duration: 0.65 })
-          .to(intro, { autoAlpha: 0, yPercent: -8, duration: 0.35, ease: 'power2.inOut' })
-          .to(panels[0], { yPercent: 0, duration: 0.48, ease: 'power2.inOut' }, '<')
-          .to(label, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, '<0.15')
-          .to({}, { duration: 0.72 })
-
-        panels.slice(1).forEach((panel) => {
-          timeline
-            .to(panel, { yPercent: 0, duration: 0.48, ease: 'power2.inOut' })
-            .to({}, { duration: 0.72 })
-        })
-
-        return () => {
-          timeline.kill()
-          states.forEach((state) => {
-            state.inert = false
-            state.removeAttribute('aria-hidden')
-          })
-        }
-      }
-
       media.add('(min-width: 992px) and (prefers-reduced-motion: no-preference)', createStackedStory)
-      media.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', createMobileStory)
       return () => media.revert()
     },
     { scope: sectionRef },
@@ -190,6 +130,14 @@ export default function ContextsStory({ contexts }) {
             {contexts.map((context, index) => (
               <ContextPanel key={context.id} context={context} index={index} total={contexts.length} />
             ))}
+          </div>
+          <div className="contexts-mobile-outro section-pad">
+            <a className="contexts-mobile-action" href="#contact">
+              <span>Получить консультацию</span>
+              <svg viewBox="0 0 18 18" aria-hidden="true">
+                <path d="M3 9h11M10 4l5 5-5 5" />
+              </svg>
+            </a>
           </div>
         </div>
       </div>
