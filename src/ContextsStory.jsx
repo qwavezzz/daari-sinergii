@@ -5,7 +5,7 @@ import { gsap, useGSAP } from './motion.js'
 
 function ContextPanel({ context, index, total }) {
   return (
-    <article className={`context-panel context-panel-${context.id}`}>
+    <article className={`context-panel context-panel-${context.id}`} data-mobile-snap>
       <div className="context-panel-meta">
         <span>{String(index + 1).padStart(2, '0')}</span>
         <span aria-hidden="true">/</span>
@@ -75,8 +75,6 @@ export default function ContextsStory({ contexts }) {
       }
 
       media.add('(min-width: 992px) and (prefers-reduced-motion: no-preference)', createStackedStory)
-      media.add('(max-width: 991px) and (prefers-reduced-motion: no-preference)', createStackedStory)
-
       return () => media.revert()
     },
     { scope: sectionRef },

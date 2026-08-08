@@ -1447,6 +1447,24 @@ svg {
   }
 }
 
+@media (max-width: 991px) and (prefers-reduced-motion: no-preference) {
+  html,
+  body {
+    scroll-snap-type: y mandatory;
+  }
+
+  [data-scroll-snap],
+  [data-mobile-snap],
+  .site-footer {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .site-footer {
+    scroll-snap-align: end;
+  }
+}
+
 @media (max-width: 991px) {
   .site-header {
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -1572,12 +1590,13 @@ svg {
 
   .contexts-intro {
     min-height: 100svh;
+    min-height: 100dvh;
     padding-top: 150px;
     padding-bottom: 150px;
   }
 
   .contexts-track {
-    height: 420svh;
+    height: auto;
   }
 
   .evidence-inner {
@@ -1585,12 +1604,12 @@ svg {
   }
 
   .context-snap-range {
-    display: block;
+    display: none;
   }
 
   .contexts-stage {
-    height: 100svh;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
   }
 
   .contexts-stage-label {
@@ -1598,14 +1617,15 @@ svg {
   }
 
   .context-panels {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    inset: auto;
   }
 
   .context-panel {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    inset: auto;
     min-height: 100svh;
+    min-height: 100dvh;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     padding-top: 110px;
   }
@@ -1629,6 +1649,10 @@ svg {
 }
 
 @media (max-width: 767px) {
+  .hero {
+    min-height: 100dvh;
+  }
+
   .hero-vignette {
     background:
       linear-gradient(90deg, rgba(4, 16, 31, .54), rgba(4, 16, 31, 0) 82%),
@@ -1698,6 +1722,7 @@ svg {
 
   .opening-statement {
     min-height: 100svh;
+    min-height: 100dvh;
     padding-top: 60px;
   }
 
@@ -1718,7 +1743,8 @@ svg {
   }
 
   .section-lead {
-    min-height: 88svh;
+    min-height: 100svh;
+    min-height: 100dvh;
     padding-top: 100px;
     padding-bottom: 100px;
   }
@@ -1735,7 +1761,8 @@ svg {
   }
 
   .product {
-    min-height: auto;
+    min-height: 100svh;
+    min-height: 100dvh;
     gap: 60px 20px;
     padding-top: 100px;
     padding-bottom: 110px;
@@ -1743,6 +1770,7 @@ svg {
 
   .product-hydrolat {
     min-height: 100svh;
+    min-height: 100dvh;
   }
 
   .system-explainer {
@@ -1891,12 +1919,14 @@ svg {
 
   .contexts-intro {
     min-height: 100svh;
+    min-height: 100dvh;
     padding-top: 120px;
     padding-bottom: 120px;
   }
 
   .context-panel {
     min-height: 100svh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -1936,6 +1966,7 @@ svg {
 
   .process {
     min-height: 100svh;
+    min-height: 100dvh;
     padding-top: 72px;
     padding-bottom: 64px;
   }
@@ -2012,7 +2043,8 @@ svg {
   }
 
   .contact {
-    min-height: 900px;
+    min-height: 100svh;
+    min-height: 100dvh;
     padding-top: 90px;
   }
 
@@ -2127,6 +2159,7 @@ svg {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+    scroll-snap-type: none;
   }
 
   *,

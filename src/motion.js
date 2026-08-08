@@ -18,11 +18,6 @@ export function usePageMotion(scopeRef) {
     let lenis = null
     let snap = null
     let anchorSnapResumeTimer = 0
-    let mobileSnapTimer = 0
-    let mobileSnapReleaseTimer = 0
-    let mobileSnapActive = false
-    let mobileScrollDirection = 1
-    let lastMobileScrollY = window.scrollY
 
     const tick = (time) => {
       lenis?.raf(time * 1000)
@@ -38,84 +33,9 @@ export function usePageMotion(scopeRef) {
       document.documentElement.classList.remove('has-smooth-scroll', 'has-section-snap')
     }
 
-    const getMobileSnapTargets = () =>
-      [...(scopeRef.current?.querySelectorAll('[data-scroll-snap]') ?? [])].filter(
-        (element) => element.offsetHeight > 1 && element.getClientRects().length > 0,
-      )
-
-    const releaseMobileSnap = () => {
-      mobileSnapActive = false
-      document.documentElement.classList.remove('is-mobile-snapping')
-    }
-
-    const snapMobileInDirection = () => {
-      if (
-        desktop.matches ||
-        reducedMotion.matches ||
-        mobileSnapActive ||
-        document.body.classList.contains('menu-lock')
-      ) {
-        return
-      }
-
-      const threshold = Math.min(560, window.innerHeight * 0.68)
-      const candidate = getMobileSnapTargets()
-        .map((element) => ({ element, top: element.getBoundingClientRect().top }))
-        .filter(({ top }) =>
-          mobileScrollDirection > 0
-            ? top > 2 && top <= threshold
-            : top < -2 && Math.abs(top) <= threshold,
-        )
-        .sort((a, b) => Math.abs(a.top) - Math.abs(b.top))[0]
-
-      if (!candidate) return
-
-      mobileSnapActive = true
-      document.documentElement.classList.add('is-mobile-snapping')
-      window.scrollTo({
-        top: Math.max(0, window.scrollY + candidate.top),
-        behavior: 'smooth',
-      })
-
-      window.clearTimeout(mobileSnapReleaseTimer)
-      mobileSnapReleaseTimer = window.setTimeout(releaseMobileSnap, 720)
-    }
-
-    const handleMobileScroll = () => {
-      const currentScrollY = window.scrollY
-      const delta = currentScrollY - lastMobileScrollY
-      if (Math.abs(delta) > 1) mobileScrollDirection = delta > 0 ? 1 : -1
-      lastMobileScrollY = currentScrollY
-
-      if (mobileSnapActive) return
-      window.clearTimeout(mobileSnapTimer)
-      mobileSnapTimer = window.setTimeout(snapMobileInDirection, 150)
-    }
-
-    const startMobileSnap = () => {
-      lastMobileScrollY = window.scrollY
-      window.addEventListener('scroll', handleMobileScroll, { passive: true })
-      document.documentElement.classList.add('has-mobile-section-snap')
-    }
-
-    const stopMobileSnap = () => {
-      window.clearTimeout(mobileSnapTimer)
-      window.clearTimeout(mobileSnapReleaseTimer)
-      window.removeEventListener('scroll', handleMobileScroll)
-      mobileSnapActive = false
-      document.documentElement.classList.remove('has-mobile-section-snap', 'is-mobile-snapping')
-    }
-
     const configureLenis = () => {
       destroyLenis()
-      stopMobileSnap()
-      if (reducedMotion.matches) {
-        requestAnimationFrame(() => ScrollTrigger.refresh())
-        return
-      }
-
-      if (!desktop.matches) {
-        startMobileSnap()
+      if (reducedMotion.matches || !desktop.matches) {
         requestAnimationFrame(() => ScrollTrigger.refresh())
         return
       }
@@ -202,7 +122,6 @@ export function usePageMotion(scopeRef) {
       window.clearTimeout(anchorSnapResumeTimer)
       lightHeaderTriggers.forEach((trigger) => trigger.kill())
       header?.classList.remove('is-on-light')
-      stopMobileSnap()
       destroyLenis()
       gsap.ticker.remove(tick)
       desktop.removeEventListener('change', configureLenis)
