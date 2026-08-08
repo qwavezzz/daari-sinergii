@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { assetPath } from './assetPath.js'
 import ConceptPhoto from './ConceptPhoto.jsx'
 import { gsap, useGSAP } from './motion.js'
 
@@ -15,10 +16,10 @@ function ContextPanel({ context, index, total }) {
       </div>
       <ConceptPhoto
         className="context-panel-visual context-panel-photo"
-        src={`/assets/photos/optimized/context-${context.id}-bg-1536.webp`}
-        srcSet={`/assets/photos/optimized/context-${context.id}-bg-768.webp 768w, /assets/photos/optimized/context-${context.id}-bg-1536.webp 1536w`}
+        src={assetPath(`assets/photos/optimized/context-${context.id}-bg-1536.webp`)}
+        srcSet={`${assetPath(`assets/photos/optimized/context-${context.id}-bg-768.webp`)} 768w, ${assetPath(`assets/photos/optimized/context-${context.id}-bg-1536.webp`)} 1536w`}
         sizes="100vw"
-        mobileSrcSet={`/assets/photos/optimized/context-${context.id}-bg-mobile-720.webp 720w`}
+        mobileSrcSet={`${assetPath(`assets/photos/optimized/context-${context.id}-bg-mobile-720.webp`)} 720w`}
         width="1536"
         height="864"
       />

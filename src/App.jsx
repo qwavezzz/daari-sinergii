@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { assetPath } from './assetPath.js'
 import ConceptPhoto from './ConceptPhoto.jsx'
 import ContextsStory from './ContextsStory.jsx'
 import { usePageMotion } from './motion.js'
@@ -54,21 +55,21 @@ const complianceDocuments = [
     category: 'Оборудование',
     registration: 'ЕАЭС N RU Д-RU.РА02.В.86418/26',
     validUntil: 'Действует до 25 марта 2031 года',
-    href: '/documents/ozone-generator-declaration.pdf',
+    href: assetPath('documents/ozone-generator-declaration.pdf'),
   },
   {
     title: 'Косметические озонированные масла',
     category: 'Серийный выпуск',
     registration: 'ЕАЭС N RU Д-RU.РА12.В.18093/25',
     validUntil: 'Действует до 29 декабря 2030 года',
-    href: '/documents/ozonated-oils-declaration.pdf',
+    href: assetPath('documents/ozonated-oils-declaration.pdf'),
   },
   {
     title: 'Гидролаты и травяные вытяжки',
     category: 'Серийный выпуск',
     registration: 'ЕАЭС N RU Д-RU.РА12.В.07428/25',
     validUntil: 'Действует до 29 декабря 2030 года',
-    href: '/documents/hydrolats-declaration.pdf',
+    href: assetPath('documents/hydrolats-declaration.pdf'),
   },
 ]
 
@@ -77,7 +78,7 @@ function Brand({ full = false }) {
     return (
       <img
         className="brand-full"
-        src="/assets/brand-lockup-navy.png"
+        src={assetPath('assets/brand-lockup-navy.png')}
         alt="Дары Синергии"
         width="1289"
         height="1043"
@@ -90,7 +91,7 @@ function Brand({ full = false }) {
   return (
     <a className="brand" href="#top" aria-label="Дары Синергии — на главную">
       <span className="brand-mark" aria-hidden="true">
-        <img src="/assets/brand-mark-navy.png" alt="" width="848" height="848" decoding="async" />
+        <img src={assetPath('assets/brand-mark-navy.png')} alt="" width="848" height="848" decoding="async" />
       </span>
       <span>Дары Синергии</span>
     </a>
@@ -167,13 +168,13 @@ function HeroVideo() {
       loop
       playsInline
       preload="metadata"
-      poster="/assets/hero-ozone-water-poster.webp"
+      poster={assetPath('assets/hero-ozone-water-poster.webp')}
       aria-hidden="true"
       tabIndex={-1}
       disablePictureInPicture
     >
-      <source src="/assets/hero-ozone-water.webm" type="video/webm" />
-      <source src="/assets/hero-ozone-water.mp4" type="video/mp4" />
+      <source src={assetPath('assets/hero-ozone-water.webm')} type="video/webm" />
+      <source src={assetPath('assets/hero-ozone-water.mp4')} type="video/mp4" />
     </video>
   )
 }
@@ -198,10 +199,10 @@ function WaterSystemGraphic() {
   return (
     <ConceptPhoto
       className="system-graphic product-photo"
-      src="/assets/photos/optimized/product-water-system-bg-1536.webp"
-      srcSet="/assets/photos/optimized/product-water-system-bg-768.webp 768w, /assets/photos/optimized/product-water-system-bg-1536.webp 1536w"
+      src={assetPath('assets/photos/optimized/product-water-system-bg-1536.webp')}
+      srcSet={`${assetPath('assets/photos/optimized/product-water-system-bg-768.webp')} 768w, ${assetPath('assets/photos/optimized/product-water-system-bg-1536.webp')} 1536w`}
       sizes="100vw"
-      mobileSrcSet="/assets/photos/optimized/product-water-system-bg-mobile-720.webp 720w"
+      mobileSrcSet={`${assetPath('assets/photos/optimized/product-water-system-bg-mobile-720.webp')} 720w`}
       width="1536"
       height="864"
     />
@@ -275,10 +276,10 @@ function OilGraphic() {
   return (
     <ConceptPhoto
       className="oil-graphic product-photo"
-      src="/assets/photos/optimized/product-ozonated-oils-bg-1536.webp"
-      srcSet="/assets/photos/optimized/product-ozonated-oils-bg-768.webp 768w, /assets/photos/optimized/product-ozonated-oils-bg-1536.webp 1536w"
+      src={assetPath('assets/photos/optimized/product-ozonated-oils-bg-1536.webp')}
+      srcSet={`${assetPath('assets/photos/optimized/product-ozonated-oils-bg-768.webp')} 768w, ${assetPath('assets/photos/optimized/product-ozonated-oils-bg-1536.webp')} 1536w`}
       sizes="100vw"
-      mobileSrcSet="/assets/photos/optimized/product-ozonated-oils-bg-mobile-720.webp 720w"
+      mobileSrcSet={`${assetPath('assets/photos/optimized/product-ozonated-oils-bg-mobile-720.webp')} 720w`}
       width="1536"
       height="864"
     />
@@ -289,10 +290,10 @@ function HydrolatGraphic() {
   return (
     <ConceptPhoto
       className="hydrolat-graphic product-photo"
-      src="/assets/photos/optimized/product-hydrolats-bg-1536.webp"
-      srcSet="/assets/photos/optimized/product-hydrolats-bg-768.webp 768w, /assets/photos/optimized/product-hydrolats-bg-1536.webp 1536w"
+      src={assetPath('assets/photos/optimized/product-hydrolats-bg-1536.webp')}
+      srcSet={`${assetPath('assets/photos/optimized/product-hydrolats-bg-768.webp')} 768w, ${assetPath('assets/photos/optimized/product-hydrolats-bg-1536.webp')} 1536w`}
       sizes="100vw"
-      mobileSrcSet="/assets/photos/optimized/product-hydrolats-bg-mobile-720.webp 720w"
+      mobileSrcSet={`${assetPath('assets/photos/optimized/product-hydrolats-bg-mobile-720.webp')} 720w`}
       width="1536"
       height="864"
     />
@@ -303,10 +304,10 @@ function ProcessDiagram() {
   return (
     <ConceptPhoto
       className="process-diagram process-photo"
-      src="/assets/photos/optimized/process-installation-bg-1536.webp"
-      srcSet="/assets/photos/optimized/process-installation-bg-768.webp 768w, /assets/photos/optimized/process-installation-bg-1536.webp 1536w"
+      src={assetPath('assets/photos/optimized/process-installation-bg-1536.webp')}
+      srcSet={`${assetPath('assets/photos/optimized/process-installation-bg-768.webp')} 768w, ${assetPath('assets/photos/optimized/process-installation-bg-1536.webp')} 1536w`}
       sizes="100vw"
-      mobileSrcSet="/assets/photos/optimized/process-installation-bg-mobile-720.webp 720w"
+      mobileSrcSet={`${assetPath('assets/photos/optimized/process-installation-bg-mobile-720.webp')} 720w`}
       width="1536"
       height="864"
     />

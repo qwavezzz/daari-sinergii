@@ -15,6 +15,14 @@ Production-сборка:
 npm run build
 ```
 
+## Публикация
+
+Сайт автоматически публикуется в GitHub Pages после каждого push в `main`:
+
+https://qwavezzz.github.io/daari-sinergii/
+
+В настройках репозитория источником Pages должен быть выбран `GitHub Actions`.
+
 ## Ключевые файлы
 
 - `src/App.jsx` — структура страницы, интерактивность и lifecycle hero-видео.
