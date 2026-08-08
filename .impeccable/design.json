@@ -90,7 +90,7 @@
       { "name": "content-reveal", "value": "900ms cubic-bezier(.17, 1, .35, .96)", "purpose": "Смысловая маска, короткий подъём и opacity без размытия букв." },
       { "name": "bubble-pulse", "value": "3.4s ease-in-out infinite alternate", "purpose": "Тихая пульсация части системных микропузырьков." },
       { "name": "steam-rise", "value": "8s linear infinite", "purpose": "Медленное движение штриха в схеме гидролатов." },
-      { "name": "safari-26-quiet", "value": "native document flow", "purpose": "На iPhone Safari 26 отключает Lenis, pin/scrub, split text и viewport-lock; ритм задают контентные паузы и safe-area." }
+      { "name": "safari-26-quiet", "value": "native flow + 88–120px alpha-mask overlap", "purpose": "На iPhone Safari 26 отключает Lenis, pin/scrub и split text; сцены высотой 100lvh + overlap проявляются друг поверх друга без scroll listeners." }
     ],
     "breakpoints": [
       { "name": "compact-grid", "value": "991px", "purpose": "12 колонок переходят в 6; desktop-nav заменяется menu control." },
@@ -129,7 +129,7 @@
       "refersTo": "context-scene",
       "description": "Полноширинная сцена применения: индекс, крупное название, визуальная пауза и предметное описание. На iPhone Safari 26 живёт в нативном документном потоке.",
       "html": "<article class=\"ds-context-scene\"><span class=\"ds-context-scene__index\">01 / 05</span><h3>Спортивные клубы</h3><p>Система подбирается под конкретный водный контур и существующую инфраструктуру.</p></article>",
-      "css": ".ds-context-scene { display: flex; min-height: 100svh; flex-direction: column; justify-content: space-between; padding: 96px 20px; color: var(--text, #f7fbfd); background: linear-gradient(180deg, rgba(4,16,31,.28), rgba(4,16,31,.92)), radial-gradient(circle at 68% 42%, rgba(137,191,226,.18), transparent 42%), var(--ink-deep, #04101f); } .ds-context-scene__index { align-self: flex-end; color: var(--text-muted, #699cc6); font: 400 11px/1 'IBM Plex Mono', Menlo, monospace; letter-spacing: .05em; } .ds-context-scene h3 { max-width: 9ch; margin: 0; font: 500 clamp(48px, 5.4vw, 84px)/.94 'Manrope Variable', Arial, sans-serif; letter-spacing: -.035em; } .ds-context-scene p { max-width: 42ch; margin: 0; color: var(--text-soft, #b1dff6); font: 400 16px/1.45 'Manrope Variable', Arial, sans-serif; } @media (max-width: 767px) { .ds-context-scene { min-height: auto; padding: 112px 20px; } .ds-context-scene h3 { margin-bottom: clamp(220px, 62vw, 280px); font-size: clamp(46px, 13vw, 68px); } }"
+      "css": ".ds-context-scene { display: flex; min-height: 100svh; flex-direction: column; justify-content: space-between; padding: 96px 20px; color: var(--text, #f7fbfd); background: linear-gradient(180deg, rgba(4,16,31,.28), rgba(4,16,31,.92)), radial-gradient(circle at 68% 42%, rgba(137,191,226,.18), transparent 42%), var(--ink-deep, #04101f); } .ds-context-scene__index { align-self: flex-end; color: var(--text-muted, #699cc6); font: 400 11px/1 'IBM Plex Mono', Menlo, monospace; letter-spacing: .05em; } .ds-context-scene h3 { max-width: 9ch; margin: 0; font: 500 clamp(48px, 5.4vw, 84px)/.94 'Manrope Variable', Arial, sans-serif; letter-spacing: -.035em; } .ds-context-scene p { max-width: 42ch; margin: 0; color: var(--text-soft, #b1dff6); font: 400 16px/1.45 'Manrope Variable', Arial, sans-serif; } @media (max-width: 767px) { .ds-context-scene { min-height: max(720px, 112svh); padding: 112px 20px; } .ds-context-scene h3 { margin-bottom: clamp(220px, 62vw, 280px); font-size: clamp(46px, 13vw, 68px); } html.is-iphone-safari-26 .ds-context-scene { min-height: calc(100lvh + clamp(88px, 22vw, 120px)); } }"
     },
     {
       "name": "Process Act",
@@ -166,7 +166,7 @@
       { "name": "The Flat-by-Default Rule", "body": "Глубина появляется из тона, света и движения воды; тени под текстом, секциями и псевдокарточками не добавляются.", "section": "elevation" },
       { "name": "The No-Container Rule", "body": "Не оборачивать смысловые блоки в скруглённые панели: границу задают фон, сетка, тонкая линия или пустое пространство.", "section": "shapes" },
       { "name": "The Text-Only Action Rule", "body": "Премиальные действия остаются текстом, линией и направлением; залитую кнопку не добавлять без нового подтверждённого функционального приоритета.", "section": "components" },
-      { "name": "The Safari 26 Quiet Rule", "body": "На iPhone Safari 26 использовать нативный document flow, content-based heights и safe-area; не включать pin, scrub, snap и character splitting.", "section": "layout" }
+      { "name": "The Safari 26 Quiet Rule", "body": "На iPhone Safari 26 использовать нативный document flow, 100lvh + mask-overlap и safe-area; не включать pin, scrub, snap и character splitting.", "section": "layout" }
     ],
     "dos": [
       "Do сохранять navy/cyan-мир, 20 px поля и 12/6-колоночную сетку на новых экранах.",
@@ -175,7 +175,7 @@
       "Do оставлять действия текстовыми и обеспечивать заметные hover/focus-состояния.",
       "Do сохранять крупную типографику и смысловую последовательность при мобильной перестройке.",
       "Do оставлять первый кадр, навигацию и весь смысл доступными при reduced motion или отсутствии hero-видео.",
-      "Do на iPhone Safari 26 использовать контентные высоты, safe-area и нативный scroll."
+      "Do на iPhone Safari 26 использовать 100lvh + overlap, safe-area и нативный scroll."
     ],
     "donts": [
       "Don't превращать поток озона в космос, портал, плазму, электричество, дым или абстрактную магию.",
@@ -184,7 +184,7 @@
       "Don't размещать основной текст поверх самого яркого участка воды или полагаться на motion как единственный носитель смысла.",
       "Don't заменять будущим Gemini-видео что-либо кроме hero-media слоя или менять утверждённую композицию источника и текста.",
       "Don't вводить новые цвета, радиусы или компонентные варианты, если они не повторяются в реальной реализации.",
-      "Don't включать на iPhone Safari 26 pin/scrub, character splitting, scroll snap или ширинно-зависимые высоты длинных сцен."
+      "Don't включать на iPhone Safari 26 pin/scrub, character splitting, scroll snap, dvh-пересчёты или JavaScript-анимацию границ длинных сцен."
     ]
   }
 }

@@ -2392,6 +2392,16 @@ svg {
 
 @media (max-width: 767px) {
   html.is-iphone-safari-26 {
+    --ios26-scene-overlap: clamp(88px, 22vw, 120px);
+    --ios26-scene-height: 100lvh;
+    --ios26-scene-mask: linear-gradient(
+      to bottom,
+      transparent 0,
+      rgba(0, 0, 0, .18) 24px,
+      rgba(0, 0, 0, .72) 72px,
+      #000 var(--ios26-scene-overlap),
+      #000 100%
+    );
     scroll-behavior: auto;
   }
 
@@ -2411,19 +2421,24 @@ svg {
   }
 
   html.is-iphone-safari-26 .opening-statement {
-    min-height: auto;
+    min-height: calc(var(--ios26-scene-height) + var(--ios26-scene-overlap));
     padding-top: 132px;
     padding-bottom: 168px;
   }
 
-  html.is-iphone-safari-26 .product {
-    min-height: auto;
-    padding-top: clamp(360px, 108vw, 460px);
-    padding-bottom: max(108px, calc(84px + var(--mobile-safe-bottom)));
+  html.is-iphone-safari-26 .section-lead,
+  html.is-iphone-safari-26 .system-explainer,
+  html.is-iphone-safari-26 .product,
+  html.is-iphone-safari-26 .contexts-story-intro,
+  html.is-iphone-safari-26 .context-panel,
+  html.is-iphone-safari-26 .process,
+  html.is-iphone-safari-26 .evidence {
+    min-height: calc(var(--ios26-scene-height) + var(--ios26-scene-overlap));
   }
 
-  html.is-iphone-safari-26 .product + .product {
-    margin-top: 0;
+  html.is-iphone-safari-26 .product {
+    padding-top: clamp(360px, 108vw, 460px);
+    padding-bottom: max(108px, calc(84px + var(--mobile-safe-bottom)));
   }
 
   html.is-iphone-safari-26 .product::before {
@@ -2438,7 +2453,6 @@ svg {
 
   html.is-iphone-safari-26 .contexts-story-intro {
     display: flex;
-    min-height: auto;
     padding-top: 144px;
     padding-bottom: 172px;
   }
@@ -2446,7 +2460,6 @@ svg {
   html.is-iphone-safari-26 .context-panel {
     display: flex;
     flex-direction: column;
-    min-height: auto;
     justify-content: flex-start;
     gap: 0;
     padding-top: 112px;
@@ -2458,7 +2471,6 @@ svg {
   }
 
   html.is-iphone-safari-26 .context-panel + .context-panel {
-    margin-top: 0;
     border-top: 0;
   }
 
@@ -2470,7 +2482,6 @@ svg {
   }
 
   html.is-iphone-safari-26 .process {
-    min-height: auto;
     padding-top: 112px;
     padding-bottom: max(112px, calc(88px + var(--mobile-safe-bottom)));
   }
@@ -2487,5 +2498,34 @@ svg {
 
   html.is-iphone-safari-26 .contact-top {
     margin-bottom: clamp(160px, 42vw, 220px);
+  }
+
+  html.is-iphone-safari-26 .hero {
+    min-height: calc(var(--ios26-scene-height) + var(--ios26-scene-overlap));
+  }
+
+  html.is-iphone-safari-26 .opening-statement,
+  html.is-iphone-safari-26 .products,
+  html.is-iphone-safari-26 .products > .system-explainer,
+  html.is-iphone-safari-26 .products > .product,
+  html.is-iphone-safari-26 .contexts,
+  html.is-iphone-safari-26 .context-panels,
+  html.is-iphone-safari-26 .context-panel + .context-panel,
+  html.is-iphone-safari-26 .contexts-mobile-outro,
+  html.is-iphone-safari-26 .process,
+  html.is-iphone-safari-26 .evidence,
+  html.is-iphone-safari-26 .contact {
+    position: relative;
+    margin-top: calc(-1 * var(--ios26-scene-overlap));
+    -webkit-mask-image: var(--ios26-scene-mask);
+    mask-image: var(--ios26-scene-mask);
+  }
+
+  html.is-iphone-safari-26 .products,
+  html.is-iphone-safari-26 .contexts,
+  html.is-iphone-safari-26 .process,
+  html.is-iphone-safari-26 .evidence,
+  html.is-iphone-safari-26 .contact {
+    z-index: 1;
   }
 }
