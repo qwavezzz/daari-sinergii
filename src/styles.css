@@ -873,6 +873,10 @@ svg {
   background: #050e1a;
 }
 
+.contexts-story-intro {
+  display: none;
+}
+
 .contexts-head {
   position: relative;
   z-index: 1;
@@ -1449,38 +1453,8 @@ svg {
 
 @media (max-width: 991px) {
   :root {
-    --mobile-scene-height: 100vh;
+    --mobile-scene-height: 100svh;
     --mobile-browser-chrome: env(safe-area-inset-bottom, 0px);
-  }
-}
-
-@supports (height: 100lvh) and (height: 100dvh) {
-  @media (max-width: 991px) {
-    :root {
-      --mobile-scene-height: 100lvh;
-      --mobile-browser-chrome: max(
-        env(safe-area-inset-bottom, 0px),
-        calc(100lvh - 100dvh)
-      );
-    }
-  }
-}
-
-@media (max-width: 991px) and (prefers-reduced-motion: no-preference) {
-  html,
-  body {
-    scroll-snap-type: y mandatory;
-  }
-
-  [data-scroll-snap],
-  [data-mobile-snap],
-  .site-footer {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
-
-  .site-footer {
-    scroll-snap-align: end;
   }
 }
 
@@ -1666,6 +1640,10 @@ svg {
 }
 
 @media (max-width: 767px) {
+  .contexts-intro-desktop {
+    display: none;
+  }
+
   .hero {
     min-height: var(--mobile-scene-height);
   }
@@ -1936,8 +1914,45 @@ svg {
     padding-bottom: 120px;
   }
 
+  .contexts-track {
+    height: 720svh;
+  }
+
+  .contexts-stage {
+    position: sticky;
+    top: 0;
+    isolation: isolate;
+    height: 100svh;
+    overflow: hidden;
+    overflow: clip;
+  }
+
+  .contexts-story-intro {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding-top: 120px;
+    padding-bottom: 120px;
+    overflow: hidden;
+    background: #050e1a;
+  }
+
+  .contexts-stage-label {
+    top: 76px;
+  }
+
+  .context-panels {
+    position: absolute;
+    inset: 0;
+  }
+
   .context-panel {
-    min-height: var(--mobile-scene-height);
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -2215,5 +2230,32 @@ svg {
     position: relative;
     inset: auto;
     min-height: var(--mobile-scene-height, 100svh);
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .contexts-track {
+    height: auto;
+  }
+
+  .contexts-stage {
+    position: relative;
+    top: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .contexts-story-intro {
+    position: relative;
+    inset: auto;
+    min-height: 100svh;
+  }
+
+  .contexts-stage-label {
+    display: none;
+  }
+
+  .context-panel {
+    height: auto;
   }
 }
