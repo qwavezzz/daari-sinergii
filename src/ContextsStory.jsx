@@ -25,8 +25,8 @@ function ContextPanel({ context, index, total }) {
       />
       <div className="context-panel-copy">
         <p className="context-panel-caption">{context.caption}</p>
-        <a className="context-panel-action" href="#contact">
-          <span>Получить консультацию</span>
+        <a className="context-panel-action" href={`#/materials/${context.id}`}>
+          <span>{context.id === 'agriculture' ? 'Материалы о лошадях и КРС' : context.id === 'sport' ? 'Материалы для спортивных клубов' : 'Материалы по направлению'}</span>
           <svg viewBox="0 0 18 18" aria-hidden="true">
             <path d="M3 9h11M10 4l5 5-5 5" />
           </svg>

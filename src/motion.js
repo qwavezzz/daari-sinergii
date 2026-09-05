@@ -105,7 +105,7 @@ export function usePageMotion(scopeRef) {
 
     const handleAnchor = (event) => {
       const link = event.target.closest('a[href^="#"]')
-      if (!link || !lenis) return
+      if (!link || !lenis || link.getAttribute('href').startsWith('#/')) return
       const target = document.querySelector(link.getAttribute('href'))
       if (!target) return
       event.preventDefault()

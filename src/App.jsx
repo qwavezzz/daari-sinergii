@@ -3,11 +3,13 @@ import { assetPath } from './assetPath.js'
 import ConceptPhoto from './ConceptPhoto.jsx'
 import ContextsStory from './ContextsStory.jsx'
 import { usePageMotion } from './motion.js'
+import { HandbookFeature } from './Materials.jsx'
 
 const navItems = [
   ['Решения', '#products'],
   ['Применение', '#contexts'],
   ['Производство', '#process'],
+  ['Материалы', '#/materials'],
   ['Контакты', '#contact'],
 ]
 
@@ -529,6 +531,7 @@ function App() {
                 параметры будущей системы обсуждаем под конкретную задачу.
               </p>
               <TextLink href="#contact" data-emergence-copy>Получить консультацию</TextLink>
+              <div className="material-entry"><TextLink href="#/materials/technology">О технологии и применении</TextLink></div>
             </div>
           </article>
 
@@ -540,6 +543,7 @@ function App() {
                 выпуск задекларирован по требованиям к парфюмерно-косметической продукции.
               </p>
               <TextLink href="#documents" data-emergence-copy>Смотреть декларацию</TextLink>
+              <div className="material-entry"><TextLink href="#/materials/oils">Материалы об озонированных маслах</TextLink></div>
             </div>
             <OilGraphic />
           </article>
@@ -553,6 +557,7 @@ function App() {
                 Серийный выпуск продукции подтверждён декларацией соответствия.
               </p>
               <TextLink href="#documents" data-emergence-copy>Смотреть декларацию</TextLink>
+              <div className="material-entry"><TextLink href="#/materials/hydrolats">Читать о гидролатах</TextLink></div>
             </div>
           </article>
         </section>
@@ -608,6 +613,8 @@ function App() {
                 </a>
               ))}
             </div>
+            <HandbookFeature />
+            <div className="material-entry"><TextLink href="#/materials">Все материалы по применению</TextLink></div>
           </div>
         </section>
 
