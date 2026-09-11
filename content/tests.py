@@ -72,7 +72,7 @@ class ImportedContentTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response["Content-Type"], "application/pdf")
             self.assertIn("no-store", response["Cache-Control"])
-            response.close()
+            self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF-"))
             with self.assertRaises(ValueError):
                 document.file.url
 
@@ -168,7 +168,7 @@ class ImportedContentTests(TestCase):
         )
         private_file = self.client.get(preview + "file/", HTTP_HOST=settings.SHOP_HOST)
         self.assertEqual(private_file.status_code, 200)
-        private_file.close()
+        self.assertTrue(b"".join(private_file.streaming_content).startswith(b"%PDF-"))
         self.assertEqual(self.client.get(doc.file_url).status_code, 404)
 
 
@@ -300,7 +300,7 @@ class ShopEditorialIntegrationTests(TestCase):
         ):
             response = self.client.get(path, HTTP_HOST=settings.MAIN_HOST)
             self.assertEqual(response.status_code, 200)
-            response.close()
+            self.assertTrue(b"".join(response.streaming_content))
             item.status = PublicationStatus.ARCHIVED
             item.save()
             self.assertEqual(self.client.get(path, HTTP_HOST=settings.MAIN_HOST).status_code, 404)

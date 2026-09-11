@@ -25,7 +25,7 @@ jobs:
           POSTGRES_PASSWORD: ci-only-password
         ports: ['5432:5432']
         options: >-
-          --health-cmd pg_isready --health-interval 10s
+          --health-cmd "pg_isready -U dari_ci -d dari_ci" --health-interval 10s
           --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql://dari_ci:ci-only-password@127.0.0.1:5432/dari_ci

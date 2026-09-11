@@ -32,7 +32,9 @@ class PublicationTests(TestCase):
             url = image.image.url
             response = self.client.get(url, HTTP_HOST="shop.localhost")
             self.assertEqual(response.status_code, 200)
-            response.close()
+            # Consume through Django's test-client wrapper so it closes the file
+            # without closing PostgreSQL's surrounding TestCase transaction.
+            self.assertEqual(b"".join(response.streaming_content), stream.getvalue())
             self.product.status = "draft"
             self.product.save(update_fields=["status"])
             self.assertEqual(self.client.get(url, HTTP_HOST="shop.localhost").status_code, 404)
