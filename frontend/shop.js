@@ -34,6 +34,28 @@ Alpine.data('shopShell', () => ({
   closeMenu() {
     this.menuOpen = false
   },
+  trapFocus(event) {
+    const dialog = document.getElementById('cart-dialog')
+    if (!dialog.open) return
+    const controls = [
+      ...dialog.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((node) => node.getClientRects().length > 0)
+    const first = controls[0]
+    const last = controls.at(-1)
+    if (!first) {
+      event.preventDefault()
+      return
+    }
+    if (!dialog.contains(document.activeElement) || (event.shiftKey && document.activeElement === first)) {
+      event.preventDefault()
+      ;(event.shiftKey ? last : first).focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  },
   openCart(event) {
     if (event && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)) return
     event?.preventDefault()

@@ -155,6 +155,8 @@ test('responsive gallery, product and cart stay within viewport at 320–1440px'
     expect(Math.round(box.width)).toBe(width < 640 ? width : 440)
     await page.keyboard.press('Tab')
     expect(await drawer.evaluate((node) => node.contains(document.activeElement))).toBe(true)
+    await page.keyboard.press('Shift+Tab')
+    expect(await drawer.evaluate((node) => node.contains(document.activeElement))).toBe(true)
     await page.screenshot({ path: `artifacts/shop/cart-${width}.png` })
     await page.keyboard.press('Escape')
     await expect(drawer).not.toBeVisible()

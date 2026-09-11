@@ -46,7 +46,7 @@
 <p class="shop-muted">© {% now "Y" %} Дары Синергии</p>
 </footer>
 </div>
-<dialog id="cart-dialog" class="cart-drawer" aria-labelledby="cart-dialog-title" @click="backdropClick($event)" @cancel.prevent="closeCart">
+<dialog id="cart-dialog" class="cart-drawer" aria-labelledby="cart-dialog-title" @click="backdropClick($event)" @cancel.prevent="closeCart" @keydown.tab="trapFocus($event)">
 <div class="cart-drawer-header"><button type="button" class="icon-button" @click="closeCart" aria-label="Закрыть корзину"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><h2 id="cart-dialog-title">Корзина</h2><span data-cart-count>{{ cart_count|default:0 }}</span></div>
 <div id="cart-panel" class="cart-panel" hx-history="false"><p class="cart-loading" role="status">Загружаем корзину…</p></div>
 <div id="cart-error" class="shop-error cart-error" role="alert" hidden><span></span><button type="button" class="shop-link" data-retry-request>Повторить</button></div>
