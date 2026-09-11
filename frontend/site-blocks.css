@@ -1,0 +1,6 @@
+/* Only the new CMS sections use Tailwind. No preflight or global reset. */
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw);
+@source '../templates/site/partials/reviews.html';
+@source '../templates/site/partials/review_item.html';
+@source '../templates/site/partials/videos.html';

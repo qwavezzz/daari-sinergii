@@ -1,0 +1,23 @@
+{% load static %}
+<header class="site-header" data-menu-background="true">
+<a class="brand" href="#top" aria-label="Дары Синергии — на главную">
+<span class="brand-mark" aria-hidden="true">
+{% include 'shared/brand_mark.html' with brand_sizes='(max-width: 991px) 36px, 42px' %}
+</span>
+<span>{{ site_settings.company_name }}</span>
+</a>
+<nav class="desktop-nav" aria-label="Основная навигация">
+<a href="#products">{{ site_content.nav_products }}</a>
+<a href="#contexts">{{ site_content.nav_contexts }}</a>
+<a href="#process">{{ site_content.nav_process }}</a>
+<a href="/materials/">{{ site_content.nav_materials }}</a>
+<a href="#contact">{{ site_content.nav_contact }}</a>
+<a href="{{ shop_url }}" hx-boost="false">{{ site_content.nav_shop }}</a>
+</nav>
+<button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-menu" x-cloak="" x-ref="menuToggle" @click="toggle()" :aria-expanded="menuOpen" :aria-label="menuOpen ? 'Закрыть меню' : 'Открыть меню'">
+<svg class="menu-mark" viewBox="0 0 26 20" aria-hidden="true">
+<path d="M1 2.5h24M1 10h24M1 17.5h24">
+</path>
+</svg>
+</button>
+</header>

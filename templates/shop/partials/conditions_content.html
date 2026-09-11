@@ -1,0 +1,2 @@
+{% include 'shared/meta.html' %}<article class="shop-container legal-page"><a class="shop-link" href="{% url 'catalog:index' %}">Каталог</a><h1>Доставка и оплата</h1>{% if store_settings.delivery_text %}<div class="legal-copy">{{ store_settings.delivery_text|linebreaks }}</div>{% else %}<p>Условия покупки и получения готовятся к публикации. Онлайн-заказы пока не принимаются.</p><a class="shop-link" href="{{ site_url }}/#contact" hx-boost="false">Связаться с компанией</a>{% endif %}</article>
+

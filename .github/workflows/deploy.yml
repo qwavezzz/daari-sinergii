@@ -1,49 +1,112 @@
-name: Deploy to GitHub Pages
+name: Validate and publish Pages preview
 
 on:
   push:
-    branches: ['main']
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: dari_ci
+          POSTGRES_USER: dari_ci
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://dari_ci:ci-only-password@127.0.0.1:5432/dari_ci
+      DJANGO_SETTINGS_MODULE: config.settings_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.txt
+          npm ci
+      - name: Lint and build
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+          node scripts/check-js.mjs
+          npm test
+          npm run build
+      - name: PostgreSQL and HTTP behavior
+        run: |
+          .venv/bin/python manage.py test --noinput
+          .venv/bin/python manage.py makemigrations --check --dry-run
+          .venv/bin/python manage.py migrate --noinput
+          .venv/bin/python manage.py import_legacy_content
+          .venv/bin/python manage.py collectstatic --noinput
+      - name: Production configuration
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-only-random-secret-with-at-least-fifty-characters-no-production-value
+          HSTS_SECONDS: '31536000'
+        run: .venv/bin/python manage.py check --deploy --fail-level ERROR
+      - name: Browser behavior (isolated disposable database)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:browser
+
+  pages:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          node-version: lts/*
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Configure Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Build isolated static demonstration
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+          npm ci
+          npm run build:pages
+      - name: Verify Pages routes and browser-only cart
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/verify-pages.mjs
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: ./dist
-
-      - name: Deploy
+          path: var/pages-site
+      - name: Publish demonstration
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+# Only the read-only preview runs on Pages. Django is deployed separately to Linux.

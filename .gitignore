@@ -1,5 +1,18 @@
 node_modules/
 dist/
+.venv/
+var/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.tmp/
+artifacts/
+test-results/
+playwright-report/
+static/dist/
+static/assets/
+static/*.png
 
 # Local Impeccable working files
 .impeccable/qa/
@@ -13,4 +26,3 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
-

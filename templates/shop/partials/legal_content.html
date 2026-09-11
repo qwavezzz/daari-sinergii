@@ -1,0 +1,2 @@
+{% include 'shared/meta.html' %}<article class="shop-container legal-page"><h1>{{ legal_title }}</h1>{% if legal_text %}<div class="legal-copy">{{ legal_text|linebreaks }}</div>{% else %}<p>Документ готовится к публикации. Онлайн-заказы пока не принимаются.</p>{% endif %}<a class="shop-link" href="{% url 'catalog:index' %}">В каталог</a></article>
+

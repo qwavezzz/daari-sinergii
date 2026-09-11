@@ -1,0 +1,29 @@
+{% load shop_tags %}
+<div class="cart-content" data-cart-version="{{ cart_version }}" data-cart-count="{{ cart_count }}" hx-history="false">
+{% if cart_items %}
+<div class="cart-summary">
+<div class="cart-total"><span>Сумма товаров</span><strong>{{ cart_total|money }} ₽</strong></div>
+<p class="cart-quantity">{{ cart_count }} {{ cart_count|ru_products }}</p>
+{% if cart_valid != False %}<a class="shop-button checkout-link" href="{% url 'orders:checkout' %}" hx-target="#main-content" hx-swap="innerHTML show:top">Оформить заказ</a>{% else %}<p class="shop-warning">Проверьте доступность и количество товаров перед оформлением.</p>{% endif %}
+<p class="cart-delivery-note">Способ и стоимость получения — при оформлении.</p>
+{% if cart_message %}<p class="cart-notice" role="status">{{ cart_message }}</p>{% endif %}
+{% if cart_error %}<p class="shop-error" role="alert">{{ cart_error }}</p>{% endif %}
+</div>
+<div class="cart-items">
+{% for row in cart_items %}
+<article class="cart-item" data-item-id="{{ row.item.pk }}">
+<a class="cart-item-name" href="{{ row.product.get_absolute_url }}" hx-target="#main-content" hx-swap="innerHTML show:top">{{ row.product.name }}</a>
+<div class="cart-item-image">{% if row.product.image_url %}<img src="{{ row.product.image_url }}" alt="" width="96" height="96">{% else %}<span>Фото скоро</span>{% endif %}</div>
+<div class="cart-item-info"><p class="cart-sku">{{ row.product.sku }}</p><p>{{ row.unit_price|money }} ₽ / шт.</p>{% if not row.available %}<p class="shop-warning">Недоступно выбранное количество. Измените его или удалите товар.</p>{% endif %}</div>
+<form class="cart-remove" action="{% url 'cart:remove' row.item.pk %}" method="post" hx-post="{% url 'cart:remove' row.item.pk %}" hx-target="closest .cart-content" hx-swap="outerHTML" hx-push-url="false" hx-sync="#cart-dialog:queue all">
+{% csrf_token %}<button type="submit" class="icon-button" aria-label="Удалить {{ row.product.name }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+</form>
+<form class="cart-item-quantity" action="{% url 'cart:update' row.item.pk %}" method="post" hx-post="{% url 'cart:update' row.item.pk %}" hx-target="closest .cart-content" hx-swap="outerHTML" hx-push-url="false" hx-sync="#cart-dialog:queue all">
+{% csrf_token %}<label for="quantity-{{ row.item.pk }}">Количество</label><input type="number" id="quantity-{{ row.item.pk }}" name="quantity" value="{{ row.quantity }}" min="1" max="999" inputmode="numeric" required><button type="submit" class="shop-link">Обновить</button>
+</form><strong class="cart-line-total">{{ row.subtotal|money }} ₽</strong>
+</article>
+{% endfor %}
+</div>
+{% else %}<div class="cart-empty"><h3>В корзине пока нет товаров</h3><p>Выберите продукцию в каталоге.</p><a href="{% url 'catalog:index' %}" class="shop-button secondary" hx-target="#main-content" hx-swap="innerHTML show:top">Перейти в каталог</a>{% if cart_error %}<p class="shop-error" role="alert">{{ cart_error }}</p>{% endif %}</div>{% endif %}
+</div>
+

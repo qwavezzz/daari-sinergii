@@ -1,0 +1,56 @@
+/* The baseline stylesheet is unchanged. These rules make its server HTML usable
+   before JS, after a failed effect, and when no industry scene is published. */
+.hero {
+  background-image: var(--hero-poster);
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+@media (min-width: 992px) {
+  .contexts:not(.is-stacked) .contexts-track {
+    height: auto;
+  }
+
+  .contexts:not(.is-stacked) .contexts-stage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .contexts:not(.is-stacked) .context-panels {
+    position: relative;
+    inset: auto;
+  }
+
+  .contexts:not(.is-stacked) .context-panel {
+    position: relative;
+    inset: auto;
+    min-height: 100svh;
+  }
+
+  .contexts:not(.is-stacked) .context-snap-range,
+  .contexts:not(.is-stacked) .contexts-stage-label {
+    display: none;
+  }
+}
+
+.mobile-menu-fallback {
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .mobile-menu-fallback {
+    position: relative;
+    z-index: 29;
+    display: block;
+    padding: 100px var(--page) 20px;
+    background: var(--ink-deep);
+  }
+
+  .fallback-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+  }
+}

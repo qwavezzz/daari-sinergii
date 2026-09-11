@@ -1,0 +1,38 @@
+{% load static %}
+<div class="mobile-menu " id="mobile-menu" role="dialog" aria-modal="true" aria-label="Навигация" aria-hidden="true" x-ref="menu" :class="{ 'is-open': menuOpen }" :aria-hidden="!menuOpen" inert="" :inert="!menuOpen">
+<div class="mobile-menu-top">
+<a class="brand" href="#top" aria-label="Дары Синергии — на главную" @click="close(false)">
+<span class="brand-mark" aria-hidden="true">
+{% include 'shared/brand_mark.html' with brand_sizes='42px' %}
+</span>
+<span>{{ site_settings.company_name }}</span>
+</a>
+<button class="mobile-menu-close" type="button" aria-label="Закрыть меню" @click="close()">
+<svg class="close-mark" viewBox="0 0 24 24" aria-hidden="true">
+<path d="M3 3l18 18M21 3L3 21">
+</path>
+</svg>
+</button>
+</div>
+<nav aria-label="Мобильная навигация">
+<a href="#products" @click="close(false)">{{ site_content.nav_products }}</a>
+<a href="#contexts" @click="close(false)">{{ site_content.nav_contexts }}</a>
+<a href="#process" @click="close(false)">{{ site_content.nav_process }}</a>
+<a href="/materials/" @click="close(false)">{{ site_content.nav_materials }}</a>
+<a href="#contact" @click="close(false)">{{ site_content.nav_contact }}</a>
+<a href="{{ shop_url }}" hx-boost="false">{{ site_content.nav_shop }}</a>
+</nav>
+<p>{{ site_content.menu_description }}</p>
+</div>
+<noscript>
+<div class="mobile-menu-fallback">
+<nav class="fallback-nav" aria-label="Основная навигация">
+<a href="#products">{{ site_content.nav_products }}</a>
+<a href="#contexts">{{ site_content.nav_contexts }}</a>
+<a href="#process">{{ site_content.nav_process }}</a>
+<a href="/materials/">{{ site_content.nav_materials }}</a>
+<a href="#contact">{{ site_content.nav_contact }}</a>
+<a href="{{ shop_url }}" hx-boost="false">{{ site_content.nav_shop }}</a>
+</nav>
+</div>
+</noscript>

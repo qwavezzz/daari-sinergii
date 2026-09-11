@@ -1,0 +1,328 @@
+{% load static %}
+{% include "shared/meta.html" %}
+<div class="site-shell" id="top" data-page="landing" x-data="landingMenu">
+<a class="skip-link" href="#site-content" data-menu-background="true">Перейти к содержанию</a>{% include "site/partials/landing_header.html" %}{% include "site/partials/landing_menu.html" %}<main id="site-content" data-menu-background="true" tabindex="-1">
+<section class="hero" aria-labelledby="hero-title" data-scroll-snap="true" style="--hero-poster: url('{% static 'assets/hero-ozone-water-poster.webp' %}')">
+<video class="hero-video" muted="" loop="" playsinline="" preload="none" poster="{% static 'assets/hero-ozone-water-poster.webp' %}" aria-hidden="true" tabindex="-1" disablepictureinpicture="">
+<source data-src="{% static 'assets/hero-ozone-water.webm' %}" type="video/webm">
+<source data-src="{% static 'assets/hero-ozone-water.mp4' %}" type="video/mp4">
+</video>
+<div class="hero-vignette" aria-hidden="true">
+</div>
+<div class="hero-content">
+<h1 id="hero-title">{{ site_content.hero_title_first }}<br>{{ site_content.hero_title_second }}</h1>
+<p>{{ site_content.hero_description }}</p>
+<a class="text-link " href="#products">
+<span>{{ site_content.hero_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+</div>
+<div class="hero-products" aria-label="Направления компании">
+<span>{{ site_content.hero_water_label }}</span>
+<span>{{ site_content.oil_title }}</span>
+<span>{{ site_content.hydrolat_title }}</span>
+</div>
+<p class="hero-caption" aria-hidden="true">{{ site_content.hero_formula }}</p>
+</section>
+<section class="opening-statement section-pad" data-scroll-snap="true" data-text-emergence="true">
+<div class="opening-title">
+<h2 data-emergence-title="true">{{ site_content.opening_title }}</h2>
+<p data-emergence-copy="true">{{ site_content.opening_description }}</p>
+</div>
+<div class="opening-flow" aria-hidden="true">
+<span>
+</span>
+<span>
+</span>
+<span>
+</span>
+</div>
+</section>
+<section class="products" id="products" aria-labelledby="products-title">
+<header class="section-lead section-pad transition-scene" data-scroll-snap="true" data-text-emergence="true">
+<h2 id="products-title" data-transition-content="true" data-emergence-title="true">{{ site_content.products_title }}</h2>
+<p data-emergence-copy="true">{{ site_content.products_description }}</p>
+<div class="transition-current" aria-hidden="true">
+<span>
+</span>
+<span>
+</span>
+<span>
+</span>
+</div>
+</header>
+<section class="system-explainer section-pad" aria-labelledby="system-explainer-title" data-scroll-snap="true" data-text-emergence="true">
+<div class="system-explainer-head">
+<h3 id="system-explainer-title" data-emergence-title="true">{{ site_content.system_explainer_title }}</h3>
+<p data-emergence-copy="true">{{ site_content.system_explainer_description }}</p>
+</div>
+<ol class="system-flow" data-reveal="rise">{% for stage in system_stages %}<li>
+<span>{{ forloop.counter|stringformat:"02d" }}</span>
+<h4>{{ stage.title }}</h4>
+<p>{{ stage.copy }}</p>
+</li>{% endfor %}</ol>
+<div class="system-inputs" data-reveal="rise">
+<p>{{ site_content.system_inputs_title }}</p>
+<ul>
+<li>{{ site_content.system_input_purpose }}</li>
+<li>{{ site_content.system_input_water }}</li>
+<li>{{ site_content.system_input_flow }}</li>
+<li>{{ site_content.system_input_filtration }}</li>
+<li>{{ site_content.system_input_requirements }}</li>
+</ul>
+<small>{{ site_content.system_inputs_note }}</small>
+</div>
+</section>
+<article class="product product-system section-pad" data-scroll-snap="true" data-text-emergence="true">
+<figure class="concept-photo system-graphic product-photo" aria-hidden="true">
+<picture>
+<source media="(max-width: 767px)" srcset="{% static 'assets/photos/optimized/product-water-system-bg-mobile-720.webp' %} 720w" sizes="100vw">
+<img src="{% static 'assets/photos/optimized/product-water-system-bg-1536.webp' %}" srcset="{% static 'assets/photos/optimized/product-water-system-bg-768.webp' %} 768w, {% static 'assets/photos/optimized/product-water-system-bg-1536.webp' %} 1536w" sizes="100vw" width="1536" height="864" alt="" loading="lazy" decoding="async">
+</picture>
+</figure>
+<div class="product-copy">
+<h3 data-emergence-title="true">{{ site_content.water_title }}</h3>
+<p data-emergence-copy="true">{{ site_content.water_description }}</p>
+<a class="text-link " href="#contact" data-emergence-copy="true">
+<span>{{ site_content.consultation_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+<div class="material-entry">
+<a class="text-link " href="/materials/technology/">
+<span>{{ site_content.water_materials_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+<a class="text-link" href="{{ shop_url }}" hx-boost="false">
+<span>{{ site_content.shop_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+</div>
+</div>
+</article>
+<article class="product product-oil section-pad" data-scroll-snap="true" data-text-emergence="true">
+<div class="product-copy">
+<h3 data-emergence-title="true">{{ site_content.oil_title }}</h3>
+<p data-emergence-copy="true">{{ site_content.oil_description }}</p>
+<a class="text-link " href="#documents" data-emergence-copy="true">
+<span>{{ site_content.declaration_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+<div class="material-entry">
+<a class="text-link " href="/materials/oils/">
+<span>{{ site_content.oil_materials_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+<a class="text-link" href="{{ shop_url }}" hx-boost="false">
+<span>{{ site_content.shop_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+</div>
+</div>
+<figure class="concept-photo oil-graphic product-photo" aria-hidden="true">
+<picture>
+<source media="(max-width: 767px)" srcset="{% static 'assets/photos/optimized/product-ozonated-oils-bg-mobile-720.webp' %} 720w" sizes="100vw">
+<img src="{% static 'assets/photos/optimized/product-ozonated-oils-bg-1536.webp' %}" srcset="{% static 'assets/photos/optimized/product-ozonated-oils-bg-768.webp' %} 768w, {% static 'assets/photos/optimized/product-ozonated-oils-bg-1536.webp' %} 1536w" sizes="100vw" width="1536" height="864" alt="" loading="lazy" decoding="async">
+</picture>
+</figure>
+</article>
+<article class="product product-hydrolat section-pad" data-scroll-snap="true" data-text-emergence="true">
+<figure class="concept-photo hydrolat-graphic product-photo" aria-hidden="true">
+<picture>
+<source media="(max-width: 767px)" srcset="{% static 'assets/photos/optimized/product-hydrolats-bg-mobile-720.webp' %} 720w" sizes="100vw">
+<img src="{% static 'assets/photos/optimized/product-hydrolats-bg-1536.webp' %}" srcset="{% static 'assets/photos/optimized/product-hydrolats-bg-768.webp' %} 768w, {% static 'assets/photos/optimized/product-hydrolats-bg-1536.webp' %} 1536w" sizes="100vw" width="1536" height="864" alt="" loading="lazy" decoding="async">
+</picture>
+</figure>
+<div class="product-copy">
+<h3 data-emergence-title="true">{{ site_content.hydrolat_title }}</h3>
+<p data-emergence-copy="true">{{ site_content.hydrolat_description }}</p>
+<a class="text-link " href="#documents" data-emergence-copy="true">
+<span>{{ site_content.declaration_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+<div class="material-entry">
+<a class="text-link " href="/materials/hydrolats/">
+<span>{{ site_content.hydrolat_materials_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+<a class="text-link" href="{{ shop_url }}" hx-boost="false">
+<span>{{ site_content.shop_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+</div>
+</div>
+</article>
+</section>{% include "site/partials/reviews.html" %}<section class="contexts" id="contexts" aria-label="Области применения">
+<div class="contexts-intro contexts-intro-desktop section-pad transition-scene" data-scroll-snap="true" data-text-emergence="true">
+<div class="contexts-head">
+<h2 id="contexts-title" data-transition-content="true" data-emergence-title="true">{{ site_content.contexts_title }}</h2>
+<p data-emergence-copy="true">{{ site_content.contexts_description }}</p>
+</div>
+<div class="transition-current" aria-hidden="true">
+<span>
+</span>
+<span>
+</span>
+<span>
+</span>
+</div>
+</div>
+<div class="contexts-track">
+<div class="context-snap-range" aria-hidden="true">{% for context in contexts %}<span class="context-snap-marker" data-scroll-snap>
+</span>{% endfor %}</div>
+<div class="contexts-stage">
+<div class="contexts-story-intro section-pad">
+<div class="contexts-head">
+<h2 id="contexts-title-mobile">{{ site_content.contexts_title }}</h2>
+<p>{{ site_content.contexts_description }}</p>
+</div>
+<div class="transition-current" aria-hidden="true">
+<span>
+</span>
+<span>
+</span>
+<span>
+</span>
+</div>
+</div>
+<p class="contexts-stage-label">{{ site_content.nav_contexts }}</p>
+<div class="context-panels">{% for context in contexts %}<article class="context-panel context-panel-{{ context.slug }}">
+<div class="context-panel-meta">
+<span>{{ forloop.counter|stringformat:"02d" }}</span>
+<span aria-hidden="true">/</span>
+<span>{{ contexts|length|stringformat:"02d" }}</span>
+</div>
+<div class="context-panel-title">
+<h3>{{ context.title }}</h3>
+</div>
+<figure class="concept-photo context-panel-visual context-panel-photo" aria-hidden="true">
+<picture>
+<source media="(max-width: 767px)" srcset="{{ context.mobile_image_url }} 720w" sizes="100vw">
+<img src="{{ context.image_url }}" srcset="{{ context.image_srcset }}" sizes="100vw" width="1536" height="864" alt="" loading="lazy" decoding="async">
+</picture>
+</figure>
+<div class="context-panel-copy">
+<p class="context-panel-caption">{{ context.caption }}</p>
+{% if context.collection.is_published %}<a class="context-panel-action" href="{{ context.collection.get_absolute_url }}">
+<span>{{ context.action_label }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>{% endif %}
+</div>
+</article>{% endfor %}</div>
+<div class="contexts-mobile-outro section-pad">
+<a class="contexts-mobile-action" href="#contact">
+<span>{{ site_content.consultation_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+</div>
+</div>
+</div>
+</section>
+<section class="process section-pad" id="process" aria-labelledby="process-title" data-scroll-snap="true" data-text-emergence="true">
+<header class="process-head">
+<h2 id="process-title" data-emergence-title="true">{{ site_content.process_title }}</h2>
+</header>
+<figure class="concept-photo process-diagram process-photo" aria-hidden="true">
+<picture>
+<source media="(max-width: 767px)" srcset="{% static 'assets/photos/optimized/process-installation-bg-mobile-720.webp' %} 720w" sizes="100vw">
+<img src="{% static 'assets/photos/optimized/process-installation-bg-1536.webp' %}" srcset="{% static 'assets/photos/optimized/process-installation-bg-768.webp' %} 768w, {% static 'assets/photos/optimized/process-installation-bg-1536.webp' %} 1536w" sizes="100vw" width="1536" height="864" alt="" loading="lazy" decoding="async">
+</picture>
+</figure>
+<div class="process-acts">
+<article>
+<h3>{{ site_content.production_title }}</h3>
+<p>{{ site_content.production_description }}</p>
+</article>
+<article>
+<h3>{{ site_content.installation_title }}</h3>
+<p>{{ site_content.installation_description }}</p>
+</article>
+</div>
+</section>
+<section class="evidence section-pad" id="documents" aria-labelledby="evidence-title" data-scroll-snap="true" data-text-emergence="true">
+<div class="evidence-inner">
+<h2 id="evidence-title" data-emergence-title="true">{{ site_content.evidence_title }}</h2>
+<p data-emergence-copy="true">{{ site_content.evidence_description }}</p>
+<div class="evidence-documents" aria-label="Документы о соответствии">{% for document in compliance_documents %}<a class="evidence-document" href="{{ document.file_url }}" hx-boost="false">
+<div class="evidence-document-title">
+<span>{{ document.category }}</span>
+<h3>{{ document.title }}</h3>
+</div>
+<div class="evidence-document-meta">
+<p>{{ document.registration }}</p>
+<span>{{ document.valid_until_label }}</span>
+</div>
+<span class="evidence-document-action">
+<span>{{ site_content.documents_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</span>
+</a>{% empty %}<p>{{ site_content.documents_empty }}</p>{% endfor %}</div>{% include "site/partials/handbook.html" %}<div class="material-entry">
+<a class="text-link " href="/materials/">
+<span>{{ site_content.all_materials_action }}</span>
+<svg viewBox="0 0 18 18" aria-hidden="true">
+<path d="M3 9h11M10 4l5 5-5 5">
+</path>
+</svg>
+</a>
+</div>
+</div>
+</section>{% include "site/partials/videos.html" %}<section class="contact section-pad" id="contact" aria-labelledby="contact-title" data-scroll-snap="true" data-text-emergence="true">
+<div class="contact-top">
+<h2 id="contact-title" data-emergence-title="true">{{ site_content.contact_title_first }}<br>{{ site_content.contact_title_second }}</h2>
+<img class="brand-full" src="{% static 'assets/brand-lockup-navy.lossless.webp' %}" alt="Дары Синергии" width="1289" height="1043" loading="lazy" decoding="async">
+</div>
+<div class="contact-actions">
+<div class="contact-company">
+<span>{{ site_content.contact_company_label }}</span>
+<p>«{{ site_settings.company_name }}»</p>
+<small>{{ site_settings.legal_name }}</small>
+</div>
+<a href="mailto:{{ site_settings.email }}">
+<span>{{ site_content.contact_email_label }}</span>
+<p>{{ site_settings.email }}</p>
+</a>
+<a href="tel:{{ site_settings.phone }}">
+<span>{{ site_content.contact_phone_label }}</span>
+<p>{{ site_settings.phone_label }}</p>
+</a>
+</div>
+</section>
+</main>{% include "site/partials/landing_footer.html" %}</div>

@@ -1,0 +1,17 @@
+{% if homepage_videos %}
+<section class="site-videos section-pad tw:grid tw:gap-16 tw:bg-[var(--ink)] tw:py-24 tw:lg:py-32" id="videos" aria-labelledby="videos-title" data-scroll-snap>
+  <h2 id="videos-title" class="tw:text-[clamp(48px,6vw,88px)] tw:leading-[.94] tw:tracking-[-.04em]">Видео</h2>
+  <div class="tw:grid tw:gap-x-5 tw:gap-y-16 tw:lg:grid-cols-2">
+    {% for video in homepage_videos %}
+    <article class="tw:flex tw:flex-col tw:items-start tw:gap-5 tw:border-0 tw:border-t tw:border-solid tw:border-[var(--line)] tw:pt-8">
+      <h3 class="tw:max-w-[24ch] tw:text-[clamp(28px,3vw,44px)] tw:leading-[1.08] tw:tracking-[-.03em]">{{ video.title }}</h3>
+      <p class="tw:max-w-[58ch] tw:text-base tw:leading-relaxed tw:text-[var(--text-soft)]">{{ video.description }}</p>
+      <a class="tw:flex tw:w-full tw:flex-col tw:items-start tw:gap-5 tw:text-sm tw:leading-normal" href="{{ video.external_url }}" hx-boost="false" target="_blank" rel="noopener noreferrer">
+        {% if video.cover %}<img class="tw:aspect-video tw:w-full tw:object-cover" src="{{ video.cover_url }}" alt="" width="768" height="432" loading="lazy" />{% endif %}
+        Смотреть видео (новая вкладка)
+      </a>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

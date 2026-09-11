@@ -1,0 +1,15 @@
+[Unit]
+Description=Send queued order email notifications
+After=postgresql.service network-online.target
+[Service]
+Type=oneshot
+User=dari
+Group=www-data
+WorkingDirectory=/srv/dari/current
+EnvironmentFile=/etc/dari/dari.env
+ExecStart=/usr/bin/flock -n /srv/dari/shared/notifications.lock /srv/dari/current/.venv/bin/python manage.py send_notifications
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/dari/shared

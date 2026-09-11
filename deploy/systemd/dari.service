@@ -1,0 +1,25 @@
+[Unit]
+Description=Dari Sinergii Django / Gunicorn
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=dari
+Group=www-data
+WorkingDirectory=/srv/dari/current
+EnvironmentFile=/etc/dari/dari.env
+RuntimeDirectory=dari
+RuntimeDirectoryMode=0750
+UMask=0007
+ExecStart=/srv/dari/current/.venv/bin/gunicorn config.wsgi:application --workers 3 --bind unix:/run/dari/gunicorn.sock --timeout 60 --access-logfile - --error-logfile -
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/dari/shared /run/dari
+
+[Install]
+WantedBy=multi-user.target

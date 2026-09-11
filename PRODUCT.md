@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-React + Vite. Выбор подтверждён пользователем для одностраничного лендинга с выразительным hero и сложным motion.
+Django 5.2 LTS + PostgreSQL + Django Templates + HTMX + Alpine.js (CSP). Vite собирает обычные JavaScript/CSS-модули; GSAP/Lenis и исходный CSS сохраняют визуальную систему лендинга. Для магазина и новых CMS-блоков используется Tailwind. Развёртывание: Linux, venv, Gunicorn, Nginx, systemd. Перенос утверждён пользователем 11 сентября 2026 по TECHNICAL_SPECIFICATION.md; React служит только исходным визуальным эталоном и отсутствует в целевой сборке.
 
 ## Users
 

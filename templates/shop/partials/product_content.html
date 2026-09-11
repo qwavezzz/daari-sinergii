@@ -1,0 +1,34 @@
+{% load shop_tags %}
+{% include 'shared/meta.html' %}
+<div class="shop-container product-page" data-page="product">
+<nav class="breadcrumbs" aria-label="Хлебные крошки"><a href="{% url 'catalog:index' %}">Каталог</a><span aria-hidden="true">/</span><span>{{ product.name }}</span></nav>
+<div class="product-layout">
+<section class="product-gallery" x-data="productGallery" aria-label="Фотографии товара">
+<div class="gallery-track" @touchstart="touchStart($event)" @touchend="touchEnd($event)">
+{% for picture in product.images.all %}<figure data-gallery-slide><img src="{{ picture.image.url }}" alt="{{ picture.alt_text|default:product.name }}" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} width="720" height="720"></figure>{% empty %}<div class="gallery-placeholder">Фото скоро</div>{% endfor %}
+</div>
+{% if product.images.all|length > 1 %}<div class="gallery-controls" data-gallery-controls hidden><button type="button" class="icon-button" @click="previous" aria-label="Предыдущее изображение">←</button><span x-text="counter"></span><button type="button" class="icon-button" @click="next" aria-label="Следующее изображение">→</button></div><div class="gallery-thumbnails" data-gallery-controls hidden>{% for picture in product.images.all %}<button type="button" data-slide="{{ forloop.counter0 }}" @click="select($event)" aria-label="Изображение {{ forloop.counter }}"><img src="{{ picture.image.url }}" alt="" width="64" height="64" loading="lazy"></button>{% endfor %}</div>{% endif %}
+</section>
+<section class="product-purchase">
+<div class="product-title"><p class="product-category">{% for category in product.categories.all %}{{ category.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</p><h1>{{ product.name }}</h1><p class="product-sku">Артикул {{ product.sku }}</p></div>
+<div class="product-price-block">{% if product.price != None %}<p class="product-price">{{ product.price|money }} ₽</p>{% endif %}<p class="availability {% if product.available_quantity and product.purchasable %}available{% endif %}">{% if product.available_quantity and product.purchasable %}В наличии{% else %}Нет в наличии{% endif %}</p></div>
+<div class="product-description"><p>{{ product.short_description|truncatechars:300|linebreaksbr }}</p>{% if product.description or product.short_description|length > 300 %}<a href="#description" class="shop-link">Подробнее о товаре</a>{% endif %}</div>
+<div class="product-buy">
+{% if product.available_quantity and product.purchasable and product.price %}
+<form method="post" action="{% url 'cart:add' product.pk %}" hx-post="{% url 'cart:add' product.pk %}" hx-target="#cart-panel" hx-swap="innerHTML" hx-push-url="false" hx-sync="#cart-dialog:queue all" data-cart-add>
+{% csrf_token %}<label for="product-quantity">Количество</label><div class="purchase-controls"><input id="product-quantity" type="number" name="quantity" min="1" max="{{ product.available_quantity }}" value="1" inputmode="numeric" required><button class="shop-button" type="submit"><span class="button-idle">Добавить в корзину</span><span class="button-busy">Добавляем…</span></button></div>
+</form>{% else %}<p class="shop-muted">Товар пока недоступен для покупки.</p>{% endif %}
+<div class="shop-error" data-form-error role="alert" hidden></div>
+<a class="shop-link product-conditions" href="{% url 'catalog:conditions' %}">Доставка и оплата {% include 'shared/arrow.html' %}</a>
+{% if product_documents %}<a class="shop-link" href="#product-documents">Документы товара</a>{% endif %}
+</div>
+</section>
+</div>
+<div class="product-details">
+{% if product.description or product.short_description|length > 300 %}<details id="description" open><summary>Описание<span aria-hidden="true"></span></summary><div class="detail-copy">{% if product.short_description|length > 300 %}{{ product.short_description|linebreaks }}{% endif %}{{ product.description|linebreaks }}</div></details>{% endif %}
+{% if product.specifications.all %}<details open><summary>Характеристики и комплектация<span aria-hidden="true"></span></summary><dl class="product-specifications">{% for specification in product.specifications.all %}<div><dt>{{ specification.name }}</dt><dd>{{ specification.value }}</dd></div>{% endfor %}</dl></details>{% endif %}
+{% if product_documents %}<details id="product-documents" open><summary>Документы<span aria-hidden="true"></span></summary>{% for material in product_documents %}<article class="shop-document"><div><h3>{{ material.title }}</h3><p>{{ material.material_type }} · PDF{% if material.pages %} · {{ material.pages }} стр.{% endif %}</p></div><div><a href="{{ site_url }}{{ material.file_url }}" target="_blank" rel="noopener" hx-boost="false">Открыть PDF</a><a href="{{ site_url }}{{ material.file_url }}?download=1" hx-boost="false">Скачать</a></div></article>{% endfor %}</details>{% endif %}
+{% if product_videos %}<details open><summary>Видео<span aria-hidden="true"></span></summary><div class="product-videos">{% for video in product_videos %}<article><h3>{{ video.title }}</h3><p>{{ video.description }}</p><a href="{{ video.external_url }}" hx-boost="false" target="_blank" rel="noopener noreferrer">{% if video.cover %}<img src="{{ site_url }}{{ video.cover_url }}" alt="" width="768" height="432" loading="lazy">{% endif %}Смотреть видео (новая вкладка)</a></article>{% endfor %}</div></details>{% endif %}
+<details open><summary>Отзывы<span aria-hidden="true"></span></summary>{% for review in product_reviews %}{% include 'site/partials/review_item.html' with review_surface='shop' %}{% empty %}<p class="shop-muted detail-copy">Об этом товаре пока нет опубликованных отзывов.</p>{% endfor %}</details>
+</div>
+</div>

@@ -1,0 +1,10 @@
+<article class="review-item{% if review_surface == 'landing' %} tw:grid tw:gap-5 tw:border-0 tw:border-t tw:border-solid tw:border-[var(--line)] tw:pt-8{% endif %}"{% if review.text|length > 500 %} x-data="reviewDisclosure"{% endif %}>
+  {% if review.photo %}<img class="{% if review_surface == 'landing' %}tw:h-16 tw:w-16 tw:object-contain{% endif %}" src="{% if preview_file_url %}{{ preview_file_url }}{% else %}{% if review_surface == 'shop' %}{{ site_url }}{% endif %}{{ review.photo_url }}{% endif %}" alt="" width="64" height="64" loading="lazy" />{% endif %}
+  <blockquote class="{% if review_surface == 'landing' %}tw:m-0 tw:max-w-[52ch] tw:text-[clamp(20px,2.1vw,30px)] tw:leading-[1.4] tw:tracking-[-.02em]{% endif %}">
+    {% if review.text|length > 500 %}<p x-cloak x-show="!expanded">{{ review.text|truncatechars:500|linebreaksbr }}</p>{% endif %}
+    <p id="review-text-{{ review.pk }}-{{ review_surface|default:'detail' }}"{% if review.text|length > 500 %} x-show="expanded"{% endif %}>{{ review.text|linebreaksbr }}</p>
+  </blockquote>
+  {% if review.text|length > 500 %}<button class="{% if review_surface == 'landing' %}tw:min-h-11 tw:justify-self-start tw:text-sm tw:text-[var(--text-soft)] tw:underline tw:underline-offset-4{% else %}shop-link{% endif %}" type="button" x-cloak @click="toggle" :aria-expanded="expanded" aria-expanded="false" aria-controls="review-text-{{ review.pk }}-{{ review_surface|default:'detail' }}" x-text="buttonLabel">Читать полностью</button>{% endif %}
+  <p class="{% if review_surface == 'landing' %}tw:text-base tw:leading-relaxed tw:text-[var(--text-soft)]{% endif %}"><strong>{{ review.author }}</strong>{% if review.organization %} · {{ review.organization }}{% endif %}</p>
+  <time class="{% if review_surface == 'landing' %}tw:text-[13px] tw:leading-normal tw:text-[var(--text-soft)]{% endif %}" datetime="{{ review.date|date:'Y-m-d' }}">{{ review.date|date:'j E Y' }}</time>
+</article>

@@ -1,0 +1,56 @@
+{% load static vite %}<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ page_title|default:"Магазин — Дары Синергии" }}</title>
+<meta name="description" content="{{ page_description|default:'Продукция Дары Синергии: озонированные масла, гидролаты и системы озонирования воды.' }}">
+<link rel="canonical" href="{{ canonical_url }}">
+<meta property="og:title" content="{{ page_title|default:'Магазин — Дары Синергии' }}"><meta property="og:description" content="{{ page_description }}"><meta property="og:url" content="{{ canonical_url }}"><meta property="og:type" content="website">
+<meta property="og:image" content="{{ site_url }}{% static 'assets/og-dary-sinergii.webp' %}">
+{% if noindex or demo_catalog %}<meta name="robots" content="noindex, nofollow">{% endif %}
+<link rel="icon" href="{% static 'favicon-32.png' %}">
+{% vite_asset 'frontend/shop.js' %}
+<noscript><style>
+@media (max-width: 767px) {
+  .shop-menu-toggle { display: none !important; }
+  .shop-header-inner { flex-wrap: wrap; padding-block: 12px; }
+  .shop-navigation { position: static; display: flex; flex-direction: row; order: 3; flex: 0 0 100%; padding: 0; border: 0; justify-content: space-between; }
+  .shop-navigation a { padding: 8px 0; }
+}
+</style></noscript>
+</head>
+<body class="shop" x-data="shopShell" hx-boost="true" hx-target="#main-content" hx-swap="innerHTML show:top" hx-history="false">
+<!-- THESIS: Светлая предметная витрина по DESIGN-SHOP.md. OWN-WORLD: Manrope, белый, navy, плоские товарные поля, тонкие линии. STORY: Выбор категории, изучение товара, проверка состава и заказ. FIRST VIEWPORT: Шапка, крупный Каталог, категории, начало двухколоночной выдачи. FORM: Утверждённая композиция DESIGN-SHOP.md, без нового визуального направления. -->
+<a href="#main-content" class="skip-link">Перейти к содержанию</a>
+<div id="shop-page">
+<header class="shop-header">
+<div class="shop-container shop-header-inner">
+<button type="button" class="icon-button shop-menu-toggle" aria-label="Открыть меню" aria-controls="shop-navigation" :aria-expanded="menuOpen" @click="toggleMenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h18"/></svg></button>
+<a href="{% url 'catalog:index' %}" class="shop-brand">{% include 'shared/brand_mark.html' with brand_sizes='(max-width: 767px) 32px, 40px' %}Дары Синергии</a>
+<nav id="shop-navigation" class="shop-navigation" :class="menuClass" aria-label="Навигация магазина">
+<a href="{% url 'catalog:index' %}" @click="closeMenu">Каталог</a>
+<a href="{{ site_url }}/materials/" hx-boost="false">Документы</a>
+<a href="{{ site_url }}/#process" hx-boost="false">О компании</a>
+</nav>
+<a href="{% url 'cart:detail' %}" id="cart-toggle" class="shop-cart-toggle" hx-boost="false" @click.prevent.stop="openCart($event)" aria-haspopup="dialog" aria-controls="cart-dialog">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span class="shop-cart-label">Корзина</span><span data-cart-count>{{ cart_count|default:0 }}</span>
+</a>
+</div>
+</header>
+{% if demo_catalog %}<aside class="shop-demo-notice"><div class="shop-container"><strong>Демонстрационный каталог.</strong> Товары, цены и наличие вымышлены. Можно собрать корзину; оформление заказа выключено.</div></aside>{% endif %}
+<main id="main-content" tabindex="-1" hx-history-elt>{% block content %}{% endblock %}</main>
+<footer class="shop-footer shop-container">
+<a class="shop-brand" href="{{ site_url }}/" hx-boost="false">{% include 'shared/brand_mark.html' with brand_sizes='(max-width: 767px) 32px, 40px' %}Дары Синергии</a>
+<div class="shop-footer-links"><a href="{{ site_url }}/#contact" hx-boost="false">Связаться с нами</a><a href="{{ site_url }}/materials/" hx-boost="false">Документы</a><a href="{% url 'catalog:conditions' %}">Доставка и оплата</a><a href="{% url 'catalog:legal' slug='terms' %}">Условия покупки</a><a href="{% url 'catalog:legal' slug='privacy' %}">Политика обработки данных</a></div>
+{% if site_settings.legal_name %}<p>{{ site_settings.legal_name }}</p>{% endif %}
+<p class="shop-muted">© {% now "Y" %} Дары Синергии</p>
+</footer>
+</div>
+<dialog id="cart-dialog" class="cart-drawer" aria-labelledby="cart-dialog-title" @click="backdropClick($event)" @cancel.prevent="closeCart">
+<div class="cart-drawer-header"><button type="button" class="icon-button" @click="closeCart" aria-label="Закрыть корзину"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><h2 id="cart-dialog-title">Корзина</h2><span data-cart-count>{{ cart_count|default:0 }}</span></div>
+<div id="cart-panel" class="cart-panel" hx-history="false"><p class="cart-loading" role="status">Загружаем корзину…</p></div>
+<div id="cart-error" class="shop-error cart-error" role="alert" hidden><span></span><button type="button" class="shop-link" data-retry-request>Повторить</button></div>
+</dialog>
+<div id="request-feedback" class="request-feedback" role="alert" hidden><span></span><button type="button" class="shop-link" data-retry-request>Повторить</button><button type="button" class="icon-button" data-dismiss-feedback aria-label="Закрыть сообщение">×</button></div>
+<div id="shop-status" class="sr-only" role="status" aria-live="polite"></div>
+</body></html>

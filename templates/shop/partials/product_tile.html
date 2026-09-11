@@ -1,0 +1,7 @@
+{% load shop_tags %}
+<article class="product-tile">
+<h2><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h2><p class="product-category">{% for category in product.categories.all %}{{ category.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+<a href="{{ product.get_absolute_url }}" class="product-tile-image" tabindex="-1" aria-hidden="true">{% if product.image_url %}<img src="{{ product.image_url }}" alt="" loading="lazy" width="640" height="480">{% else %}<span>Фото скоро</span>{% endif %}</a>
+<div class="product-tile-bottom"><div>{% if product.price != None %}<p class="product-price">{{ product.price|money }} ₽</p>{% endif %}<p class="availability {% if product.available_quantity and product.purchasable %}available{% endif %}">{% if product.available_quantity and product.purchasable %}В наличии{% else %}Нет в наличии{% endif %}</p></div><a href="{{ product.get_absolute_url }}" class="shop-link">Подробнее {% include 'shared/arrow.html' %}</a></div>
+</article>
+

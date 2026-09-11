@@ -1,0 +1,13 @@
+{% load static vite %}<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ page_title|default:"Дары Синергии — системы озонирования воды, масла и гидролаты" }}</title>
+<meta name="description" content="{{ page_description|default:'Системы озонирования воды, озонированные масла и гидролаты. Собственное производство и монтаж на объектах.' }}">
+<link rel="canonical" href="{{ canonical_url }}"><meta property="og:title" content="{{ page_title }}"><meta property="og:description" content="{{ page_description }}"><meta property="og:url" content="{{ canonical_url }}"><meta property="og:type" content="website"><meta property="og:image" content="{{ site_url }}{% static 'assets/og-dary-sinergii.webp' %}">
+{% if noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+<link rel="icon" href="{% static 'favicon-32.png' %}"><link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+{% vite_asset 'frontend/site.js' %}
+</head><body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML show:top" hx-history="false">
+<div id="main-content" hx-history-elt>{% block content %}{% endblock %}</div>
+<div id="request-feedback" class="site-request-feedback" role="alert" hidden><span></span><button type="button" data-retry-request>Повторить</button><button type="button" data-dismiss-feedback aria-label="Закрыть сообщение">×</button></div>
+</body></html>

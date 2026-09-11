@@ -1,0 +1,36 @@
+.site-request-feedback {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--ink-deep);
+  border: 1px solid var(--text-muted);
+  z-index: 1000;
+  font-size: 14px;
+}
+.site-request-feedback[hidden] {
+  display: none;
+}
+.site-request-feedback span {
+  flex: 1;
+}
+.site-request-feedback button {
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 8px;
+  text-decoration: underline;
+}
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator {
+  display: inline;
+}
+#main-content:focus {
+  outline: 0;
+}

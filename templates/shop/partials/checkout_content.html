@@ -1,0 +1,19 @@
+{% load shop_tags %}{% include 'shared/meta.html' %}
+<section class="shop-container checkout-page" data-page="checkout" hx-history="false">
+<nav class="breadcrumbs" aria-label="Хлебные крошки"><a href="{% url 'cart:detail' %}">Корзина</a><span aria-hidden="true">/</span><span>Оформление</span></nav>
+<h1>Оформление заказа</h1>
+{% if not checkout_enabled %}<div class="checkout-unavailable"><h2>Онлайн-заказы пока не принимаются</h2><p>Мы готовим условия покупки и получения. Товары в вашей корзине сохранятся.</p><a href="{{ site_url }}/#contact" hx-boost="false" class="shop-button secondary">Связаться с нами</a></div>{% else %}
+{% if form.errors or error %}<div class="shop-error error-summary" role="alert" tabindex="-1" data-error-summary><h2>Проверьте данные заказа</h2>{% if error %}<p>{{ error }}</p>{% endif %}{{ form.non_field_errors }}{% for field in form %}{% if field.errors %}<p><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ field.errors|striptags }}</a></p>{% endif %}{% endfor %}</div>{% endif %}
+<div class="checkout-layout">
+<form action="{% url 'orders:checkout' %}" method="post" hx-post="{% url 'orders:checkout' %}" hx-target="#main-content" hx-swap="innerHTML show:top" hx-sync="this:drop" class="checkout-form" x-data="checkoutForm">
+{% csrf_token %}{{ form.checkout_key }}{{ form.quote_token }}{{ form.confirmed_delivery }}
+<fieldset><legend>Контакты получателя</legend>{% include 'shop/partials/form_field.html' with field=form.name %}{% include 'shop/partials/form_field.html' with field=form.phone %}{% include 'shop/partials/form_field.html' with field=form.email %}</fieldset>
+<fieldset><legend>Способ получения</legend>{% include 'shop/partials/form_field.html' with field=form.delivery_method %}{% if delivery_requires_address %}{% include 'shop/partials/form_field.html' with field=form.address %}{% endif %}</fieldset>
+{% include 'shop/partials/form_field.html' with field=form.comment %}
+<div class="checkout-consent">{{ form.accept_terms }}<label for="{{ form.accept_terms.id_for_label }}">Принимаю <a href="{% url 'catalog:legal' slug='terms' %}" target="_blank" hx-boost="false">условия покупки</a> и подтверждаю ознакомление с <a href="{% url 'catalog:legal' slug='privacy' %}" target="_blank" hx-boost="false">политикой обработки данных</a>.</label>{{ form.accept_terms.errors }}</div>
+<div class="checkout-final"><dl><div><dt>Товары</dt><dd>{{ cart_total|money }} ₽</dd></div>{% if delivery_price != None %}<div><dt>Получение</dt><dd>{{ delivery_price|money }} ₽</dd></div><div class="checkout-total"><dt>Итого</dt><dd>{{ order_total|money }} ₽</dd></div>{% else %}<div><dt>Получение</dt><dd>Выберите способ</dd></div>{% endif %}</dl>
+<button type="submit" class="shop-button"><span class="button-idle">{% if order_total != None %}Перейти к оплате — {{ order_total|money }} ₽{% else %}Проверить заказ{% endif %}</span><span class="button-busy">Подготавливаем оплату…</span></button><p class="shop-muted">Оплата на защищённой странице ЮKassa.</p></div>
+</form>
+<aside class="checkout-summary"><h2>Ваш заказ</h2><details open><summary>Состав заказа · {{ cart_count }} {{ cart_count|ru_products }}</summary>{% for row in cart_items %}<div class="order-summary-line"><div>{{ row.product.name }}<span>{{ row.quantity }} шт. × {{ row.unit_price|money }} ₽</span></div><strong>{{ row.subtotal|money }} ₽</strong></div>{% endfor %}</details><a href="{% url 'cart:detail' %}" class="shop-link">Изменить корзину</a></aside>
+</div>{% endif %}
+</section>

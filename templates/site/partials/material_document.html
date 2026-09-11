@@ -1,0 +1,4 @@
+<article class="material-document">
+  <div><p class="material-meta">{{ document.material_type }} · PDF{% if document.pages %} · {{ document.pages }} стр.{% endif %}</p><h3>{{ document.title }}</h3><p>{{ document.description }}</p></div>
+  <div class="material-document-actions"><a href="{% if preview_file_url %}{{ preview_file_url }}{% else %}{{ document.file_url }}{% endif %}" hx-boost="false" target="_blank" rel="noopener noreferrer" aria-label="Открыть «{{ document.title }}» (PDF, новая вкладка)">Открыть PDF {% include "site/partials/material_arrow.html" %}</a><a href="{% if preview_file_url %}{{ preview_file_url }}{% else %}{{ document.file_url }}{% endif %}?download=1" hx-boost="false" download>Скачать</a></div>
+</article>

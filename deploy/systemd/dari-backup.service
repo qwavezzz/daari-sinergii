@@ -1,0 +1,13 @@
+[Unit]
+Description=Back up Dari database and media
+[Service]
+Type=oneshot
+User=dari
+Group=www-data
+EnvironmentFile=/etc/dari/dari.env
+ExecStart=/usr/bin/bash /srv/dari/current/deploy/backup.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/dari/shared /srv/dari/backups

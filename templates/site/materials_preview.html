@@ -1,0 +1,7 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Закрытый предпросмотр. Статус: {{ object.get_status_display }}.</p>
+{% if opts.model_name == 'document' %}{% include "site/partials/material_document.html" with document=object %}
+{% elif opts.model_name == 'review' %}{% include "site/partials/review_item.html" with review=object %}
+{% else %}<h1>{{ object.title }}</h1><p>{{ object.intro }}</p><p>{{ object.caption }}</p><p>{{ object.description }}</p>{% for section in object.sections.all %}<h2>{{ section.title }}</h2><p>{{ section.body }}</p>{% endfor %}{% endif %}
+{% endblock %}

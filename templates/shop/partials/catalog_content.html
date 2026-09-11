@@ -1,0 +1,17 @@
+{% load static shop_tags %}{% include 'shared/meta.html' %}
+<div class="shop-container" data-page="catalog">
+<section class="catalog-intro"><h1>Каталог</h1><p>Продукция «Дары Синергии»</p></section>
+<nav class="category-filter" aria-label="Категории товаров" hx-sync="this:replace">
+<a href="{% url 'catalog:index' %}" {% if not selected_category %}aria-current="page"{% endif %}>Все товары</a>
+{% for category in categories %}<a href="?category={{ category.slug }}" {% if selected_category == category or selected_category == category.slug %}aria-current="page"{% endif %}>{{ category.name }}</a>{% endfor %}
+</nav>
+<div class="catalog-count" aria-live="polite"><span>{{ products.paginator.count }} {{ products.paginator.count|ru_products }}</span><span class="htmx-indicator">Загружаем…</span></div>
+<div class="product-grid">
+{% for product in products %}{% include 'shop/partials/product_tile.html' %}{% empty %}
+<section class="catalog-empty"><h2>{% if selected_category %}В этой категории пока нет товаров{% else %}Каталог готовится к открытию{% endif %}</h2><p>{% if selected_category %}Посмотрите продукцию в других категориях.{% else %}Продукция появится здесь, когда начнутся онлайн-продажи. Пока вы можете познакомиться с направлениями и документами компании.{% endif %}</p>
+{% if selected_category %}<a href="{% url 'catalog:index' %}" class="shop-button secondary">Все товары</a>{% else %}<a href="{{ site_url }}/materials/" hx-boost="false" class="shop-button secondary">Изучить материалы {% include 'shared/arrow.html' %}</a>{% endif %}
+</section>{% endfor %}
+</div>
+{% if products.has_other_pages %}<nav class="pagination" aria-label="Страницы каталога">{% if products.has_previous %}<a href="?{% if selected_category %}category={{ selected_category.slug|default:selected_category }}&amp;{% endif %}page={{ products.previous_page_number }}">Предыдущая</a>{% endif %}<span>Страница {{ products.number }} из {{ products.paginator.num_pages }}</span>{% if products.has_next %}<a href="?{% if selected_category %}category={{ selected_category.slug|default:selected_category }}&amp;{% endif %}page={{ products.next_page_number }}">Следующая {% include 'shared/arrow.html' %}</a>{% endif %}</nav>{% endif %}
+</div>
+
