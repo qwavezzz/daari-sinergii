@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 from django.contrib.admin.sites import AdminSite
 from django.core import signing
 from django.core.exceptions import ValidationError
-from django.db import close_old_connections
+from django.db import close_old_connections, connections
 from django.test import (
     Client,
     RequestFactory,
@@ -302,7 +302,9 @@ class ConcurrentCheckoutTests(TransactionTestCase):
             except ValidationError:
                 return False
             finally:
-                close_old_connections()
+                # These worker threads own persistent PostgreSQL connections;
+                # request-age cleanup does not close healthy connections.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as workers:
             results = list(workers.map(purchase, data))
