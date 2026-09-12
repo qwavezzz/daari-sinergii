@@ -1,14 +1,16 @@
-import htmx from 'htmx.org'
+import htmx from '#navigation-transport'
 
-htmx.config.allowEval = false
-htmx.config.allowScriptTags = false
-htmx.config.includeIndicatorStyles = false
-htmx.config.historyCacheSize = 0
-htmx.config.historyRestoreAsHxRequest = false
-htmx.config.scrollIntoViewOnBoost = false
-htmx.config.timeout = 15000
-htmx.config.selfRequestsOnly = true
-window.htmx = htmx
+if (htmx) {
+  htmx.config.allowEval = false
+  htmx.config.allowScriptTags = false
+  htmx.config.includeIndicatorStyles = false
+  htmx.config.historyCacheSize = 0
+  htmx.config.historyRestoreAsHxRequest = false
+  htmx.config.scrollIntoViewOnBoost = false
+  htmx.config.timeout = 15000
+  htmx.config.selfRequestsOnly = true
+  window.htmx = htmx
+}
 
 export function syncMetadata(root = document) {
   const meta = root.querySelector('[data-page-meta]')
@@ -138,13 +140,14 @@ export function installNavigation({ beforePage = () => {}, afterPage = () => {} 
     root.querySelector('[data-page]')?.dispatchEvent(new CustomEvent('page:restore-scroll', { detail }))
     if (!detail.handled) window.scrollTo({ top, behavior: 'instant' })
   }
-  const finish = (isHistory = false) => {
+  const finish = async (isHistory = false) => {
     cancelFinish()
     const revision = finishRevision
     const root = document.getElementById('main-content')
     syncMetadata(root)
     currentUrl = location.pathname + location.search
-    afterPage(root)
+    await afterPage(root)
+    if (revision !== finishRevision || !root.isConnected) return
     const hash = location.hash
     finishFrame = requestAnimationFrame(() => {
       if (revision !== finishRevision) return

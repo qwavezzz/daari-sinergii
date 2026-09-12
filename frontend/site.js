@@ -7,7 +7,9 @@ import './site-blocks.css'
 import Alpine from '@alpinejs/csp'
 import { registerContentUI } from './content-ui.js'
 import { installNavigation, syncMetadata } from './shared.js'
-import { initLanding, destroyLanding, registerLandingUI } from './landing.js'
+import { registerLandingUI } from './landing/menu.js'
+import { initLanding, destroyLanding } from './landing-loader.js'
+import './landing/fallbacks.css'
 import './site.css'
 
 const legacy = location.hash.match(/^#\/materials(?:\/([a-z0-9-]+))?\/?$/)

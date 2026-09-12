@@ -68,3 +68,32 @@ test('leaving during deferred scene preparation cleans up the departed landing',
   await expect(page.locator('.emergence-char, .pin-spacer')).toHaveCount(0)
   expect(errors).toEqual([])
 })
+
+test('video starts while motion is downloading and a departed page is not initialized', async ({ page }) => {
+  let release
+  const motionReady = new Promise((resolve) => {
+    release = resolve
+  })
+  await page.route('**/static/dist/assets/landing-*.js', async (route) => {
+    await motionReady
+    await route.continue()
+  })
+  try {
+    await page.goto('http://localhost:8001/', { waitUntil: 'domcontentloaded' })
+    await expect
+      .poll(() => page.locator('.hero-video').evaluate((video) => video.currentTime))
+      .toBeGreaterThan(0)
+    await expect(page.locator('.pin-spacer')).toHaveCount(0)
+    await page.locator('.desktop-nav a[href="/materials/"]').click()
+    await expect(page.locator('[data-page=materials]')).toBeVisible()
+    release()
+    await page.waitForTimeout(300)
+    await expect(page.locator('.emergence-char, .pin-spacer')).toHaveCount(0)
+    await page.goBack()
+    await expect(page.locator('[data-page=landing]')).toBeVisible()
+    await expect(page.locator('.pin-spacer')).toHaveCount(1)
+    await expect.poll(() => page.locator('.hero-video').evaluate((video) => !video.paused)).toBe(true)
+  } finally {
+    release()
+  }
+})

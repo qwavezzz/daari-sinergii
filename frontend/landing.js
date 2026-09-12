@@ -1,10 +1,5 @@
-import { applyRuntimePlatformClass } from '../src/platform.js'
 import { initPageMotion, ScrollTrigger } from './landing/motion.js'
 import { initContextsStory } from './landing/contexts.js'
-import { initHeroVideo } from './landing/hero.js'
-import './landing/fallbacks.css'
-
-export { registerLandingUI } from './landing/menu.js'
 
 const instances = new WeakMap()
 
@@ -16,7 +11,6 @@ function findLanding(root) {
 export function initLanding(root = document) {
   const scope = findLanding(root)
   if (!scope || instances.has(scope)) return instances.get(scope)?.destroy
-  applyRuntimePlatformClass()
   const disposers = []
   const controller = new AbortController()
   let frame = 0
@@ -46,7 +40,6 @@ export function initLanding(root = document) {
   instances.set(scope, { destroy, refresh })
 
   try {
-    disposers.push(initHeroVideo(scope))
     disposers.push(initContextsStory(scope))
     disposers.push(initPageMotion(scope))
 
