@@ -465,6 +465,14 @@ p {
   margin-top: 8px;
   font-size: 14px;
 }
+.gallery-controls > span {
+  min-width: 5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.gallery-controls .gallery-previous svg {
+  transform: rotate(180deg);
+}
 .gallery-thumbnails {
   display: flex;
   gap: 8px;
@@ -796,7 +804,7 @@ dd {
   text-align: center;
 }
 .cart-item-quantity .shop-link {
-  font-size: 12px;
+  font-size: 14px;
 }
 .cart-line-total {
   grid-column: 2/-1;
@@ -1339,7 +1347,7 @@ dd {
     padding-inline: 20px;
   }
   .cart-item-quantity label {
-    font-size: 12px;
+    font-size: 14px;
   }
   .cart-item-quantity .shop-link {
     width: 100%;

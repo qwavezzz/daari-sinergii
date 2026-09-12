@@ -2260,6 +2260,17 @@ svg {
   }
 }
 
+@media (max-width: 359px) {
+  :root {
+    --type-mobile-context-title: 40px;
+    --type-mobile-contact-display: 42px;
+  }
+
+  .product-copy h3 {
+    font-size: clamp(36px, 11.7vw, 42px);
+  }
+}
+
 @media (max-width: 479px) {
   .site-header,
   .mobile-menu,
