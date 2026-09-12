@@ -54,3 +54,8 @@
     gap: 12px 24px;
   }
 }
+
+/* Decorative video must never receive taps or native player gestures. */
+.hero-video {
+  pointer-events: none;
+}

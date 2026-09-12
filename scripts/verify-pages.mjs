@@ -41,6 +41,88 @@ try {
     await new Promise((done) => setTimeout(done, 100))
   }
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE })
+  // Verify actual inline playback and navigation in the Pages bundle.
+  const android = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    userAgent:
+      'Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0.0.0 Mobile Safari/537.36',
+  })
+  await android.addInitScript(() => {
+    window.heroPlayCalls = 0
+    const original = HTMLMediaElement.prototype.play
+    HTMLMediaElement.prototype.play = function (...args) {
+      if (this.matches('.hero-video')) window.heroPlayCalls++
+      return original.apply(this, args)
+    }
+  })
+  const androidPage = await android.newPage()
+  const androidMedia = []
+  androidPage.on('request', (request) => {
+    if (request.resourceType() === 'media') androidMedia.push(request.url())
+  })
+  for (let visit = 0; visit < 2; visit++) {
+    if (visit === 0) await androidPage.goto(origin + base)
+    else await androidPage.reload()
+    await expect(androidPage.locator('html')).toHaveClass(/\bjs\b/)
+    await expect(androidPage.locator('.hero-video')).toBeVisible()
+    await expect(androidPage.locator('#hero-title')).toBeVisible()
+    await expect
+      .poll(() => androidPage.locator('.hero-video').evaluate((video) => video.currentTime))
+      .toBeGreaterThan(0)
+    expect(
+      await androidPage
+        .locator('.hero-video')
+        .evaluate(
+          (video) =>
+            video.playsInline &&
+            video.muted &&
+            !video.controls &&
+            getComputedStyle(video).pointerEvents === 'none',
+        ),
+    ).toBe(true)
+    expect(await androidPage.evaluate(() => document.fullscreenElement)).toBeNull()
+    await androidPage.locator('#contact').scrollIntoViewIfNeeded()
+    await expect(androidPage.locator('#contact')).toBeInViewport()
+    expect(await androidPage.evaluate(() => window.heroPlayCalls)).toBeGreaterThan(0)
+    await androidPage.goto(origin + base + 'materials/')
+    await expect(androidPage.locator('h1')).toBeVisible()
+    await androidPage.goBack()
+    await expect(androidPage.locator('.hero-video')).toBeVisible()
+    await androidPage.locator('#hero-title').scrollIntoViewIfNeeded()
+    await expect
+      .poll(() =>
+        androidPage.locator('.hero-video').evaluate((video) => !video.paused && video.currentTime > 0),
+      )
+      .toBe(true)
+  }
+  expect(androidMedia.length).toBeGreaterThan(0)
+  await androidPage.locator('#hero-title').scrollIntoViewIfNeeded()
+  await androidPage.screenshot({ path: `${output}/landing-android-webview.png` })
+  await androidPage.addInitScript(() => {
+    const play = HTMLMediaElement.prototype.play
+    let blocked = false
+    HTMLMediaElement.prototype.play = function (...args) {
+      if (this.matches('.hero-video') && !blocked) {
+        blocked = true
+        window.autoplayRejected = true
+        return Promise.reject(new DOMException('Test autoplay restriction', 'NotAllowedError'))
+      }
+      return play.apply(this, args)
+    }
+  })
+  await androidPage.goto(origin + base)
+  await expect.poll(() => androidPage.evaluate(() => window.autoplayRejected)).toBe(true)
+  await androidPage.locator('#hero-title').tap()
+  await expect
+    .poll(() => androidPage.locator('.hero-video').evaluate((video) => video.currentTime))
+    .toBeGreaterThan(0)
+  await android.close()
+  const androidResult = { scenario: 'embedded Android inline playback and navigation', status: 'PASS' }
+  results.push(androidResult)
+  await writeFile(`${output}/android-verification.json`, JSON.stringify(androidResult, null, 2))
+  console.log(JSON.stringify(androidResult))
   for (const width of [1440, 390]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } })
     const page = await context.newPage()

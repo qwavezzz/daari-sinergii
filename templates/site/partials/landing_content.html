@@ -3,7 +3,7 @@
 <div class="site-shell" id="top" data-page="landing" x-data="landingMenu">
 <a class="skip-link" href="#site-content" data-menu-background="true">Перейти к содержанию</a>{% include "site/partials/landing_header.html" %}{% include "site/partials/landing_menu.html" %}<main id="site-content" data-menu-background="true" tabindex="-1">
 <section class="hero" aria-labelledby="hero-title" data-scroll-snap="true" style="--hero-poster: url('{% static 'assets/hero-ozone-water-poster.webp' %}')">
-<video class="hero-video" muted="" loop="" playsinline="" preload="none" poster="{% static 'assets/hero-ozone-water-poster.webp' %}" aria-hidden="true" tabindex="-1" disablepictureinpicture="">
+<video class="hero-video" muted="" loop="" playsinline="" webkit-playsinline="" controlslist="nofullscreen noremoteplayback nodownload" disableremoteplayback="" preload="none" poster="{% static 'assets/hero-ozone-water-poster.webp' %}" aria-hidden="true" tabindex="-1" disablepictureinpicture="">
 <source data-src="{% static 'assets/hero-ozone-water.webm' %}" type="video/webm">
 <source data-src="{% static 'assets/hero-ozone-water.mp4' %}" type="video/mp4">
 </video>

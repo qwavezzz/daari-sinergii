@@ -6,9 +6,16 @@ export function initHeroVideo(root) {
   let isVisible = false
   let disposed = false
   let sourceAttached = false
+  let playPending = false
+  let autoplayBlocked = false
   const connection = navigator.connection
   // The muted property must be set as well as the HTML attribute on Safari.
   video.muted = true
+  video.defaultMuted = true
+  video.playsInline = true
+  video.controls = false
+  video.setAttribute('webkit-playsinline', '')
+  video.setAttribute('controlslist', 'nofullscreen noremoteplayback nodownload')
 
   const syncPlayback = () => {
     const shouldPlay =
@@ -24,14 +31,21 @@ export function initHeroVideo(root) {
       sourceAttached = true
       video.load()
     }
+    if (playPending || !video.paused || autoplayBlocked) return
+    playPending = true
     const attempt = video.play()
     attempt
       ?.then(() => {
-        if (disposed) video.pause()
+        if (disposed || !isVisible || document.hidden || reduceMotion.matches || connection?.saveData)
+          video.pause()
       })
-      .catch(() => {
-        // Keep the native poster and the matching CSS background when autoplay fails.
+      .catch((error) => {
+        autoplayBlocked = error.name === 'NotAllowedError'
       })
+      .finally(() => {
+        playPending = false
+      })
+    if (!attempt) playPending = false
   }
   const observer = new IntersectionObserver(
     ([entry]) => {
@@ -41,6 +55,14 @@ export function initHeroVideo(root) {
     { threshold: 0.05 },
   )
 
+  // Retry a blocked autoplay inside a real gesture, without consuming navigation.
+  const retryPlayback = () => {
+    if (!autoplayBlocked) return
+    autoplayBlocked = false
+    syncPlayback()
+  }
+  root.addEventListener('pointerup', retryPlayback, true)
+  root.addEventListener('keydown', retryPlayback, true)
   observer.observe(video)
   document.addEventListener('visibilitychange', syncPlayback)
   reduceMotion.addEventListener('change', syncPlayback)
@@ -51,6 +73,8 @@ export function initHeroVideo(root) {
   return () => {
     disposed = true
     observer.disconnect()
+    root.removeEventListener('pointerup', retryPlayback, true)
+    root.removeEventListener('keydown', retryPlayback, true)
     document.removeEventListener('visibilitychange', syncPlayback)
     reduceMotion.removeEventListener('change', syncPlayback)
     connection?.removeEventListener('change', syncPlayback)
