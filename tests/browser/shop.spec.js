@@ -40,14 +40,15 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   await page.screenshot({ path: 'artifacts/shop/cart-filled-390.png' })
   await page.route('**/cart/update/**', (route) => route.abort())
   await drawer.locator('input[name=quantity]').fill('2')
-  await drawer.getByRole('button', { name: 'Обновить', exact: true }).click()
   await expect(drawer.locator('#cart-error')).toBeVisible()
+  await expect(drawer.locator('[data-quantity-status]')).toContainText('Не удалось обновить количество')
+  await expect(drawer.locator('input[name=quantity]')).toHaveValue('2')
+  await expect(drawer.locator('.checkout-link')).toHaveAttribute('aria-disabled', 'true')
   await expect(drawer.locator('.cart-total strong')).toHaveText('1 290,50 ₽')
   await page.unroute('**/cart/update/**')
   await drawer.getByRole('button', { name: 'Повторить', exact: true }).click()
   await expect(drawer.locator('.cart-total strong')).toHaveText('2 581 ₽')
   await drawer.locator('input[name=quantity]').fill('3')
-  await drawer.getByRole('button', { name: 'Обновить', exact: true }).click()
   await expect(drawer.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
   await expect(page.locator('#cart-toggle [data-cart-count]')).toHaveText('3')
   await page.keyboard.press('Escape')
@@ -78,6 +79,67 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   const response = await request.get(orderUrl)
   expect(response.status()).toBe(404)
   expect(errors).toEqual([])
+})
+
+test('automatic quantity updates expose pending totals, reject invalid input and survive reload', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/products/test-product-1/')
+  await page.getByRole('button', { name: 'Добавить в корзину' }).click()
+  const drawer = page.getByRole('dialog', { name: 'Корзина' })
+  await expect(drawer.locator('.cart-item')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await page.goto('/cart/')
+  const cart = page.locator('.cart-page')
+  let release
+  const responseGate = new Promise((resolve) => {
+    release = resolve
+  })
+  let mutations = 0
+  await page.route('**/cart/update/**', async (route) => {
+    mutations++
+    await responseGate
+    await route.continue()
+  })
+  await cart.locator('input[name=quantity]').fill('2')
+  await cart.locator('input[name=quantity]').fill('3')
+  await expect(cart.locator('.cart-content')).toHaveAttribute('aria-busy', 'true')
+  await expect(cart.locator('[data-quantity-status]')).toContainText('Пересчитываем сумму')
+  await expect(cart.locator('.cart-total strong')).toHaveText('1 290,50 ₽')
+  await expect(cart.locator('.checkout-link')).toHaveAttribute('aria-disabled', 'true')
+  expect(mutations).toBe(1)
+  await page.screenshot({ path: 'artifacts/shop/cart-quantity-pending-390.png' })
+  release()
+  await expect(cart.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
+  await expect(cart.locator('.cart-content')).toHaveAttribute('aria-busy', 'false')
+  await expect(cart.locator('.checkout-link')).not.toHaveAttribute('aria-disabled', 'true')
+  await cart.locator('input[name=quantity]').fill('0')
+  await expect(cart.locator('[data-quantity-status]')).toContainText('допустимое целое количество')
+  await cart.locator('.checkout-link').focus()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/cart\/$/)
+  expect(mutations).toBe(1)
+  await cart.locator('input[name=quantity]').fill('51')
+  await expect(cart.locator('.shop-error')).toBeVisible()
+  await expect(cart.locator('input[name=quantity]')).toHaveValue('3')
+  await expect(cart.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
+  await page.reload()
+  await expect(cart.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
+  // The server may save a quantity even when the response never reaches us.
+  await page.unroute('**/cart/update/**')
+  await page.route('**/cart/update/**', async (route) => {
+    await route.fetch()
+    await route.abort()
+  })
+  await cart.locator('input[name=quantity]').fill('2')
+  await expect(cart.locator('[data-quantity-status]')).toContainText('Не удалось обновить количество')
+  await page.screenshot({ path: 'artifacts/shop/cart-quantity-error-390.png' })
+  await page.unroute('**/cart/update/**')
+  await cart.locator('input[name=quantity]').fill('3')
+  await expect(cart.locator('[data-quantity-status]')).toBeHidden()
+  await page.reload()
+  await expect(cart.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
 })
 
 test('unavailable products cannot be purchased and network errors preserve catalog', async ({ page }) => {

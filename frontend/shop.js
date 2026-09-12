@@ -4,6 +4,12 @@ import './shop.css'
 import Alpine from '@alpinejs/csp'
 import { htmx, installNavigation, syncMetadata } from './shared.js'
 import { registerContentUI } from './content-ui.js'
+import {
+  hasQuantityChanges,
+  installQuantityUpdates,
+  quantityRequestFailed,
+  syncQuantityFeedback,
+} from './cart-quantity.js'
 
 let latestVersion = 0
 let pendingCartRequests = 0
@@ -16,6 +22,7 @@ function cartCounts(count) {
   })
 }
 function refreshCart() {
+  if (pendingCartRequests || hasQuantityChanges()) return Promise.resolve()
   if (demoCart) return demoCart.then((cart) => cart.refreshCart())
   return htmx.ajax('GET', '/cart/?drawer=1', { target: '#cart-panel', swap: 'innerHTML' })
 }
@@ -176,6 +183,7 @@ window.Alpine = Alpine
 registerContentUI(Alpine)
 Alpine.start()
 document.documentElement.classList.add('js')
+installQuantityUpdates()
 demoCart?.then((cart) => cart.installDemoCart())
 
 document.addEventListener('htmx:beforeRequest', (event) => {
@@ -185,7 +193,7 @@ document.addEventListener('htmx:beforeRequest', (event) => {
       event.detail.elt.closest('.cart-item')?.querySelector('[name=quantity]')?.id ||
       ''
     pendingCartRequests++
-    document.querySelectorAll('.checkout-link').forEach((node) => node.setAttribute('aria-disabled', 'true'))
+    syncQuantityFeedback(pendingCartRequests)
   }
 })
 document.addEventListener('htmx:beforeSwap', (event) => {
@@ -198,9 +206,10 @@ document.addEventListener('htmx:beforeSwap', (event) => {
 document.addEventListener('htmx:afterRequest', (event) => {
   if (event.detail.requestConfig?.path?.startsWith('/cart/')) {
     pendingCartRequests = Math.max(0, pendingCartRequests - 1)
-    if (!pendingCartRequests)
-      document.querySelectorAll('.checkout-link').forEach((node) => node.removeAttribute('aria-disabled'))
     const source = event.detail.requestConfig?.elt
+    if (event.detail.failed || event.detail.xhr.status === 0 || event.detail.xhr.status >= 400)
+      quantityRequestFailed(source)
+    syncQuantityFeedback(pendingCartRequests)
     if (source?.matches('[data-cart-add]') && event.detail.xhr.status === 422) {
       const response = new DOMParser().parseFromString(event.detail.xhr.responseText, 'text/html')
       const error = source.parentElement.querySelector('[data-form-error]')
@@ -249,6 +258,7 @@ document.addEventListener('htmx:afterSwap', (event) => {
     next?.focus({ preventScroll: true })
   }
   window.shopShell?.sizeCart()
+  syncQuantityFeedback(pendingCartRequests)
 })
 channel?.addEventListener('message', (event) => {
   if (Number(event.data.version) <= latestVersion) return

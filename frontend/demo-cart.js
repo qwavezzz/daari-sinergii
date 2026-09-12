@@ -1,4 +1,5 @@
 // Only included in the Pages preview build. Real orders always use Django.
+import { quantityRequestFailed, syncQuantityFeedback } from './cart-quantity.js'
 const catalog = JSON.parse(document.getElementById('demo-products').textContent)
 const products = new Map(catalog.map((product) => [String(product.id), product]))
 const base = document.documentElement.dataset.demoBase
@@ -65,6 +66,7 @@ export function refreshCart() {
     node.textContent = count
   })
   window.shopShell?.sizeCart()
+  syncQuantityFeedback()
 }
 
 export function installDemoCart() {
@@ -89,6 +91,8 @@ export function installDemoCart() {
     if (!product || !Number.isInteger(next) || next < 1 || next > product.stock) {
       input.setCustomValidity('Недоступно выбранное количество. Уменьшите количество или измените корзину.')
       input.reportValidity()
+      quantityRequestFailed(form)
+      syncQuantityFeedback()
       return
     }
     input.setCustomValidity('')
