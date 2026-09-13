@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }}</title></head>
+<body style="margin:0;background:#f3f6f8;color:#11263b;font-family:Arial,sans-serif;line-height:1.6">
+<main style="max-width:600px;margin:24px auto;padding:28px;background:#fff">
+<p style="font-size:18px;font-weight:bold">Дары Синергии</p>
+{% if test_payment %}<p>Тестовый режим. Настоящие деньги не списываются.</p>{% endif %}
+<h1 style="font-size:26px;line-height:1.3">{{ title }}</h1>
+<p>Заказ № {{ order.pk }} от {{ order.created_at|date:"d.m.Y H:i" }}</p>
+<p>{{ instruction }}</p>
+<h2 style="font-size:20px">Состав заказа</h2>
+<table style="width:100%;border-collapse:collapse"><thead><tr><th scope="col" style="text-align:left">Товар</th><th scope="col" style="text-align:right">Сумма</th></tr></thead><tbody>
+{% for item in items %}<tr><td style="padding:12px 8px 12px 0;border-bottom:1px solid #d6dfe7">{{ item.name }}<br>{{ item.quantity }} шт. × {{ item.unit_price }} ₽</td><td style="padding:12px 0;text-align:right;border-bottom:1px solid #d6dfe7">{{ item.subtotal }} ₽</td></tr>{% endfor %}
+</tbody></table>
+<p>Получение: {{ order.delivery_price }} ₽<br><strong>Итого: {{ order.total }} ₽</strong></p>
+<p>{{ order.delivery_method }}<br>Текущий статус оплаты: {{ order.get_financial_status_display }}</p>
+{% if manager %}<h2 style="font-size:20px">Данные для выполнения заказа</h2><p>{{ order.name }}<br>{{ order.phone }}<br>{{ order.email }}</p>
+{% if order.address %}<p>{{ order.address|linebreaksbr }}</p>{% endif %}
+{% if order.comment %}<p>Комментарий: {{ order.comment|linebreaksbr }}</p>{% endif %}
+{% if order.needs_attention %}<p><strong>Требует внимания:</strong> {{ order.attention_reason }}</p>{% endif %}
+<p><a href="{{ order_url }}" style="color:#125ca1">Открыть заказ в панели управления</a><br>Потребуется вход в аккаунт сотрудника.</p>
+{% else %}<p><a href="{{ order_url }}" style="color:#125ca1">Открыть заказ</a><br>Страница доступна в том браузере, где вы оформили заказ.</p>{% endif %}
+<p style="font-size:13px">Это уведомление о заказе, а не кассовый чек.</p>
+</main></body></html>

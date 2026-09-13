@@ -1,0 +1,5 @@
+{% extends "admin/change_form.html" %}
+{% block content %}
+{% if workflow_actions %}<section aria-label="Следующее действие с заказом"><p>Состав заказа указан ниже. Отмечайте этапы по мере выполнения.</p><form method="post" action="{% url 'admin:orders_order_workflow' original.pk %}" class="order-workflow">{% csrf_token %}{% for action in workflow_actions %}<button type="submit" name="target" value="{{ action.value }}">{{ action.label }}</button>{% endfor %}</form></section>{% endif %}
+{{ block.super }}
+{% endblock %}

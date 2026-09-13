@@ -9,16 +9,16 @@ export default defineConfig({
     alias: {
       '#navigation-transport':
         process.env.VITE_STATIC_DEMO === 'true'
-          ? fileURLToPath(new URL('./frontend/navigation-demo.js', import.meta.url))
+          ? fileURLToPath(new URL('./frontend/demo/navigation.js', import.meta.url))
           : 'htmx.org',
     },
   },
   plugins: [tailwindcss()],
   build: {
-    outDir: process.env.VITE_OUTPUT_DIR || 'static/dist',
+    outDir: process.env.VITE_OUTPUT_DIR || 'var/build/static/dist',
     manifest: true,
     emptyOutDir: true,
     rollupOptions: { input: ['frontend/site.js', 'frontend/shop.js'] },
   },
-  server: { watch: { ignored: ['**/.venv/**', '**/var/**', '**/artifacts/**'] } },
+  server: { watch: { ignored: ['**/.venv/**', '**/var/**'] } },
 })

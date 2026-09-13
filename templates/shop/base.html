@@ -37,7 +37,7 @@
 </a>
 </div>
 </header>
-{% if demo_catalog %}<aside class="shop-demo-notice"><div class="shop-container"><strong>Демонстрационный каталог.</strong> Товары, цены и наличие вымышлены. Можно собрать корзину; оформление заказа выключено.</div></aside>{% endif %}
+{% if demo_catalog %}<aside class="shop-demo-notice"><div class="shop-container"><strong>Демонстрационный каталог.</strong> Товары, цены и наличие вымышлены. {% if checkout_enabled %}Можно оформить тестовый заказ; реальная покупка и доставка не выполняются.{% else %}Можно собрать корзину; оформление заказа выключено.{% endif %}</div></aside>{% elif test_payments %}<aside class="shop-demo-notice"><div class="shop-container"><strong>Тестовая оплата.</strong> Используйте тестовую карту ЮKassa. Настоящие деньги не списываются.</div></aside>{% endif %}
 <main id="main-content" tabindex="-1" hx-history-elt>{% block content %}{% endblock %}</main>
 <footer class="shop-footer shop-container">
 <a class="shop-brand" href="{{ site_url }}/" hx-boost="false">{% include 'shared/brand_mark.html' with brand_sizes='(max-width: 767px) 32px, 40px' %}Дары Синергии</a>

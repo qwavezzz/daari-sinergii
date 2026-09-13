@@ -12,6 +12,10 @@ test('mobile header keeps its geometry while the application module is delayed',
   })
   await page.goto('/', { waitUntil: 'commit' })
   await expect(page.locator('.catalog-intro')).toBeVisible()
+  // At commit the DOM can be measurable before styles load; isolate the delayed JS.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('link[rel="stylesheet"]')].every((link) => link.sheet),
+  )
   await page.evaluate(() => document.fonts.ready)
   const before = await page.locator('#main-content').boundingBox()
   release()

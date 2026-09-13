@@ -1,0 +1,40 @@
+import { test, expect } from '@playwright/test'
+
+test('owner can find orders, change notification email and assemble a paid order', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto('/admin/')
+  await page.getByLabel('Имя пользователя').fill('browser-owner')
+  await page.getByLabel('Пароль:', { exact: true }).fill('browser-fixture-only')
+  await page.getByRole('button', { name: 'Войти', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Рабочий стол', exact: true })).toBeVisible()
+  await expect(page.locator('.order-queues')).toContainText('Ожидают сборки')
+  const orderUrl = await page
+    .locator('.business-table tbody tr')
+    .filter({ has: page.getByRole('cell', { name: 'Оплачен', exact: true }) })
+    .first()
+    .getByRole('link')
+    .getAttribute('href')
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/admin/')
+    await expect(page.locator('.order-queues')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `var/artifacts/admin/home-${width}.png`, fullPage: true })
+    await page.getByRole('link', { name: 'изменить адрес и настройки' }).click()
+    await expect(page.getByLabel('Почта менеджера по продажам')).toBeVisible()
+    await page.screenshot({ path: `var/artifacts/admin/settings-${width}.png`, fullPage: true })
+    await page.goto(orderUrl)
+    await expect(page.getByRole('button', { name: 'Начать сборку', exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `var/artifacts/admin/order-${width}.png`, fullPage: true })
+  }
+  await page.getByRole('button', { name: 'Начать сборку', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Готов к выдаче / передан в доставку' })).toBeVisible()
+  await page.goto('/admin/orders/storesettings/1/change/')
+  await page.getByLabel('Почта менеджера по продажам').fill('updated-manager@example.test')
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await page.goto('/admin/')
+  await expect(page.locator('.business-home')).toContainText('updated-manager@example.test')
+  expect(errors).toEqual([])
+})

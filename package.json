@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch --configLoader native",
-    "build": "node scripts/build-assets.mjs && vite build --configLoader native",
-    "build:pages": "node scripts/build-pages.mjs",
-    "test": "node --test src/platform.test.js",
+    "dev": "node scripts/build/assets.mjs && vite build --watch --configLoader native",
+    "build": "node scripts/build/assets.mjs && vite build --configLoader native",
+    "build:pages": "node scripts/pages/build.mjs",
+    "check:js": "node scripts/qa/check-js.mjs",
+    "check:pages": "node scripts/pages/verify.mjs",
+    "test": "node --test tests/unit/platform.test.js",
     "test:browser": "playwright test"
   },
   "dependencies": {

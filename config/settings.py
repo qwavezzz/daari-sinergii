@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
+from .local_environment import load_local_environment
+
+load_local_environment()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = False
@@ -21,30 +24,30 @@ SHOP_ORIGIN = os.environ.get("SHOP_ORIGIN", f"https://{SHOP_HOST}")
 ALLOWED_HOSTS = [MAIN_HOST, "www." + MAIN_HOST, SHOP_HOST]
 CSRF_TRUSTED_ORIGINS = [MAIN_ORIGIN, SHOP_ORIGIN]
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    "apps.core.admin_site.BusinessAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "core",
-    "content",
-    "reviews",
-    "catalog",
-    "cart",
-    "orders",
-    "payments",
+    "apps.core.apps.CoreConfig",
+    "apps.content.apps.ContentConfig",
+    "apps.reviews.apps.ReviewsConfig",
+    "apps.catalog.apps.CatalogConfig",
+    "apps.cart.apps.CartConfig",
+    "apps.orders.apps.OrdersConfig",
+    "apps.payments.apps.PaymentsConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "core.middleware.HostRoutingMiddleware",
+    "apps.core.middleware.HostRoutingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "core.middleware.ResponsePolicyMiddleware",
+    "apps.core.middleware.ResponsePolicyMiddleware",
 ]
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -57,9 +60,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "core.context_processors.public_settings",
-                "content.context_processors.site_content",
-                "cart.context_processors.cart_summary",
+                "apps.core.context_processors.public_settings",
+                "apps.content.context_processors.site_content",
+                "apps.cart.context_processors.cart_summary",
             ]
         },
     }
@@ -100,7 +103,7 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
 STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / "var" / "static"))
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / "var" / "build" / "static"]
 # Vite owns hashed entry filenames; Django copies them without a second hash.
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -142,6 +145,8 @@ EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")

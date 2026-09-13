@@ -141,7 +141,7 @@ components:
 
 Светлая предметная витрина: белая страница, светло-серые товарные поля, navy-текст и главные действия. Manrope связывает магазин с брендом; тонкие линии, спокойные интервалы и небольшие скругления помогают различать сведения и управление.
 
-Это описание фактически реализованной системы магазина в frontend/shop.css, frontend/shop.js и templates/shop/. Утверждённое направление и обязательные требования остаются в [DESIGN-SHOP.md](../../DESIGN-SHOP.md); этот файл не заменяет его. Корневые DESIGN.md и .impeccable/design.json описывают лендинг и сохраняют свою область действия.
+Это описание фактически реализованной системы магазина в frontend/styles/shop.css, frontend/shop.js и templates/shop/. Утверждённое направление и обязательные требования остаются в [DESIGN-SHOP.md](../../DESIGN-SHOP.md); этот файл не заменяет его. Корневые DESIGN.md и .impeccable/design.json описывают лендинг и сохраняют свою область действия.
 
 **Key Characteristics:**
 
@@ -150,7 +150,7 @@ components:
 - Плоские поверхности, тонкие разделители и радиус 4 px у кнопок и полей.
 - Нативный модальный диалог корзины и короткие переходы по действию пользователя.
 
-Источники реализации: [shop.css](../../frontend/shop.css), [shop.js](../../frontend/shop.js), [base.html](base.html), [шаблоны компонентов](partials/). Дополнения к токенам и изолированные образцы компонентов: [.impeccable/design.json](.impeccable/design.json). Назначение поверхности и ограничения запуска: [shop.md](../../.impeccable/surfaces/shop.md).
+Источники реализации: [shop.css](../../frontend/styles/shop.css), [shop.js](../../frontend/shop.js), [base.html](base.html), [шаблоны компонентов](partials/). Дополнения к токенам и изолированные образцы компонентов: [.impeccable/design.json](.impeccable/design.json). Назначение поверхности и ограничения запуска: [shop.md](../../.impeccable/surfaces/shop.md).
 
 ## Colors
 

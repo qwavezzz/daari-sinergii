@@ -1,0 +1,32 @@
+{% extends "admin/index.html" %}
+{% block coltype %}colM{% endblock %}
+{% block content %}
+<div id="content-main" class="business-home">
+{% if order_tasks %}
+<section aria-labelledby="orders-heading" class="business-section">
+<h2 id="orders-heading">Заказы на сегодня</h2>
+<p>Начните с оплаченных заказов. Перед отправкой проверьте состав и способ получения.</p>
+<nav class="order-queues" aria-label="Очереди заказов">{% for task in order_tasks %}<a href="{{ task.url }}">{{ task.label }} <strong>{{ task.count }}</strong></a>{% endfor %}</nav>
+<div class="business-table" role="region" aria-label="Последние заказы" tabindex="0"><table><caption>Последние заказы</caption><thead><tr><th scope="col">Заказ</th><th scope="col">Покупатель</th><th scope="col">Сумма</th><th scope="col">Оплата</th><th scope="col">Исполнение</th></tr></thead><tbody>
+{% for order in recent_orders %}<tr><th scope="row"><a href="{% url 'admin:orders_order_change' order.pk %}">№ {{ order.pk }}</a><br><small>{{ order.created_at|date:"d.m H:i" }}{% if order.test_mode %} · Тест{% endif %}</small></th><td>{{ order.name }}</td><td>{{ order.total }} ₽</td><td>{{ order.get_financial_status_display }}</td><td>{% if order.needs_attention %}Требует проверки{% elif order.status == 'new' and order.financial_status == 'paid' %}Ожидает сборки{% elif order.status == 'processing' %}Собирается{% else %}{{ order.get_status_display }}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="5">Заказов пока нет. После оформления покупателем они появятся здесь.</td></tr>{% endfor %}
+</tbody></table></div><p class="table-scroll-hint">Таблицу можно прокрутить вправо.</p><p><a href="{% url 'admin:orders_order_changelist' %}">Все заказы и поиск покупателя</a></p>
+</section>{% endif %}
+{% if store_settings_url %}<section class="business-section" aria-labelledby="settings-heading"><h2 id="settings-heading">Настройки магазина</h2>
+<p><strong>Письма менеджеру:</strong> {{ manager_email|default:"адрес пока не указан" }} — <a href="{{ store_settings_url }}">изменить адрес и настройки</a></p>
+<p>{{ mail_configuration }}{% if unsent_count %} Ожидают отправки: <a href="{% url 'admin:orders_notification_changelist' %}?sent_at__isnull=True">{{ unsent_count }}</a>.{% endif %}</p>
+<p>{{ payment_configuration }}</p></section>{% endif %}
+<section class="business-section" aria-labelledby="manage-heading"><h2 id="manage-heading">Управление сайтом</h2><p>«Товары» — цены, наличие и фотографии. «Содержимое сайта» — тексты, материалы и документы.</p>
+{% for app in app_list %}{% if app.app_label != 'payments' and app.app_label != 'core' and app.app_label != 'auth' %}{% include 'admin/app_list.html' with app_list=app.single show_changelinks=True %}{% endif %}{% endfor %}
+{% for app in app_list %}{% if app.app_label == 'payments' or app.app_label == 'core' or app.app_label == 'auth' %}<details class="business-advanced"><summary>{{ app.name }} — дополнительные разделы</summary>{% include 'admin/app_list.html' with app_list=app.single show_changelinks=True %}</details>{% endif %}{% endfor %}
+</section>
+{% if order_tasks %}<details class="business-guide"><summary>Как работать с магазином</summary><ol>
+<li>Откройте «Ожидают сборки», выберите заказ и нажмите «Начать сборку».</li>
+<li>Соберите товары. Когда заказ готов, отметьте «Готов к выдаче / передан в доставку».</li>
+<li>После получения покупателем нажмите «Завершить заказ».</li>
+<li>Для изменения товара откройте его, исправьте нужные поля и нажмите «Сохранить».</li>
+<li>Адрес менеджера меняется в «Настройках магазина». Ключи оплаты настраивает разработчик.</li>
+</ol><p>Статус «Оплачен» устанавливает платёжная система. Письмо «Заказ оформлен» ещё не означает оплату.</p></details>{% endif %}
+</div>
+{% endblock %}
+{% block sidebar %}{% endblock %}

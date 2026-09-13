@@ -1,6 +1,6 @@
 # Asset manifest — approved comp A
 
-Inventory basis: `PRODUCT.md`, `DESIGN.md`, `.impeccable/surfaces/src-app-jsx.md`, the approved `.impeccable/mocks/comp-a-focused-source.png` plus its embedded prompt, the official root logo, and the Impeccable craft floor.
+Inventory basis: `PRODUCT.md`, `DESIGN.md`, `.impeccable/surfaces/landing.md`, the approved `.impeccable/mocks/comp-a-focused-source.png` plus its embedded prompt, the official root logo, and the Impeccable craft floor.
 
 The approved comp contains one legitimate source-backed raster role: the official brand artwork. The ozone-in-water field is intentionally a Canvas fallback for a future Gemini video, and the remaining visual language is sharper, more responsive, and more honest as HTML/CSS/SVG. No product photos, cases, specifications, testimonials, medical outcomes, or quantitative claims were generated.
 
@@ -8,8 +8,8 @@ The approved comp contains one legitimate source-backed raster role: the officia
 
 ### `brand_lockup_navy`
 
-- `source_crop`: `b0fa1e44-25f2-499a-9005-1bb01b4af64d.png` (complete official logo)
-- `output_path`: `public/assets/brand-lockup-navy.png`
+- `source_crop`: `assets/source/brand/logo-original.png` (complete official logo)
+- `output_path`: `assets/source/brand/brand-lockup-navy.png`
 - `strategy`: deterministic background extraction; near-white background converted to antialiased alpha; empty outer padding trimmed with an 8 px transparent safety inset; no generative model
 - `prompt_used`: “Source-edit metadata. Preserve the supplied official Дары Синергии logo artwork exactly. Remove only the white/off-white background into clean anti-aliased alpha and trim empty outer padding while keeping 8 px transparent safety padding. Keep both emblem and Cyrillic wordmark. Add nothing: no redesign, recoloring, sharpening, effects, shadow, border, or claim.”
 - `dimensions`: 1289 × 1043 px
@@ -20,8 +20,8 @@ The approved comp contains one legitimate source-backed raster role: the officia
 
 ### `brand_mark_navy`
 
-- `source_crop`: `b0fa1e44-25f2-499a-9005-1bb01b4af64d.png` (official emblem above the wordmark)
-- `output_path`: `public/assets/brand-mark-navy.png`
+- `source_crop`: `assets/source/brand/logo-original.png` (official emblem above the wordmark)
+- `output_path`: `assets/source/brand/brand-mark-navy.png`
 - `strategy`: deterministic emblem isolation and background extraction; near-white background converted to antialiased alpha; empty outer padding trimmed with an 8 px transparent safety inset; no generative model
 - `prompt_used`: “Source-edit metadata. Preserve the supplied official Дары Синергии emblem artwork exactly. Isolate only the emblem above the wordmark, remove only the white/off-white background into clean anti-aliased alpha, and trim empty outer padding while keeping 8 px transparent safety padding. Add nothing: no redesign, recoloring, sharpening, effects, shadow, border, wordmark, or claim.”
 - `dimensions`: 848 × 848 px
@@ -34,9 +34,9 @@ Prompt metadata is embedded in each produced PNG as the `impeccable:prompt` PNG 
 
 ## Direct
 
-No standalone raster is selected to ship unchanged. The root logo remains the authoritative source but its white background and large padding make it unsuitable for direct use on the approved dark surface.
+No standalone raster is selected to ship unchanged. The logo in assets/source/brand/ remains the authoritative source but its white background and large padding make it unsuitable for direct use on the approved dark surface.
 
-`public/assets/logo-transparent.png` was observed as a concurrent project derivative during the pass and left untouched. It preserves the source canvas at 1427 × 1102 px; the two outputs above are the tighter build-oriented derivatives from this inventory.
+The unused full-canvas logo derivative was removed during repository cleanup; the original and approved cropped sources remain in assets/source/brand/.
 
 ## Semantic
 

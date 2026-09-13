@@ -1,20 +1,20 @@
 import '@fontsource-variable/manrope'
 import '@fontsource/ibm-plex-mono/400.css'
-import './shop.css'
+import './styles/shop.css'
 import Alpine from '@alpinejs/csp'
-import { htmx, installNavigation, syncMetadata } from './shared.js'
-import { registerContentUI } from './content-ui.js'
+import { htmx, installNavigation, syncMetadata } from './shared/navigation.js'
+import { registerContentUI } from './shared/content-ui.js'
 import {
   hasQuantityChanges,
   installQuantityUpdates,
   quantityRequestFailed,
   syncQuantityFeedback,
-} from './cart-quantity.js'
+} from './shared/cart-quantity.js'
 
 let latestVersion = 0
 let pendingCartRequests = 0
 let cartFocusId = ''
-const demoCart = import.meta.env.VITE_STATIC_DEMO === 'true' ? import('./demo-cart.js') : null
+const demoCart = import.meta.env.VITE_STATIC_DEMO === 'true' ? import('./demo/cart.js') : null
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('dari-cart') : null
 function cartCounts(count) {
   document.querySelectorAll('[data-cart-count]:not(.cart-content)').forEach((node) => {
