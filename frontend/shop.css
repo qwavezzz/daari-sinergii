@@ -806,6 +806,10 @@ dd {
 .cart-item-quantity .shop-link {
   font-size: 14px;
 }
+/* Keep manual submission available when JavaScript is unavailable. */
+.js .cart-item-quantity button[type='submit'] {
+  display: none;
+}
 .cart-line-total {
   grid-column: 2/-1;
   text-align: right;

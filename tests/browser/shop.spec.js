@@ -6,6 +6,7 @@ test('category URLs, pagination and history retain server HTML without a documen
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/')
+  await expect(page.locator('.product-tile .product-category')).toHaveCount(0)
   await page.evaluate(() => {
     window.navigationSentinel = 'kept'
   })
@@ -29,10 +30,12 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/products/test-product-1/')
+  await expect(page.locator('.product-title .product-category')).toBeVisible()
   await page.getByRole('button', { name: 'Добавить в корзину' }).click()
   const drawer = page.getByRole('dialog', { name: 'Корзина' })
   await expect(drawer).toBeVisible()
   await expect(drawer.locator('.cart-item')).toHaveCount(1)
+  await expect(drawer.getByRole('button', { name: 'Обновить', exact: true })).toBeHidden()
   await expect(drawer.locator('.cart-total strong')).toHaveText('1 290,50 ₽')
   await page.waitForTimeout(300)
   await page.screenshot({ path: 'artifacts/shop/cart-filled-1440.png' })
@@ -81,7 +84,7 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   expect(errors).toEqual([])
 })
 
-test('automatic quantity updates expose pending totals, reject invalid input and survive reload', async ({
+test('automatic quantity updates keep the layout stable, reject invalid input and survive reload', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
@@ -92,6 +95,8 @@ test('automatic quantity updates expose pending totals, reject invalid input and
   await page.keyboard.press('Escape')
   await page.goto('/cart/')
   const cart = page.locator('.cart-page')
+  await expect(cart.getByRole('button', { name: 'Обновить', exact: true })).toBeHidden()
+  const summaryBox = await cart.locator('.cart-summary').boundingBox()
   let release
   const responseGate = new Promise((resolve) => {
     release = resolve
@@ -105,7 +110,10 @@ test('automatic quantity updates expose pending totals, reject invalid input and
   await cart.locator('input[name=quantity]').fill('2')
   await cart.locator('input[name=quantity]').fill('3')
   await expect(cart.locator('.cart-content')).toHaveAttribute('aria-busy', 'true')
-  await expect(cart.locator('[data-quantity-status]')).toContainText('Пересчитываем сумму')
+  await expect(cart.locator('[data-quantity-status]')).toBeHidden()
+  const pendingBox = await cart.locator('.cart-summary').boundingBox()
+  expect(Math.abs(pendingBox.height - summaryBox.height)).toBeLessThan(1)
+  expect(Math.abs(pendingBox.y - summaryBox.y)).toBeLessThan(1)
   await expect(cart.locator('.cart-total strong')).toHaveText('1 290,50 ₽')
   await expect(cart.locator('.checkout-link')).toHaveAttribute('aria-disabled', 'true')
   expect(mutations).toBe(1)
@@ -136,7 +144,11 @@ test('automatic quantity updates expose pending totals, reject invalid input and
   await expect(cart.locator('[data-quantity-status]')).toContainText('Не удалось обновить количество')
   await page.screenshot({ path: 'artifacts/shop/cart-quantity-error-390.png' })
   await page.unroute('**/cart/update/**')
+  const confirmedUpdate = page.waitForResponse(
+    (response) => response.url().includes('/cart/update/') && response.ok(),
+  )
   await cart.locator('input[name=quantity]').fill('3')
+  await confirmedUpdate
   await expect(cart.locator('[data-quantity-status]')).toBeHidden()
   await page.reload()
   await expect(cart.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
@@ -181,6 +193,9 @@ test('catalog, full cart and checkout operate without JavaScript', async ({ brow
   await page.getByRole('button', { name: 'Добавить в корзину' }).click()
   await expect(page).toHaveURL(/cart/)
   await expect(page.locator('.cart-item')).toHaveCount(1)
+  await page.getByRole('spinbutton', { name: 'Количество', exact: true }).fill('2')
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click()
+  await expect(page.locator('.cart-total strong')).toHaveText('2 581 ₽')
   await page.getByRole('link', { name: 'Оформить заказ' }).click()
   await expect(page.getByRole('heading', { name: 'Оформление заказа' })).toBeVisible()
   await context.close()
@@ -247,10 +262,10 @@ test('twenty cart lines remain reachable with fixed summary, short viewport and 
   const drawer = page.getByRole('dialog', { name: 'Корзина' })
   const list = drawer.locator('.cart-items')
   const checkout = drawer.getByRole('link', { name: 'Оформить заказ' })
-  const lastUpdate = drawer
+  const lastQuantity = drawer
     .locator('.cart-item')
     .last()
-    .getByRole('button', { name: 'Обновить', exact: true })
+    .getByRole('spinbutton', { name: 'Количество', exact: true })
   await expect(drawer.locator('.cart-item')).toHaveCount(20)
   await expect(drawer.locator('.cart-total strong')).toHaveText('25 810 ₽')
   await expect(page.locator('body')).toHaveCSS('position', 'fixed')
@@ -260,7 +275,7 @@ test('twenty cart lines remain reachable with fixed summary, short viewport and 
   await list.evaluate((node) => {
     node.scrollTop = node.scrollHeight
   })
-  await expect(lastUpdate).toBeInViewport()
+  await expect(lastQuantity).toBeInViewport()
   await expect(checkout).toBeInViewport()
   expect(Math.abs((await drawer.locator('.cart-summary').boundingBox()).y - summaryTop)).toBeLessThan(1)
   expect(await page.evaluate(() => scrollY)).toBe(backgroundY)
@@ -275,7 +290,7 @@ test('twenty cart lines remain reachable with fixed summary, short viewport and 
   await drawer.evaluate((node) => {
     node.scrollTop = node.scrollHeight
   })
-  await expect(lastUpdate).toBeInViewport()
+  await expect(lastQuantity).toBeInViewport()
   expect(await drawer.evaluate((node) => node.scrollTop)).toBeGreaterThan(0)
   await drawer.evaluate((node) => {
     node.scrollTop = 0
@@ -300,9 +315,9 @@ test('twenty cart lines remain reachable with fixed summary, short viewport and 
   await drawer.evaluate((node) => {
     node.scrollTop = node.scrollHeight
   })
-  await expect(lastUpdate).toBeInViewport()
-  await lastUpdate.focus()
-  await expect(lastUpdate).toBeFocused()
+  await expect(lastQuantity).toBeInViewport()
+  await lastQuantity.focus()
+  await expect(lastQuantity).toBeFocused()
   await checkout.scrollIntoViewIfNeeded()
   await expect(checkout).toBeInViewport()
   await page.screenshot({ path: 'artifacts/shop/cart-text-200.png' })

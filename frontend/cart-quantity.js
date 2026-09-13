@@ -21,12 +21,10 @@ export function syncQuantityFeedback(pending = requests) {
       (form) => form.dataset.quantityState,
     )
     let message = ''
-    if (requests) message = 'Пересчитываем сумму…'
-    else if (states.includes('error'))
+    if (!requests && states.includes('error'))
       message = 'Не удалось обновить количество. Сумма пока не изменена. Повторите обновление.'
-    else if (states.includes('invalid'))
+    else if (!requests && states.includes('invalid'))
       message = 'Укажите допустимое целое количество. Сумма пока не изменена.'
-    else if (states.length) message = 'Количество изменено. Пересчитываем сумму…'
     let status = summary.querySelector('[data-quantity-status]')
     if (!status && message) {
       status = document.createElement('p')
