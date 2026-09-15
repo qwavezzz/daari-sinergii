@@ -4,6 +4,7 @@ Description=Back up Dari database and media
 Type=oneshot
 User=dari
 Group=www-data
+SupplementaryGroups=dari
 EnvironmentFile=/etc/dari/dari.env
 ExecStart=/usr/bin/bash /srv/dari/current/deploy/backup.sh
 NoNewPrivileges=true

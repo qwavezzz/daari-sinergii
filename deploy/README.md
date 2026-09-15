@@ -1,5 +1,7 @@
 # Linux release and operations
 
+Current deployment handoff: [VPS migration, 2026-09-15](HANDOFF-2026-09-15.md).
+
 The production target is Ubuntu 24.04 LTS, Python 3.12 (Ubuntu security updates), PostgreSQL 16, Nginx from the Ubuntu security repository, Node.js 22 LTS for builds only, and the exact Python/npm dependencies in the repository. Local Windows validation uses Python 3.14 and explicit SQLite development settings. PostgreSQL is mandatory in production; concurrency acceptance must run against PostgreSQL.
 
 ## First installation
@@ -7,7 +9,8 @@ The production target is Ubuntu 24.04 LTS, Python 3.12 (Ubuntu security updates)
 1. Prepare a VPS with SSH, a restricted deployment account, backups, monitoring and DNS for the main and shop hosts. Run `sudo bash deploy/bootstrap.sh`. Install a verified Node.js 22 distribution. Create a dedicated PostgreSQL role/database with no superuser or database-creation rights. Bind PostgreSQL to loopback; close external port 5432.
 2. Fill `/etc/dari/dari.env` from `.env.example`. Generate a random Django secret. Keep the file `root:dari`, mode `0640`, outside releases and static directories. `EnvironmentFile` does not execute shell substitutions; use proper systemd quoting for JSON. Never commit the completed file.
 3. Configure PostgreSQL backup access through `PGSERVICE`, `PGSERVICEFILE` and a private `PGPASSFILE` (mode `0600`). The service file identifies the same database as `DATABASE_URL`. Set these environment variables for `dari-backup.service` in the env file. Credentials are not passed as shell command arguments.
-4. Obtain a Let's Encrypt certificate for all three configured names (main, www, shop). Use a temporary HTTP-only ACME virtual host before installing the final TLS config. Disable Ubuntu's example default server so there is exactly one `default_server`. Nginx must support the `http2 on` directive; on Ubuntu's older Nginx 1.24 replace it with `listen 443 ssl http2` and remove `http2 on`.
+   All application units and transient management commands use `SupplementaryGroups=dari` in addition to `Group=www-data`. This grants traversal of `/etc/dari` (`root:dari`, `0750`) and access to its service file (`root:dari`, `0640`), while preserving Nginx access to the Gunicorn socket. The password file must belong to `dari` with mode `0600`. For manual `systemd-run --uid=dari --gid=www-data` commands, include `-p SupplementaryGroups=dari` as well.
+4. Obtain a Let's Encrypt certificate for all three configured names (main, www, shop). Use a temporary HTTP-only ACME virtual host before installing the final TLS config. Disable Ubuntu's example default server so there is exactly one `default_server` per listening address/port. The supplied configuration uses `listen 443 ssl http2`, compatible with Ubuntu's Nginx 1.24.
 5. Prepare an immutable checkout in `/srv/dari/releases/<release-id>`, then run `sudo bash deploy/release.sh /srv/dari/releases/<release-id>`. The script creates the venv, installs locked dependencies, builds assets, checks production settings, backs up an existing installation, migrates, installs roles, collects static files, switches the release and verifies both hosts. Do not run migration procedures concurrently.
 6. On the initial release run `manage.py import_legacy_content` with the production environment to import original content and protected documents, then create a superuser. Both commands must run under the `dari` account and the same environment (`systemd-run` pattern in `release.sh`). Do not place admin/session cookies on a shared parent domain.
 
@@ -22,6 +25,14 @@ Do not enable live payments until the seller, agreement, delivery, tax rates, re
 Refunds are performed in the YooKassa dashboard; authenticated webhook/reconciliation imports their confirmed state. Admin cannot set a financial status. A refund does not automatically return goods to stock. Order fulfillment transitions use guarded Admin actions. Orders and payment history cannot be deleted through Admin.
 
 ## Routine operation
+
+Nginx workers run as `www-data` and must be able to traverse `/srv/dari` itself,
+not only `/srv/dari/shared/static`. Keep `/srv/dari` owned by `dari:www-data`
+with mode `0750`; `bootstrap.sh` and `release.sh` enforce the required group and
+mode. If HTML works but all static assets return 403, inspect the full path with
+`namei -l` and the Nginx error log. Do not recursively relax permissions on
+private media, backups, or `/etc/dari`. Release checks include fetching collected
+admin CSS through Nginx on both hosts in addition to Django health checks.
 
 The static locations explicitly enable gzip for CSS/JavaScript/SVG. Verify `nginx -t` before reload,
 then request an actual hashed JS/CSS URL with `Accept-Encoding: gzip` and check `Content-Encoding: gzip`
