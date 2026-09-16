@@ -2,6 +2,7 @@ import uuid
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 from core.models import TimeStampedModel
 
 
@@ -149,11 +150,44 @@ class StockReservation(TimeStampedModel):
         ]
 
 
+class NotificationSettings(models.Model):
+    manager_email = models.EmailField(
+        "Email менеджера",
+        blank=True,
+        help_text="Новые и ещё не отправленные уведомления менеджеру. Если пусто — серверный MANAGER_EMAIL.",
+    )
+    reply_to_email = models.EmailField(
+        "Email для ответов покупателей",
+        blank=True,
+        help_text="Рабочий ящик для вопросов по заказу. Если пусто — адрес менеджера, затем адрес отправителя.",
+    )
+
+    class Meta:
+        verbose_name = "Почтовые уведомления"
+        verbose_name_plural = "Почтовые уведомления"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Адреса уведомлений о заказах"
+
+
 class Notification(models.Model):
+    class Audience(models.TextChoices):
+        CUSTOMER = "customer", "Покупатель"
+        MANAGER = "manager", "Менеджер"
+
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="notifications")
-    event = models.CharField("Событие", max_length=40)
+    event = models.CharField("Событие", max_length=96)
+    audience = models.CharField("Кому", max_length=12, choices=Audience, default=Audience.CUSTOMER)
+    payload = models.JSONField("Данные события", default=dict, blank=True)
     recipient = models.EmailField("Получатель")
+    created_at = models.DateTimeField("Создано", default=timezone.now)
+    next_attempt_at = models.DateTimeField("Следующая попытка", default=timezone.now, db_index=True)
     sent_at = models.DateTimeField("Отправлено", null=True, blank=True)
+    skipped_at = models.DateTimeField("Пропущено как дубликат", null=True, blank=True)
     attempts = models.PositiveIntegerField("Попытки", default=0)
     last_error = models.CharField("Ошибка", max_length=160, blank=True)
 
@@ -161,5 +195,9 @@ class Notification(models.Model):
         verbose_name = "Email-уведомление"
         verbose_name_plural = "Email-уведомления"
         constraints = [
-            models.UniqueConstraint(fields=["order", "event", "recipient"], name="one_order_notification")
+            models.UniqueConstraint(
+                fields=["order", "event", "recipient"],
+                condition=models.Q(skipped_at__isnull=True),
+                name="one_order_notification",
+            )
         ]

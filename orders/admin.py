@@ -1,6 +1,15 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
-from .models import DeliveryMethod, Notification, Order, OrderItem, StockReservation, StoreSettings
+from django.utils import timezone
+from .models import (
+    DeliveryMethod,
+    Notification,
+    NotificationSettings,
+    Order,
+    OrderItem,
+    StockReservation,
+    StoreSettings,
+)
 from payments.models import PaymentAttempt
 from .services import transition_order
 
@@ -122,12 +131,43 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ["order", "event", "recipient", "sent_at", "attempts", "last_error"]
+    list_display = [
+        "order",
+        "event",
+        "audience",
+        "recipient",
+        "sent_at",
+        "skipped_at",
+        "attempts",
+        "next_attempt_at",
+        "last_error",
+    ]
     readonly_fields = [field.name for field in Notification._meta.fields]
-    list_filter = ["event", "sent_at"]
+    list_filter = ["audience", "event", "sent_at", "skipped_at"]
 
     def has_add_permission(self, request):
         return False
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(NotificationSettings)
+class NotificationSettingsAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return super().has_add_permission(request) and not NotificationSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if "manager_email" in form.changed_data:
+            Notification.objects.filter(
+                audience=Notification.Audience.MANAGER,
+                sent_at__isnull=True,
+                skipped_at__isnull=True,
+            ).update(next_attempt_at=timezone.now())
+            self.message_user(
+                request, "Неотправленные письма менеджеру будут направлены на актуальный адрес."
+            )

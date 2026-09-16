@@ -6,6 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from orders.models import Notification, Order, StockReservation
+from orders.notifications import build_notification_email
 from orders.services import create_order
 from orders.test_support import checkout_data, fixture_cart
 from .models import PaymentAttempt, Refund
@@ -158,6 +159,42 @@ class PaymentTests(TestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.financial_status, "paid")
 
+    def test_refund_mail_uses_confirmed_event_amount_and_handles_uuid_ids(self):
+        attempt = self.succeeded()
+        refund_id = "12345678-1234-1234-1234-123456789abc"
+        refund = {
+            "id": refund_id,
+            "payment_id": attempt.provider_id,
+            "status": "pending",
+            "amount": {"value": "40.00", "currency": "RUB"},
+        }
+        apply_refund(attempt.pk, refund)
+        self.assertFalse(Notification.objects.filter(event__startswith="refund").exists())
+        refund["status"] = "succeeded"
+        apply_refund(attempt.pk, refund)
+        apply_refund(attempt.pk, refund)
+        notices = Notification.objects.filter(event=f"refund-{refund_id}")
+        self.assertEqual(notices.count(), 2)
+        notice = notices.first()
+        notice.full_clean()
+        self.assertEqual(Decimal(notice.payload["refund_amount"]), Decimal("40.00"))
+        self.assertEqual(Decimal(notice.payload["refunded_total"]), Decimal("40.00"))
+        next_refund = {
+            **refund,
+            "id": "second-refund",
+            "status": "pending",
+            "amount": {"value": "110.00", "currency": "RUB"},
+        }
+        apply_refund(attempt.pk, next_refund)
+        self.assertFalse(Notification.objects.filter(event="refund-second-refund").exists())
+        next_refund["status"] = "succeeded"
+        apply_refund(attempt.pk, next_refund)
+        full_notice = Notification.objects.filter(event="refunded").first()
+        self.assertEqual(full_notice.payload["refund_amount"], "110.00")
+        notice.refresh_from_db()
+        self.assertEqual(notice.payload["refund_amount"], "40.00")
+        self.assertIn("Возврат по этому уведомлению: 40 ₽", build_notification_email(notice).body)
+
     def test_webhook_payload_is_not_trusted(self):
         attempt = self.attempt()
         payload = {
@@ -200,9 +237,7 @@ class PaymentTests(TestCase):
         self.assertEqual(self.order.reservations.get().state, "active")
 
     def test_notification_failure_keeps_order_and_queue(self):
-        with patch(
-            "orders.management.commands.send_notifications.EmailMessage.send", side_effect=OSError("test")
-        ):
+        with patch("orders.notifications.EmailMultiAlternatives.send", side_effect=OSError("test")):
             call_command("send_notifications", verbosity=0)
         self.assertTrue(Order.objects.filter(pk=self.order.pk).exists())
         self.assertEqual(Notification.objects.filter(sent_at__isnull=True).count(), 2)

@@ -22,6 +22,15 @@ class Command(BaseCommand):
             )
             | Permission.objects.filter(content_type__app_label="orders", codename="change_order")
             | Permission.objects.filter(
+                content_type__app_label="orders",
+                content_type__model="notificationsettings",
+                codename__in=[
+                    "view_notificationsettings",
+                    "add_notificationsettings",
+                    "change_notificationsettings",
+                ],
+            )
+            | Permission.objects.filter(
                 content_type__app_label="orders", content_type__model="deliverymethod"
             )
             | Permission.objects.filter(content_type__app_label="payments", codename__startswith="view_")

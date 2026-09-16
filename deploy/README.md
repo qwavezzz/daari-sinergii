@@ -1,6 +1,6 @@
 # Linux release and operations
 
-Current deployment handoff: [VPS migration, 2026-09-15](HANDOFF-2026-09-15.md).
+Current handoff and remaining launch tasks: [2026-09-16](HANDOFF-2026-09-16.md). Email changes are prepared in the repository, not yet deployed to the VPS; delivery integrations are researched, not implemented. Previous deployment: [VPS migration, 2026-09-15](HANDOFF-2026-09-15.md).
 
 The production target is Ubuntu 24.04 LTS, Python 3.12 (Ubuntu security updates), PostgreSQL 16, Nginx from the Ubuntu security repository, Node.js 22 LTS for builds only, and the exact Python/npm dependencies in the repository. Local Windows validation uses Python 3.14 and explicit SQLite development settings. PostgreSQL is mandatory in production; concurrency acceptance must run against PostgreSQL.
 
@@ -42,6 +42,9 @@ Private HTML/API response compression is not enabled by these static-location di
 `dari-reconcile.timer` checks payment attempts, retries unknown creation with its original payload/key only within a conservative 23-hour window (provider guarantee: 24 hours), imports refunds and releases only reserves without unresolved payments. An unknown payment beyond that window keeps its reservation and flags the order for manual review. Do not create a replacement payment until its outcome is established. Delayed successful payments are retained and stock conflicts are visible in Admin. Confirmed successful status never regresses.
 
 `dari-notifications.timer` retries durable notification records. SMTP errors never roll back orders or money. A stable Message-ID reduces duplicates, but ordinary SMTP cannot guarantee exactly-once delivery if the process dies after the mail server accepted a message. The order/payment state itself is idempotent.
+
+See [order email setup](EMAIL.md) for SMTP configuration, editable manager/Reply-To addresses,
+delivery checks and retry behavior. Apply migrations and `setup_roles` before using the new admin section.
 
 Monitor `systemctl status dari*`, `journalctl -u dari`, both `/health/` endpoints, failed timers, disk space, certificate expiry, orders needing attention, stale payment checks and unsent notifications. Logs exclude credentials and provider/card payloads. Run `clearsessions` regularly and arrange retention of expired carts/rate buckets according to the agreed personal-data policy.
 

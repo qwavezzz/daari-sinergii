@@ -148,6 +148,8 @@ def apply_payment(attempt_id, result):
             .exists()
         ):
             release_reservations(order)
+            if order.status != Order.Status.CANCELED:
+                queue_notification(order, "canceled")
             order.status = Order.Status.CANCELED
     order.save(
         update_fields=[
@@ -220,7 +222,12 @@ def apply_refund(attempt_id, data):
     if order.paid_attempt_id == attempt.pk and refunded:
         order.financial_status = "refunded" if refunded == attempt.amount else "part_refunded"
         order.save(update_fields=["financial_status", "updated_at"])
-        queue_notification(order, "refunded" if refunded == attempt.amount else f"refund-{refund_id}")
+        if state == "succeeded" and (not existing or existing.state != "succeeded"):
+            queue_notification(
+                order,
+                "refunded" if refunded == attempt.amount else f"refund-{refund_id}",
+                payload={"refund_amount": str(amount), "refunded_total": str(refunded)},
+            )
     PaymentEvent.objects.get_or_create(
         deduplication_key=f"refund:{refund_id}:{state}",
         defaults={"attempt": attempt, "event_type": "refund." + state},

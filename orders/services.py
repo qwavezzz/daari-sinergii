@@ -10,6 +10,7 @@ from cart.models import Cart
 from catalog.models import Product
 from core.models import AuditEntry
 from .models import DeliveryMethod, Notification, Order, OrderItem, StockReservation, StoreSettings
+from .notifications import manager_email
 
 
 class QuoteChanged(ValidationError):
@@ -66,9 +67,19 @@ def checkout_snapshot(cart):
     return context, signing.dumps(quote, salt="checkout-quote", compress=True)
 
 
-def queue_notification(order, event):
-    for recipient in {order.email, settings.MANAGER_EMAIL} - {""}:
-        Notification.objects.get_or_create(order=order, event=event, recipient=recipient)
+def queue_notification(order, event, payload=None):
+    recipients = [(order.email, Notification.Audience.CUSTOMER)]
+    manager = manager_email()
+    if manager and manager.casefold() != order.email.casefold():
+        recipients.append((manager, Notification.Audience.MANAGER))
+    for recipient, audience in recipients:
+        Notification.objects.get_or_create(
+            order=order,
+            event=event,
+            recipient=recipient,
+            skipped_at__isnull=True,
+            defaults={"audience": audience, "payload": payload or {}},
+        )
 
 
 @transaction.atomic
@@ -221,6 +232,7 @@ def transition_order(order_id, target, actor_id=None):
         raise ValidationError("Перед выполнением требуется подтверждённая оплата.")
     order.status = target
     order.save(update_fields=["status", "updated_at"])
+    queue_notification(order, target)
     AuditEntry.objects.create(
         kind="order.status", object_id=str(order.public_id), message=f"Статус {target}; сотрудник {actor_id}"
     )
