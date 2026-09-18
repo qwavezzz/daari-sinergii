@@ -1,0 +1,19 @@
+{
+  "useCase": "ui-mockup",
+  "surface": "homepage desktop",
+  "variant": "Водная колонна / Сечение среды",
+  "prompt": "Wide high-fidelity website UI for Дары Синергии: compact navigation; full-viewport layered water scene; enormous headline; central replaceable video aperture; bubbles and anchored categorical callouts; vertical scene progress; next section visible as a continuous sectional cutaway joining the three directions; fixed 01–04 switcher. Deep water, cyan, oxygen white; no fake proof, pseudo-science, SaaS cards, or purple.",
+  "approved": false,
+  "carryForward": [
+    "Layer ordering",
+    "Controlled display-text occlusion",
+    "Sectional connection between directions"
+  ],
+  "doNotLiteralize": [
+    "Generated facilities",
+    "Generated product vessels",
+    "Generated claims",
+    "Any photographic subject"
+  ]
+}
+

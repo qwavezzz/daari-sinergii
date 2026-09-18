@@ -35,12 +35,21 @@ install -m 0644 deploy/nginx.conf /etc/nginx/sites-available/dari
 ln -sfn /etc/nginx/sites-available/dari /etc/nginx/sites-enabled/dari
 nginx -t
 systemctl daemon-reload
-systemctl enable --now dari.service dari-reconcile.timer dari-notifications.timer dari-backup.timer
+# Payment reconciliation is enabled separately when payments are commissioned.
+# Preserve its existing state during ordinary site/security releases.
+systemctl enable --now dari.service dari-notifications.timer dari-backup.timer
 systemctl restart dari.service
 systemctl reload nginx
-curl --fail --retry 5 --retry-delay 2 https://dari-sinergii.ru/health/
-curl --fail --retry 5 --retry-delay 2 https://shop.dari-sinergii.ru/health/
+verify_release_url() {
+    if ! curl --fail --silent --show-error --retry 5 --retry-connrefused --retry-delay 2 \
+        --connect-timeout 5 --max-time 15 --retry-max-time 45 "$1"; then
+        printf '\nRelease is already selected, but HTTP verification failed: %s\n' "$1" >&2
+        printf 'Check current, services and local HTTPS before retrying or rolling back. Do not rerun installation blindly.\n' >&2
+        return 1
+    fi
+}
 # A healthy Django response does not prove Nginx can read collected assets.
 for host in dari-sinergii.ru shop.dari-sinergii.ru; do
-    curl --fail --silent --show-error --max-time 30 "https://$host/static/admin/css/base.css" >/dev/null
+    verify_release_url "https://$host/health/"
+    verify_release_url "https://$host/static/admin/css/base.css" >/dev/null
 done

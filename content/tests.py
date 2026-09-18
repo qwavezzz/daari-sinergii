@@ -71,6 +71,7 @@ class ImportedContentTests(TestCase):
             response = self.client.get(document.file_url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response["Content-Type"], "application/pdf")
+            self.assertEqual(response["Content-Security-Policy"], "default-src 'none'; sandbox")
             self.assertIn("no-store", response["Cache-Control"])
             self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF-"))
             with self.assertRaises(ValueError):
@@ -168,6 +169,7 @@ class ImportedContentTests(TestCase):
         )
         private_file = self.client.get(preview + "file/", HTTP_HOST=settings.SHOP_HOST)
         self.assertEqual(private_file.status_code, 200)
+        self.assertEqual(private_file["Content-Security-Policy"], "default-src 'none'; sandbox")
         self.assertTrue(b"".join(private_file.streaming_content).startswith(b"%PDF-"))
         self.assertEqual(self.client.get(doc.file_url).status_code, 404)
 

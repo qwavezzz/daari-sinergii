@@ -1,6 +1,8 @@
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
+from django.conf import settings
+from urllib.parse import urlencode
 from core.http import render_page
 from .models import Category, Product
 
@@ -12,12 +14,22 @@ def index(request):
     if request.GET.get("category"):
         selected = get_object_or_404(Category, slug=request.GET["category"], active=True)
         products = products.filter(categories=selected)
+    page = Paginator(products, 12).get_page(request.GET.get("page"))
+    params = {"category": selected.slug} if selected else {}
+    if page.number > 1:
+        params["page"] = page.number
+    title = f"{selected.name} — Дары Синергии" if selected else "Каталог — Дары Синергии"
+    if page.number > 1:
+        title = f"{title} — страница {page.number}"
     context = {
-        "products": Paginator(products, 12).get_page(request.GET.get("page")),
+        "products": page,
         "categories": Category.objects.filter(active=True),
         "selected_category": selected,
-        "page_title": "Каталог — Дары Синергии",
-        "canonical_url": request.build_absolute_uri("/"),
+        "page_title": title,
+        "page_description": selected.description
+        if selected and selected.description
+        else ("Каталог «Дары Синергии»: озонированные масла, гидролаты и системы озонирования воды."),
+        "canonical_url": settings.SHOP_ORIGIN + "/" + ("?" + urlencode(params) if params else ""),
     }
     return render_page(request, "shop/catalog.html", "shop/partials/catalog_content.html", context)
 

@@ -18,6 +18,9 @@ MAIN_HOST = os.environ.get("MAIN_HOST", "dari-sinergii.ru")
 SHOP_HOST = os.environ.get("SHOP_HOST", "shop.dari-sinergii.ru")
 MAIN_ORIGIN = os.environ.get("MAIN_ORIGIN", f"https://{MAIN_HOST}")
 SHOP_ORIGIN = os.environ.get("SHOP_ORIGIN", f"https://{SHOP_HOST}")
+SITE_INDEXING_ENABLED = os.environ.get("SITE_INDEXING_ENABLED", "true").lower() == "true"
+# Explicit release gate, independent of checkout/payment settings.
+SHOP_INDEXING_ENABLED = os.environ.get("SHOP_INDEXING_ENABLED", "false").lower() == "true"
 ALLOWED_HOSTS = [MAIN_HOST, "www." + MAIN_HOST, SHOP_HOST]
 CSRF_TRUSTED_ORIGINS = [MAIN_ORIGIN, SHOP_ORIGIN]
 INSTALLED_APPS = [

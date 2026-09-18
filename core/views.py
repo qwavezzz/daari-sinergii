@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
+from .seo import site_is_indexable
 
 
 @require_GET
@@ -18,17 +19,20 @@ def health(request):
 @require_GET
 def robots(request):
     origin = settings.SHOP_ORIGIN if request.is_shop else settings.MAIN_ORIGIN
+    sitemap_line = f"Sitemap: {origin}/sitemap.xml\n" if site_is_indexable(request) else ""
     return HttpResponse(
-        "User-agent: *\nDisallow: /admin/\nDisallow: /cart/\nDisallow: /checkout/\nDisallow: /orders/\nDisallow: /payments/\nDisallow: /preview/\nSitemap: "
-        + origin
-        + "/sitemap.xml\n",
+        "User-agent: *\nDisallow: /admin/\nDisallow: /cart/\nDisallow: /checkout/\nDisallow: /orders/\nDisallow: /payments/\nDisallow: /preview/\nDisallow: /health/\n"
+        + sitemap_line,
         content_type="text/plain",
     )
 
 
 @require_GET
 def sitemap(request):
-    if request.is_shop:
+    if not site_is_indexable(request):
+        paths = []
+        origin = settings.SHOP_ORIGIN if request.is_shop else settings.MAIN_ORIGIN
+    elif request.is_shop:
         from catalog.models import Product
 
         paths = ["/"] + [

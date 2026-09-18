@@ -26,3 +26,21 @@ static/*.png
 *.log
 .DS_Store
 Thumbs.db
+
+# Filled client handoff forms and local server backups are confidential.
+/private-handoff/
+/local-backups/
+*.private.md
+/dari-sinergii*.zip
+
+# Keep local issue/spec Markdown, but never commit browser profiles or scratch binaries.
+/.scratch/**
+!/.scratch/**/
+!/.scratch/**/*.md
+/.scratch/critique-b/
+/.scratch/*profile*/
+/.scratch/npm-cache/
+/.scratch/pdf-tools/
+/.scratch/official-doc-pages/
+/.scratch/qa-*/
+/.scratch/reg-ru-*/

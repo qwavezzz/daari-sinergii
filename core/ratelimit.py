@@ -1,16 +1,29 @@
 import hashlib
+from ipaddress import ip_address
 from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 from .models import RateLimitBucket
 
 
+def client_address(request):
+    remote = request.META.get("REMOTE_ADDR", "")
+    # Gunicorn has an empty REMOTE_ADDR on the private Unix socket. Only then
+    # trust X-Real-IP, which our Nginx snippet overwrites (never appends).
+    # A TCP client cannot choose its identity using a forwarded header.
+    if not remote:
+        try:
+            return str(ip_address(request.META.get("HTTP_X_REAL_IP", "")))
+        except ValueError:
+            pass
+    return remote
+
+
 def allow_request(request, action, limit=20, seconds=60):
-    # Proxy headers are deliberately ignored: Nginx also applies limits by remote IP.
     identity = (
-        request.META.get("REMOTE_ADDR", "")
+        client_address(request)
         if action == "admin-login"
-        else request.session.session_key or request.META.get("REMOTE_ADDR", "")
+        else request.session.session_key or client_address(request)
     )
     key = hashlib.sha256(f"{action}:{identity}".encode()).hexdigest()
     with transaction.atomic():

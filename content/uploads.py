@@ -70,7 +70,7 @@ def validate_image(value):
     position = value.tell()
     try:
         value.seek(0)
-        with Image.open(value) as image:
+        with Image.open(value, formats=[expected]) as image:
             if image.format != expected or image.width * image.height > 40_000_000:
                 raise ValidationError("Неверный формат или слишком большое разрешение изображения.")
             image.verify()

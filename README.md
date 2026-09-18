@@ -3,6 +3,10 @@
 Один Django-проект: лендинг, библиотека материалов и магазин на `shop.dari-sinergii.ru`.
 Требования: [TECHNICAL_SPECIFICATION.md](TECHNICAL_SPECIFICATION.md).
 Оформление: [DESIGN.md](DESIGN.md) для лендинга, [DESIGN-SHOP.md](DESIGN-SHOP.md) для магазина.
+
+Подготовка к передаче клиенту: [аудит 18.09.2026](docs/READINESS-AUDIT-2026-09-18.md),
+[паспорт доступов](docs/CLIENT-ACCESS.template.md), [руководство владельца](docs/OWNER-GUIDE.md),
+[настройка SEO](docs/SEO-SETUP.md), [диагностика VPS и выпуск исправлений](deploy/RELEASE-READINESS.md).
 Используемые токены и компоненты магазина описаны в [templates/shop/DESIGN.md](templates/shop/DESIGN.md).
 
 Лендинг сохраняет исходный CSS, DOM сцен, GSAP, SplitText и Lenis. Django выдаёт опубликованный HTML,

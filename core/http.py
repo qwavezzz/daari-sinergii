@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
+from .seo import should_noindex
 
 
 def is_partial(request):
@@ -17,10 +18,7 @@ def render_page(request, full_template, partial_template, context=None, status=2
     context.setdefault("canonical_url", request.build_absolute_uri(request.path))
     context.setdefault("page_title", "Дары Синергии")
     context.setdefault("page_description", "Системы озонирования воды, озонированные масла и гидролаты.")
-    context.setdefault(
-        "noindex",
-        request.path.startswith(("/cart/", "/checkout/", "/orders/", "/admin/", "/payments/", "/preview/")),
-    )
+    context["noindex"] = context.get("noindex", False) or should_noindex(request)
     return render(request, partial_template if is_partial(request) else full_template, context, status=status)
 
 
