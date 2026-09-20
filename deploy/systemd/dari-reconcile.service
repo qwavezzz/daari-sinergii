@@ -6,6 +6,7 @@ After=postgresql.service network-online.target
 Type=oneshot
 User=dari
 Group=www-data
+SupplementaryGroups=dari
 WorkingDirectory=/srv/dari/current
 EnvironmentFile=/etc/dari/dari.env
 ExecStart=/usr/bin/flock -n /srv/dari/shared/reconcile.lock /srv/dari/current/.venv/bin/python manage.py reconcile_payments

@@ -5,7 +5,7 @@ from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
 from apps.orders.models import Order
-from apps.orders.services import release_reservations
+from apps.orders.services import queue_notification, release_reservations
 from apps.payments.models import PaymentAttempt
 from apps.payments.provider import PaymentError
 from apps.payments.services import reconcile_attempt
@@ -67,6 +67,8 @@ class Command(BaseCommand):
                 if order.paid_attempt_id or order.payment_attempts.exclude(state="canceled").exists():
                     continue
                 release_reservations(order)
+                if order.status != "canceled":
+                    queue_notification(order, "canceled")
                 order.status = "canceled"
                 order.save(update_fields=["status", "updated_at"])
                 released += 1

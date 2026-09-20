@@ -1,0 +1,19 @@
+{
+  "useCase": "ui-mockup",
+  "surface": "homepage desktop",
+  "variant": "Белая лаборатория",
+  "prompt": "Wide high-fidelity website UI for Дары Синергии: bright asymmetric laboratory hero, giant grotesk headline crossed by a cyan replaceable video aperture, precise linework, clear CTAs, editorial three-direction index, and fixed 01–04 switcher. Mineral white, graphite, cyan; no purple, fake proof, dark dashboard, generic card grid, or excessive empty space.",
+  "approved": false,
+  "carryForward": [
+    "Bright editorial discipline",
+    "Precise cyan rules",
+    "High information density without cards"
+  ],
+  "doNotLiteralize": [
+    "Generated standards",
+    "Generated chemistry values",
+    "Generated equipment illustrations",
+    "Water photograph"
+  ]
+}
+

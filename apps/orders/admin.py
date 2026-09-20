@@ -1,11 +1,20 @@
 from django.contrib import admin, messages
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
 from django.urls import path, reverse
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
-from .models import DeliveryMethod, Notification, Order, OrderItem, StockReservation, StoreSettings
+from .models import (
+    DeliveryMethod,
+    Notification,
+    NotificationSettings,
+    Order,
+    OrderItem,
+    StockReservation,
+    StoreSettings,
+)
 from apps.payments.models import PaymentAttempt
 from .services import TRANSITIONS, transition_order
 
@@ -305,3 +314,24 @@ class NotificationAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(NotificationSettings)
+class NotificationSettingsAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return super().has_add_permission(request) and not NotificationSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if "manager_email" in form.changed_data:
+            Notification.objects.filter(
+                audience=Notification.Audience.MANAGER,
+                sent_at__isnull=True,
+                skipped_at__isnull=True,
+            ).update(next_attempt_at=timezone.now())
+            self.message_user(
+                request, "Неотправленные письма менеджеру будут направлены на актуальный адрес."
+            )

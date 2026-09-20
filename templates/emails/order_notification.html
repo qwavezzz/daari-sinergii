@@ -1,0 +1,25 @@
+{% load shop_tags %}<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f8;color:#10243a;font-family:Arial,sans-serif;line-height:1.6">
+<table role="presentation" style="width:100%;border-collapse:collapse"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" style="width:100%;max-width:600px;border-collapse:collapse;background:#ffffff"><tr><td style="padding:28px 24px;background:#10243a;color:#ffffff;font-size:20px;font-weight:bold">Дары Синергии</td></tr>
+<tr><td style="padding:24px">
+<h1 style="font-size:24px;line-height:1.3;margin:0 0 12px">{{ title }}</h1>
+<p style="font-size:12px;overflow-wrap:anywhere;margin:0 0 20px;color:#526477">Заказ № {{ order.public_id }}</p>
+<p>{{ description }}</p>
+{% if refund_amount %}<p style="padding:16px;background:#edf6fa"><strong>Возврат по этому уведомлению: {{ refund_amount|money }} ₽</strong><br>Всего подтверждено на момент события: {{ refunded_total|money }} ₽</p>{% endif %}
+<h2 style="font-size:18px;margin:24px 0 12px">Состав заказа</h2>
+<table style="width:100%;border-collapse:collapse;text-align:left">
+<thead><tr><th scope="col" style="padding:8px 0;border-bottom:1px solid #dbe3eb">Товар</th><th scope="col" style="padding:8px 0 8px 12px;border-bottom:1px solid #dbe3eb;text-align:right">Сумма</th></tr></thead>
+<tbody>{% for item in items %}<tr><td style="padding:12px 0;border-bottom:1px solid #dbe3eb;overflow-wrap:anywhere">{{ item.name }}<br><span style="font-size:13px;color:#526477">{{ item.sku }} · {{ item.quantity }} шт. × {{ item.unit_price|money }} ₽</span></td><td style="padding:12px 0 12px 12px;vertical-align:top;border-bottom:1px solid #dbe3eb;text-align:right">{{ item.subtotal|money }} ₽</td></tr>{% endfor %}</tbody></table>
+<p>Товары: {{ order.subtotal|money }} ₽<br>Получение: {{ order.delivery_price|money }} ₽<br><strong>Стоимость заказа: {{ order.total|money }} ₽</strong></p>
+<h2 style="font-size:18px;margin:24px 0 12px">Получение</h2>
+<p>{{ order.delivery_method }}<br>{{ order.name }}{% if order.address %}<br>{{ order.address|linebreaksbr }}{% endif %}</p>
+{% if is_manager %}<p>Телефон: {{ order.phone }}<br>Email покупателя: {{ order.email }}</p>{% endif %}
+{% if order.comment %}<p><strong>Комментарий:</strong><br>{{ order.comment|linebreaksbr }}</p>{% endif %}
+<p style="margin:28px 0"><a href="{{ order_url }}" style="display:inline-block;padding:12px 18px;background:#10243a;color:#ffffff;text-decoration:none;font-weight:bold">{{ link_label }}</a></p>
+{% if not is_manager %}<p style="font-size:13px;color:#526477">Ссылка доступна в браузере, где вы оформляли заказ. На другом устройстве используйте сведения из этого письма или ответьте нам — поможем уточнить состояние заказа.</p>{% endif %}
+<p>Вопросы по заказу: <a href="mailto:{{ reply_to }}" style="color:#10243a">{{ reply_to }}</a></p>
+<p style="font-size:12px;color:#526477;margin:24px 0 0">Это уведомление о заказе, не кассовый чек.</p>
+</td></tr></table></td></tr></table>
+</body></html>

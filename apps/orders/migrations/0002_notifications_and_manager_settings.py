@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from apps.orders.migration_compat import AddFieldIfMissing, RemoveConstraintIfExists
+
 
 def identify_manager_notifications(apps, schema_editor):
     notification = apps.get_model("orders", "Notification")
@@ -16,11 +18,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveConstraint(
+        RemoveConstraintIfExists(
             model_name="notification",
             name="one_order_notification",
         ),
-        migrations.AddField(
+        AddFieldIfMissing(
             model_name="notification",
             name="audience",
             field=models.CharField(

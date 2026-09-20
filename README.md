@@ -23,6 +23,19 @@ Vite собирает JavaScript/CSS; GSAP и Lenis управляют аним�
 `node_modules/` и `.venv/` — локальные зависимости. `.agents/` и `.impeccable/` содержат
 инструменты и настройки работы с дизайном, в приложение не включаются.
 
+Один Django-проект: лендинг, библиотека материалов и магазин на `shop.dari-sinergii.ru`.
+Требования: [TECHNICAL_SPECIFICATION.md](TECHNICAL_SPECIFICATION.md).
+Оформление: [DESIGN.md](DESIGN.md) для лендинга, [DESIGN-SHOP.md](DESIGN-SHOP.md) для магазина.
+
+Подготовка к передаче клиенту: [аудит 18.09.2026](docs/READINESS-AUDIT-2026-09-18.md),
+[паспорт доступов](docs/CLIENT-ACCESS.template.md), [руководство владельца](docs/OWNER-GUIDE.md),
+[настройка SEO](docs/SEO-SETUP.md), [диагностика VPS и выпуск исправлений](deploy/RELEASE-READINESS.md).
+Используемые токены и компоненты магазина описаны в [templates/shop/DESIGN.md](templates/shop/DESIGN.md).
+
+Лендинг сохраняет исходный CSS, DOM сцен, GSAP, SplitText и Lenis. Django выдаёт опубликованный HTML,
+HTMX меняет страницы и фрагменты, CSP-сборка Alpine управляет меню, галереей и корзиной.
+React в новой сборке отсутствует. JSX в `src/` оставлен только как эталон коммита `8fa57e8`.
+
 ## Локальный запуск
 
 Нужны Python 3.12–3.14 и Node.js 22 или 24. Команды PowerShell из корня проекта:

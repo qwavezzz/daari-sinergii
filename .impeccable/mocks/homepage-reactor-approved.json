@@ -1,0 +1,15 @@
+{
+  "useCase": "ui-mockup",
+  "surface": "homepage desktop",
+  "variant": "Реактор O₃",
+  "prompt": "Wide high-fidelity website UI for Дары Синергии: compact seven-route navigation; 78vh dark-water hero with the headline Технологии озона для воды, среды и продукта; two clear CTAs; a central-right replaceable video placeholder; bounded cyan particle stream and factual-category diagnostic callouts; below-fold asymmetric three-direction module; fixed 01–04 variant switcher. Deep navy, cyan, oxygen white; no purple, fake proof, SaaS cards, glassmorphism, or gradient text.",
+  "approved": true,
+  "approval": "Delegated by the user's request to propose the main technique and page composition; selected for the clearest offer, replaceable video boundary, compact rhythm, and lightweight Canvas 2D feasibility.",
+  "doNotLiteralize": [
+    "Generated equipment drawings",
+    "Generated measurement labels",
+    "Any apparent product specifications",
+    "Photographic water texture"
+  ]
+}
+

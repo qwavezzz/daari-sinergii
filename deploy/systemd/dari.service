@@ -7,6 +7,7 @@ Requires=postgresql.service
 Type=simple
 User=dari
 Group=www-data
+SupplementaryGroups=dari
 WorkingDirectory=/srv/dari/current
 EnvironmentFile=/etc/dari/dari.env
 RuntimeDirectory=dari

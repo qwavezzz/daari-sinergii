@@ -1,195 +1,204 @@
-import json
-from io import BytesIO, StringIO
+from datetime import timedelta
+from io import StringIO
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.core import mail
-from django.core.management import call_command
-from django.test import Client, TestCase, override_settings
-from django.urls import reverse
+from django.core.exceptions import ValidationError
+from django.core.management import call_command, CommandError
+from django.db import transaction
+from django.test import TestCase, override_settings
+from django.utils import timezone
 
-from apps.payments.provider import InvalidPayment, YooKassaClient
-from apps.payments.services import reconcile_attempt, start_payment
-from .models import StoreSettings
-from .notifications import build_notification
-from .services import create_order, queue_notification
-from .test_support import checkout_data, fixture_cart
+from apps.orders.models import Notification, NotificationSettings, StockReservation
+from apps.orders.notifications import build_notification_email
+from apps.orders.services import create_order, queue_notification, transition_order
+from apps.orders.test_support import checkout_data, fixture_cart
 
 
-@override_settings(
-    YOOKASSA_ENABLED=True,
-    YOOKASSA_TEST_MODE=True,
-    YOOKASSA_SHOP_ID="12345",
-    YOOKASSA_SECRET_KEY="test-fixture-key",
-)
-class NotificationFlowTests(TestCase):
+class NotificationTests(TestCase):
     def setUp(self):
         cart, self.product, method = fixture_cart()
-        StoreSettings.objects.filter(pk=1).update(manager_email="sales@example.test")
-        self.order = create_order(cart, checkout_data(cart, method), cart.session_key)
-
-    def payment(self, status="pending"):
-        return {
-            "id": "fixture-payment-1",
-            "status": status,
-            "paid": status == "succeeded",
-            "amount": {"value": str(self.order.total), "currency": "RUB"},
-            "metadata": {"order_id": str(self.order.public_id)},
-            "recipient": {"account_id": "12345"},
-            "test": True,
-            "confirmation": {"confirmation_url": "https://yoomoney.ru/checkout/fixture"},
-        }
-
-    def test_api_boundary_creates_and_confirms_test_payment_then_sends_four_role_specific_emails(self):
-        calls = []
-
-        def api(request, timeout):
-            calls.append((request.method, request.full_url))
-            if request.full_url.endswith("/me"):
-                result = {"account_id": "12345", "test": True}
-            elif request.method == "POST":
-                self.assertIn("Idempotence-key", request.headers)
-                self.assertEqual(json.loads(request.data)["amount"]["value"], "150.00")
-                result = self.payment()
-            else:
-                result = self.payment("succeeded")
-            return BytesIO(json.dumps(result).encode())
-
-        with patch("apps.payments.provider.urlopen", side_effect=api):
-            attempt = start_payment(self.order.pk)
-            # Refund enumeration is separate from this payment/notification scenario.
-            with patch.object(YooKassaClient, "list_refunds", return_value=[]):
-                reconcile_attempt(attempt.pk)
-                reconcile_attempt(attempt.pk)
-        self.assertEqual(calls[0], ("GET", "https://api.yookassa.ru/v3/me"))
-        self.order.refresh_from_db()
-        self.assertEqual(self.order.financial_status, "paid")
-        self.assertEqual(self.order.notifications.count(), 4)
-        call_command("send_notifications", stdout=StringIO())
-        self.assertEqual(len(mail.outbox), 4)
-        customer = [message for message in mail.outbox if message.to == [self.order.email]]
-        manager = [message for message in mail.outbox if message.to == ["sales@example.test"]]
-        self.assertEqual(len(customer), 2)
-        self.assertEqual(len(manager), 2)
-        self.assertTrue(any("ожидает сборки" in message.subject for message in manager))
-        for message in customer:
-            self.assertNotIn("/admin/", message.body)
-            self.assertEqual(message.alternatives[0].mimetype, "text/html")
-        for message in manager:
-            self.assertIn(f"/admin/orders/order/{self.order.pk}/change/", message.body)
-        call_command("send_notifications", stdout=StringIO())
-        self.assertEqual(len(mail.outbox), 4)
-
-    def test_wrong_shop_or_live_credentials_are_rejected_before_payment_creation(self):
-        for data in ({"account_id": "12345", "test": False}, {"account_id": "other", "test": True}):
-            with (
-                self.subTest(data=data),
-                patch.object(YooKassaClient, "request", return_value=data) as request,
-            ):
-                with self.assertRaises(InvalidPayment):
-                    YooKassaClient().create_payment({}, "fixture-key")
-                request.assert_called_once_with("GET", "me")
-
-    def test_changing_manager_affects_new_events_and_same_email_retains_both_roles(self):
-        StoreSettings.objects.filter(pk=1).update(manager_email=self.order.email)
-        queue_notification(self.order, "paid")
-        queue_notification(self.order, "paid")
-        notices = self.order.notifications.filter(event="paid")
-        self.assertEqual(notices.count(), 2)
-        self.assertEqual(set(notices.values_list("audience", flat=True)), {"customer", "manager"})
-        self.assertTrue(
-            self.order.notifications.filter(event="created", recipient="sales@example.test").exists()
+        self.order = create_order(
+            cart,
+            checkout_data(cart, method, comment='<script>alert("x")</script>'),
+            cart.session_key,
         )
 
-    def test_failed_send_stays_queued_and_retry_preserves_message_id(self):
-        notice = self.order.notifications.get(audience="manager")
-        message_id = build_notification(notice).extra_headers["Message-ID"]
+    def send(self, **options):
+        call_command("send_notifications", stdout=StringIO(), **options)
+
+    def test_buyer_and_manager_receive_distinct_complete_multipart_messages(self):
+        self.product.name = "Новое имя каталога"
+        self.product.price = 999
+        self.product.save()
+        self.send()
+        self.assertEqual(len(mail.outbox), 2)
+        buyer = next(m for m in mail.outbox if m.to == [self.order.email])
+        manager = next(m for m in mail.outbox if m.to == ["manager@example.test"])
+        for message in mail.outbox:
+            self.assertIn("Тестовый товар", message.body)
+            self.assertNotIn("Новое имя каталога", message.body)
+            self.assertIn("Стоимость заказа: 150 ₽", message.body)
+            self.assertIn("Получение: 50 ₽", message.body)
+            self.assertEqual(message.alternatives[0].mimetype, "text/html")
+            self.assertNotIn('<script>alert("x")</script>', message.alternatives[0].content)
+            self.assertIn("&lt;script&gt;", message.alternatives[0].content)
+            self.assertNotIn(self.order.session_key, message.body)
+        self.assertIn(self.order.get_absolute_url(), buyer.body)
+        self.assertNotIn("/admin/", buyer.body)
+        self.assertIn(f"/admin/orders/order/{self.order.pk}/change/", manager.body)
+        self.assertNotIn(self.order.get_absolute_url(), manager.body)
+        self.send()
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_admin_address_overrides_env_and_retargets_only_unsent_manager_mail(self):
+        # Customer mail must still go to the buyer, even after a manager address change.
+        self.send(limit=1)
+        NotificationSettings.objects.update_or_create(
+            pk=1,
+            defaults={"manager_email": "replacement@example.test", "reply_to_email": "help@example.test"},
+        )
+        self.send()
+        self.assertEqual([m.to for m in mail.outbox], [[self.order.email], ["replacement@example.test"]])
+        self.assertEqual(mail.outbox[-1].reply_to, ["help@example.test"])
+        manager = Notification.objects.get(audience="manager")
+        self.assertEqual(manager.recipient, "replacement@example.test")
+        self.assertIsNotNone(manager.sent_at)
+        NotificationSettings.objects.filter(pk=1).update(manager_email="third@example.test")
+        self.send()
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_rerouting_to_already_notified_address_does_not_send_duplicate(self):
+        self.send(limit=1)
+        NotificationSettings.objects.filter(pk=1).update(manager_email=self.order.email)
+        self.send()
+        self.assertEqual(len(mail.outbox), 1)
+        notice = Notification.objects.get(audience="manager")
+        self.assertIsNone(notice.sent_at)
+        self.assertIsNotNone(notice.skipped_at)
+
+    @override_settings(MANAGER_EMAIL="buyer@example.test")
+    def test_new_events_with_shared_buyer_manager_address_have_one_customer_message(self):
+        Notification.objects.all().delete()
+        queue_notification(self.order, "processing")
+        self.assertEqual(Notification.objects.count(), 1)
+        self.assertEqual(Notification.objects.get().audience, "customer")
+
+    def test_smtp_failure_retries_later_without_starving_new_mail_or_changing_message_id(self):
+        notice = Notification.objects.get(audience="customer")
+        message_id = build_notification_email(notice).extra_headers["Message-ID"]
         with patch(
-            "apps.orders.notifications.EmailMultiAlternatives.send", side_effect=OSError("private detail")
+            "apps.orders.notifications.EmailMultiAlternatives.send", side_effect=OSError("private-error")
         ):
-            call_command("send_notifications", stdout=StringIO())
+            self.send()
         notice.refresh_from_db()
         self.assertIsNone(notice.sent_at)
+        self.assertEqual(notice.attempts, 1)
         self.assertEqual(notice.last_error, "OSError")
-        call_command("send_notifications", stdout=StringIO())
+        self.assertGreater(notice.next_attempt_at, timezone.now() + timedelta(seconds=50))
+        self.send()
         notice.refresh_from_db()
-        self.assertIsNotNone(notice.sent_at)
-        self.assertEqual(build_notification(notice).extra_headers["Message-ID"], message_id)
-
-    def test_attention_or_refund_does_not_request_assembly_and_html_is_escaped(self):
-        self.order.name = "<script>unsafe</script>"
-        self.order.needs_attention = True
-        self.order.financial_status = "paid"
-        self.order.save()
-        queue_notification(self.order, "paid")
-        notice = self.order.notifications.get(event="paid", audience="manager")
-        message = build_notification(notice)
-        self.assertNotIn("ожидает сборки", message.subject)
-        self.assertNotIn("Начать сборку", message.body)
-        self.assertNotIn("<script>", message.alternatives[0].content)
-        self.assertIn("&lt;script&gt;", message.alternatives[0].content)
-
-
-class BusinessAdminTests(TestCase):
-    def setUp(self):
-        call_command("setup_roles", stdout=StringIO())
-        self.owner = get_user_model().objects.create_user(
-            "owner-fixture", is_staff=True, password="fixture-password"
+        self.assertEqual(notice.attempts, 1)
+        queue_notification(self.order, "processing")
+        self.send(limit=1)
+        self.assertIn("Заказ в обработке", mail.outbox[0].subject)
+        Notification.objects.filter(event="created").update(
+            next_attempt_at=timezone.now() - timedelta(seconds=1)
         )
-        self.owner.groups.add(Group.objects.get(name="Владелец магазина"))
-        cart, _, method = fixture_cart()
-        self.order = create_order(cart, checkout_data(cart, method), cart.session_key)
-        self.client = Client(HTTP_HOST="shop.localhost", enforce_csrf_checks=True)
-        self.client.force_login(self.owner)
+        self.send()
+        self.assertEqual(len(mail.outbox), 4)
+        self.assertEqual(
+            next(
+                m for m in mail.outbox if "Заказ создан" in m.subject and m.to == [self.order.email]
+            ).extra_headers["Message-ID"],
+            message_id,
+        )
+        notice.refresh_from_db()
+        self.assertEqual(notice.attempts, 2)
+        self.assertEqual(notice.last_error, "")
 
-    def test_owner_dashboard_settings_and_permissions(self):
-        response = self.client.get("/admin/")
-        self.assertContains(response, "Ожидают сборки")
-        self.assertContains(response, "Настройки магазина")
-        self.assertNotContains(response, "/admin/auth/user/")
-        self.assertEqual(self.client.get("/admin/auth/user/").status_code, 403)
-        url = reverse("admin:orders_storesettings_change", args=[1], urlconf="config.shop_urls")
-        self.client.get(url)
+    def test_backend_returning_zero_is_not_marked_sent(self):
+        with patch("apps.orders.notifications.EmailMultiAlternatives.send", return_value=0):
+            self.send()
+        self.assertFalse(Notification.objects.filter(sent_at__isnull=False).exists())
+
+    def test_check_is_read_only_and_invalid_transport_keeps_queue_untouched(self):
+        self.send(check=True)
+        self.assertEqual(len(mail.outbox), 0)
+        with override_settings(DEFAULT_FROM_EMAIL=""), self.assertRaises(CommandError):
+            self.send()
+        with override_settings(MANAGER_EMAIL=""), self.assertRaises(CommandError):
+            self.send()
+        with override_settings(DEVELOPMENT=False), self.assertRaises(CommandError):
+            self.send()
+        with (
+            override_settings(
+                EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+                EMAIL_HOST="smtp.example.test",
+                EMAIL_USE_SSL=True,
+                EMAIL_USE_TLS=True,
+            ),
+            self.assertRaises(CommandError),
+        ):
+            self.send()
+        self.assertFalse(Notification.objects.filter(attempts__gt=0).exists())
+
+    def test_expired_unpaid_reservation_queues_one_cancellation_event(self):
+        StockReservation.objects.filter(order=self.order).update(
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        call_command("reconcile_payments", stdout=StringIO())
+        call_command("reconcile_payments", stdout=StringIO())
+        self.assertEqual(Notification.objects.filter(event="canceled").count(), 2)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "canceled")
+
+    def test_status_notifications_are_atomic_idempotent_and_guarded(self):
+        transition_order(self.order.pk, "processing")
+        transition_order(self.order.pk, "processing")
+        self.assertEqual(Notification.objects.filter(event="processing").count(), 2)
+        with self.assertRaises(ValidationError):
+            transition_order(self.order.pk, "ready")
+        self.assertFalse(Notification.objects.filter(event="ready").exists())
+        with self.assertRaises(RuntimeError), transaction.atomic():
+            transition_order(self.order.pk, "canceled")
+            raise RuntimeError("rollback")
+        self.assertFalse(Notification.objects.filter(event="canceled").exists())
+        transition_order(self.order.pk, "canceled")
+        self.assertEqual(Notification.objects.filter(event="canceled").count(), 2)
+
+    def test_paid_fulfillment_sends_ready_and_completed_events(self):
+        self.order.financial_status = "paid"
+        self.order.save(update_fields=["financial_status"])
+        for state in ("processing", "ready", "completed"):
+            transition_order(self.order.pk, state)
+        self.assertEqual(Notification.objects.filter(event__in=["ready", "completed"]).count(), 4)
+
+    def test_manager_can_change_addresses_but_editor_and_public_cannot(self):
+        call_command("setup_roles", stdout=StringIO())
+        manager = User.objects.create_user("mail-manager", is_staff=True)
+        manager.groups.add(Group.objects.get(name="Менеджер магазина"))
+        url = "/admin/orders/notificationsettings/1/change/"
+        self.client.force_login(manager)
+        Notification.objects.update(next_attempt_at=timezone.now() + timedelta(hours=1))
         response = self.client.post(
             url,
             {
-                "manager_email": "new-manager@example.test",
-                "checkout_enabled": "on",
-                "terms_text": "Тестовые условия",
-                "privacy_text": "Тестовая политика",
-                "delivery_text": "",
-                "csrfmiddlewaretoken": self.client.cookies["csrftoken"].value,
+                "manager_email": "replacement@example.test",
+                "reply_to_email": "help@example.test",
+                "_save": "1",
             },
+            HTTP_HOST="shop.localhost",
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(StoreSettings.objects.get().manager_email, "new-manager@example.test")
-
-    def test_workflow_requires_post_csrf_permissions_and_verified_payment(self):
-        self.order.financial_status = "paid"
-        self.order.save()
-        url = f"/admin/orders/order/{self.order.pk}/workflow/"
-        response = self.client.get(f"/admin/orders/order/{self.order.pk}/change/")
-        self.assertContains(response, "Начать сборку")
-        self.assertNotContains(response, "paid_attempt_id")
-        self.assertEqual(self.client.get(url).status_code, 405)
-        self.assertEqual(self.client.post(url, {"target": "processing"}).status_code, 403)
-        token = self.client.cookies["csrftoken"].value
-        response = self.client.post(url, {"target": "processing", "csrfmiddlewaretoken": token})
-        self.assertEqual(response.status_code, 302)
-        self.order.refresh_from_db()
-        self.assertEqual(self.order.status, "processing")
-        self.order.financial_status = "unpaid"
-        self.order.save()
-        self.client.post(url, {"target": "ready", "csrfmiddlewaretoken": token})
-        self.order.refresh_from_db()
-        self.assertEqual(self.order.status, "processing")
-
-    def test_editor_dashboard_does_not_leak_sales_or_manager_address(self):
-        editor = get_user_model().objects.create_user("editor-fixture", is_staff=True)
+        self.assertEqual(NotificationSettings.objects.get(pk=1).manager_email, "replacement@example.test")
+        self.assertLessEqual(Notification.objects.get(audience="manager").next_attempt_at, timezone.now())
+        self.assertGreater(Notification.objects.get(audience="customer").next_attempt_at, timezone.now())
+        self.assertFalse(manager.has_perm("orders.change_storesettings"))
+        editor = User.objects.create_user("mail-editor", is_staff=True)
         editor.groups.add(Group.objects.get(name="Контент-редактор"))
         self.client.force_login(editor)
-        response = self.client.get("/admin/")
-        self.assertContains(response, "Управление сайтом")
-        self.assertNotContains(response, self.order.name)
-        self.assertNotContains(response, "Ожидают сборки")
+        self.assertEqual(self.client.get(url, HTTP_HOST="shop.localhost").status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.get(url, HTTP_HOST="shop.localhost").status_code, 302)

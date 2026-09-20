@@ -10,6 +10,7 @@ from apps.cart.models import Cart
 from apps.catalog.models import Product
 from apps.core.models import AuditEntry
 from .models import DeliveryMethod, Notification, Order, OrderItem, StockReservation, StoreSettings
+from .notifications import manager_email
 
 
 class QuoteChanged(ValidationError):
@@ -66,17 +67,19 @@ def checkout_snapshot(cart):
     return context, signing.dumps(quote, salt="checkout-quote", compress=True)
 
 
-def queue_notification(order, event):
-    store = StoreSettings.objects.filter(pk=1).first()
-    manager_email = (store.manager_email if store else "") or settings.MANAGER_EMAIL
-    for audience, recipient in (
-        (Notification.Audience.CUSTOMER, order.email),
-        (Notification.Audience.MANAGER, manager_email),
-    ):
-        if recipient:
-            Notification.objects.get_or_create(
-                order=order, event=event, recipient=recipient, audience=audience
-            )
+def queue_notification(order, event, payload=None):
+    recipients = [(order.email, Notification.Audience.CUSTOMER)]
+    manager = manager_email()
+    if manager and manager.casefold() != order.email.casefold():
+        recipients.append((manager, Notification.Audience.MANAGER))
+    for recipient, audience in recipients:
+        Notification.objects.get_or_create(
+            order=order,
+            event=event,
+            recipient=recipient,
+            skipped_at__isnull=True,
+            defaults={"audience": audience, "payload": payload or {}},
+        )
 
 
 @transaction.atomic
@@ -232,6 +235,7 @@ def transition_order(order_id, target, actor_id=None):
         raise ValidationError("Сначала разберите причину в разделе «Требует внимания».")
     order.status = target
     order.save(update_fields=["status", "updated_at"])
+    queue_notification(order, target)
     AuditEntry.objects.create(
         kind="order.status", object_id=str(order.public_id), message=f"Статус {target}; сотрудник {actor_id}"
     )

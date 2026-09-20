@@ -1,0 +1,31 @@
+{% load shop_tags %}{% autoescape off %}Дары Синергии
+{{ title }}
+Заказ № {{ order.public_id }}
+
+{{ description }}
+{% if refund_amount %}
+Возврат по этому уведомлению: {{ refund_amount|money }} ₽
+Всего подтверждено возвратов на момент события: {{ refunded_total|money }} ₽
+{% endif %}
+Состав заказа:
+{% for item in items %}— {{ item.name }} ({{ item.sku }}): {{ item.quantity }} шт. × {{ item.unit_price|money }} ₽ = {{ item.subtotal|money }} ₽
+{% endfor %}
+Товары: {{ order.subtotal|money }} ₽
+Получение: {{ order.delivery_price|money }} ₽
+Стоимость заказа: {{ order.total|money }} ₽
+
+Способ получения: {{ order.delivery_method }}
+Получатель: {{ order.name }}
+{% if order.address %}Адрес: {{ order.address }}
+{% endif %}{% if is_manager %}Телефон: {{ order.phone }}
+Email покупателя: {{ order.email }}
+{% endif %}{% if order.comment %}Комментарий: {{ order.comment }}
+{% endif %}
+{{ link_label }}:
+{{ order_url }}
+{% if not is_manager %}
+Ссылка доступна в том браузере, где вы оформляли заказ. На другом устройстве используйте сведения из этого письма или ответьте нам — поможем уточнить состояние заказа.
+{% endif %}
+Вопросы по заказу: {{ reply_to }}
+Это уведомление о заказе, не кассовый чек.
+{% endautoescape %}
