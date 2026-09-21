@@ -41,6 +41,7 @@ from datetime import date
 call_command("migrate", verbosity=0)
 call_command("flush", interactive=False, verbosity=0)
 call_command("import_legacy_content", verbosity=0)
+call_command("apply_seo_content", apply=True, verbosity=0)
 category = Category.objects.create(name="Тестовые масла", slug="test-oils")
 Category.objects.create(name="Тестовая пустая категория", slug="test-empty")
 for index in range(20):

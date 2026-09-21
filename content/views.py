@@ -13,6 +13,7 @@ from reviews.models import Review
 
 from .models import Collection, CollectionAlias, Document, DocumentAlias, Video
 from .services import editorial_context
+from .seo import absolute_main_url, schema_context
 
 
 def is_fragment(request):
@@ -34,6 +35,7 @@ def page_context(request, title, description):
 @vary_on_headers("HX-Request", "HX-History-Restore-Request")
 def home(request):
     context = editorial_context()
+    context.update(schema_context(request))
     context.update(
         page_context(
             request,
@@ -86,6 +88,9 @@ def materials(request, slug=None):
             "selected_direction": selected,
             "document_count": documents.count(),
             "document_page": Paginator(documents, 24).get_page(request.GET.get("page")),
+            "topic_declarations": Document.objects.published().filter(is_declaration=True, collections=topic)
+            if topic
+            else Document.objects.none(),
         }
     )
     title = (
@@ -96,6 +101,7 @@ def materials(request, slug=None):
     intro = topic.intro if topic else context["site_content"].get("materials_intro", "")
     context.update(page_context(request, f"{title} — Дары Синергии", intro))
     context.update({"material_title": title, "material_intro": intro})
+    context.update(schema_context(request, topic=topic, materials=True))
     response = render(
         request,
         "site/partials/materials_content.html" if is_fragment(request) else "site/materials.html",
@@ -132,12 +138,14 @@ def document(request, slug):
         if alias:
             return HttpResponsePermanentRedirect(alias.document.file_url)
         raise Http404("Документ не найден")
-    return serve_private_file(
+    response = serve_private_file(
         item.file,
         attachment=request.GET.get("download") == "1",
         filename=f"{item.slug}.pdf",
         content_type="application/pdf",
     )
+    response["Link"] = f'<{absolute_main_url(item.file_url)}>; rel="canonical"'
+    return response
 
 
 @require_GET

@@ -1,2 +1,2 @@
-<span hidden data-page-meta data-title="{{ page_title|default:'Дары Синергии' }}" data-description="{{ page_description|default:'' }}" data-canonical="{{ canonical_url }}" data-noindex="{% if noindex or demo_catalog %}true{% else %}false{% endif %}"></span>
+<span hidden data-page-meta data-title="{{ page_title|default:'Дары Синергии' }}" data-description="{{ page_description|default:'' }}" data-canonical="{{ canonical_url }}" data-noindex="{% if noindex or demo_catalog %}true{% else %}false{% endif %}" data-structured-data="{{ structured_data_json|default:'' }}"></span>
 {% for message in messages %}<p class="server-message" role="status">{{ message }}</p>{% endfor %}

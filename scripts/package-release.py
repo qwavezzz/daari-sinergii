@@ -44,6 +44,17 @@ ROOT_FILES = {
 }
 # Never glob untracked files: this checkout also contains private handoff files.
 ADDITIONS = {
+    "content/seo.py",
+    "content/templatetags/__init__.py",
+    "content/templatetags/seo.py",
+    "content/test_seo.py",
+    "content/data/seo_20260921.json",
+    "content/management/commands/apply_seo_content.py",
+    "tests/browser/seo.spec.js",
+    "deploy/INSTALL-SEO-20260921.md",
+    "docs/SEO-AUDIT-2026-09-21.md",
+    "docs/SEO-FIXES-2026-09-21.md",
+    "docs/CONTINUE-AT-HOME.md",
     "core/seo.py",
     "deploy/audit-vps.sh",
     "deploy/FIREWALL.md",

@@ -8,22 +8,25 @@
   </header>
   <main id="material-content">
     <section class="materials-hero{% if topic.image_base %} has-image{% endif %}">
-      <div><a class="material-back" href="{% if topic %}{% url 'content:materials' %}{% else %}/{% endif %}">{% if topic %}Все материалы{% else %}На главную{% endif %}</a><h1>{{ material_title }}</h1><p>{{ material_intro }}</p></div>
+      <div><nav class="material-breadcrumbs" aria-label="Хлебные крошки"><ol>{% for item in breadcrumbs %}<li>{% if not forloop.last %}<a href="{{ item.url }}">{{ item.name }}</a>{% else %}<span aria-current="page">{{ item.name }}</span>{% endif %}</li>{% endfor %}</ol></nav><h1>{{ material_title }}</h1><p>{{ material_intro }}</p></div>
       {% if topic.image_base %}<figure><img src="{{ topic.image_url }}" alt="" width="768" height="432" /><figcaption>Концептуальная визуализация</figcaption></figure>{% endif %}
     </section>
     {% if not topic %}<nav class="topic-directory" aria-label="Материалы по направлениям">{% for item in topics %}<a href="{{ item.get_absolute_url }}"><span>{{ item.title }}</span>{% include "site/partials/material_arrow.html" %}</a>{% endfor %}</nav>{% endif %}
     <div class="materials-body">
       {% if topic %}<section class="material-overview" aria-label="О подборке">{% for section in topic.sections.all %}<div><h2>{{ section.title }}</h2><p>{{ section.body }}</p></div>{% endfor %}</section>{% endif %}
-      <section aria-labelledby="library-title">
+      {% if not topic or document_count %}<section aria-labelledby="library-title">
         <div class="library-heading"><h2 id="library-title">{% if topic %}Материалы по теме{% else %}Библиотека документов{% endif %}</h2>
           {% if not topic %}<form action="{% url 'content:materials' %}" method="get" hx-get="{% url 'content:materials' %}" hx-trigger="change, submit" hx-target="#main-content" hx-push-url="true"><label>Направление<select name="direction"><option value="all">Все направления</option>{% for item in topics %}<option value="{{ item.slug }}"{% if selected_direction == item.slug %} selected{% endif %}>{{ item.title }}</option>{% endfor %}</select></label><noscript><button type="submit">Показать</button></noscript></form>{% endif %}
         </div>
         <div aria-live="polite"><p class="material-meta">Документов: {{ document_count }}</p>{% for document in document_page %}{% include "site/partials/material_document.html" %}{% empty %}<p>В этой подборке пока нет опубликованных документов.</p>{% endfor %}</div>
         {% if document_page.has_other_pages %}<nav aria-label="Страницы библиотеки">{% if document_page.has_previous %}<a href="?direction={{ selected_direction|urlencode }}&amp;page={{ document_page.previous_page_number }}">Предыдущая</a>{% endif %}<span>Страница {{ document_page.number }} из {{ document_page.paginator.num_pages }}</span>{% if document_page.has_next %}<a href="?direction={{ selected_direction|urlencode }}&amp;page={{ document_page.next_page_number }}">Следующая</a>{% endif %}</nav>{% endif %}
-      </section>
+      </section>{% endif %}
+      {% if topic_declarations %}<section aria-labelledby="topic-declarations-title"><h2 id="topic-declarations-title">Декларации соответствия</h2>{% for document in topic_declarations %}{% include "site/partials/material_document.html" %}{% endfor %}</section>{% endif %}
+      {% if not topic or document_count %}
       {% include "site/partials/handbook.html" %}
       {% if topic.handbook_chapter and handbook %}<p class="handbook-chapter"><a hx-boost="false" target="_blank" rel="noopener noreferrer" href="{{ handbook.file_url }}#page={{ topic.handbook_chapter }}">Раздел по теме в справочнике — со страницы {{ topic.handbook_chapter }} (PDF, новая вкладка)</a></p>{% endif %}
       <section class="material-evidence"><h2>{{ site_content.materials_evidence_title }}</h2><div><p>{{ site_content.materials_evidence_first }}</p><p>{{ site_content.materials_evidence_second }}</p><a href="/#documents">Смотреть декларации {% include "site/partials/material_arrow.html" %}</a></div></section>
+      {% endif %}
       <section class="material-contact"><h2>{{ site_content.materials_contact_title }}</h2><p>{{ site_content.materials_contact_copy }}</p>{% if site_settings.email %}<a href="mailto:{{ site_settings.email }}?subject={{ material_title|urlencode }}" hx-boost="false">Написать в компанию {% include "site/partials/material_arrow.html" %}</a>{% endif %}{% if site_settings.phone %}<a href="tel:{{ site_settings.phone }}" hx-boost="false">{{ site_settings.phone_label }}</a>{% endif %}</section>
     </div>
   </main>

@@ -1,12 +1,15 @@
 from reviews.models import Review
 
-from .models import Document, Industry, SiteText, Video
+from .models import Collection, Document, Industry, SiteText, Video
 
 
 def editorial_context():
     copy = dict(SiteText.objects.values_list("key", "value"))
     return {
         "site_content": copy,
+        "water_collection": Collection.objects.published()
+        .filter(source_key="seo-water-systems-20260921")
+        .first(),
         "contexts": Industry.objects.published().select_related("collection"),
         "compliance_documents": Document.objects.published().filter(is_declaration=True),
         "handbook": Document.objects.published().filter(source_key="handbook").first(),

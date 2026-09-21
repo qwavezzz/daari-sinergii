@@ -28,6 +28,7 @@ settings.MAIN_HOST = "pages-main.local"
 settings.SHOP_HOST = "pages-shop.local"
 settings.MAIN_ORIGIN = "http://pages-main.local"
 settings.SHOP_ORIGIN = "http://pages-shop.local"
+settings.SITE_INDEXING_ENABLED = False
 settings.ALLOWED_HOSTS = [settings.MAIN_HOST, settings.SHOP_HOST]
 django.setup()
 
@@ -180,6 +181,7 @@ with TemporaryDirectory(prefix="dari-pages-") as scratch:
     settings.MEDIA_ROOT = Path(scratch) / "media"
     call_command("migrate", verbosity=0)
     call_command("import_legacy_content", verbosity=0)
+    call_command("apply_seo_content", apply=True, verbosity=0)
     call_command("seed_demo_catalog", verbosity=0)
 
     products = list(Product.objects.filter(status="published").prefetch_related("images"))
