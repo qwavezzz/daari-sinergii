@@ -1,0 +1,2 @@
+# Operational shell scripts are copied directly from Windows to the VPS.
+deploy/send-client-test-email.sh text eol=lf
