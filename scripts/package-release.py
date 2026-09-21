@@ -44,6 +44,9 @@ ROOT_FILES = {
 }
 # Never glob untracked files: this checkout also contains private handoff files.
 ADDITIONS = {
+    "core/test_https.py",
+    "deploy/HTTPS-AND-MONITORING.md",
+    "deploy/INSTALL-HTTPS-20260921.md",
     "content/seo.py",
     "content/templatetags/__init__.py",
     "content/templatetags/seo.py",
