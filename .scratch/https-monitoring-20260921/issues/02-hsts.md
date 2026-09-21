@@ -1,6 +1,6 @@
 # Управлять областью HSTS и включить короткую проверочную политику
 
-Status: in-progress
+Status: done
 
 ## Comments
 
@@ -25,3 +25,9 @@ Status: in-progress
   первый 502 после restart сменился 200 через две секунды. Осталось исправить
   HSTS_SECONDS на предложенные 300; задачу пока не закрывать.
   Данные проверки: artifacts/operations-20260921/https-after.json.
+
+- Разработчик исправил HSTS_SECONDS на 300 и перезапустил приложение. Проверка
+  21 сентября 11:21:56 UTC подтвердила HTTP 200 у главной, магазина и обоих health,
+  Strict-Transport-Security: max-age=300 без includeSubDomains/preload.
+  Данные: artifacts/operations-20260921/https-300.json. Задача включения короткой
+  политики завершена; повышение срока после наблюдения не выполнено автоматически.
