@@ -1,8 +1,12 @@
 # Установка SEO-обновления от 21 сентября 2026
 
-Подготовлен отдельный релиз `seo-20260921`. На VPS его ещё нужно установить:
-GitHub push обновляет репозиторий и демонстрацию Pages, но не Django на VPS.
-Ожидаемый текущий релиз — `readiness-20260918`.
+Подготовлен отдельный релиз `seo-20260921`. GitHub push обновляет репозиторий
+и демонстрацию Pages, но не Django на VPS. Команды ниже рассчитаны на переход
+с `readiness-20260918`.
+
+После сообщения разработчика об установке публичная проверка подтвердила новые
+страницы, микроразметку, canonical PDF, sitemap и noindex магазина. Повторять
+установку для этой проверки не нужно. Результаты — в отчёте об исправлениях.
 
 ## 1. Загрузить два файла
 
@@ -70,11 +74,12 @@ BASH
 В терминале проверить два заголовка:
 
 ```bash
-curl --noproxy '*' --fail --connect-timeout 5 --max-time 15 -sSI 'https://dari-sinergii.ru/documents/oil-guide/?download=1'
+curl --noproxy '*' --fail --connect-timeout 5 --max-time 15 -sS -D - -o /dev/null 'https://dari-sinergii.ru/documents/oil-guide/?download=1'
 curl --noproxy '*' --fail --connect-timeout 5 --max-time 15 -sSI https://shop.dari-sinergii.ru/
 ```
 
 У PDF ожидается `Link: <https://dari-sinergii.ru/documents/oil-guide/>; rel="canonical"`.
+Для PDF нужен GET: обработчик не поддерживает HEAD (`curl -I` вернёт 405).
 У магазина — `X-Robots-Tag: noindex, nofollow`. Проверить вход в админку и
 содержание новых текстов. Sitemap основного сайта обновляется из опубликованных
 подборок автоматически; адрес карты остаётся `/sitemap.xml`.
