@@ -10,6 +10,7 @@ urlpatterns = [
     path("health/", health),
     path("robots.txt", robots),
     path("sitemap.xml", sitemap),
+    path("", include("content.customer_urls")),
     path("", include("catalog.urls")),
     path("cart/", include("cart.urls")),
     path("", include("orders.urls")),

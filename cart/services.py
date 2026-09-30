@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from catalog.models import Product
+from orders.delivery import default_delivery
 from .models import Cart, CartItem
 
 
@@ -35,10 +36,15 @@ def cart_context(cart):
             )
             total += subtotal
             count += item.quantity
+    delivery = default_delivery() if items else None
+    delivery_price = delivery.price if delivery else Decimal("0.00")
     return {
         "cart": cart,
         "cart_items": items,
         "cart_total": total,
+        "cart_delivery_method": delivery,
+        "cart_delivery_price": delivery_price,
+        "cart_order_total": total + delivery_price,
         "cart_count": count,
         "cart_version": cart.version if cart else 0,
         "cart_valid": bool(items) and all(item["available"] for item in items),

@@ -16,6 +16,30 @@ from .services import transition_order
 
 @admin.register(StoreSettings)
 class StoreSettingsAdmin(admin.ModelAdmin):
+    readonly_fields = ("updated_at",)
+    fieldsets = (
+        ("Оформление", {"fields": ("checkout_enabled",)}),
+        (
+            "Страницы для покупателей",
+            {
+                "fields": (
+                    "terms_text",
+                    "privacy_text",
+                    "delivery_text",
+                    "returns_text",
+                    "contacts_text",
+                    "documents_text",
+                    "faq_text",
+                    "updated_at",
+                ),
+                "description": "Каждое поле — отдельная HTML-страница. Заголовки начинайте с ##, абзацы разделяйте "
+                "пустой строкой. Переменные: {company_name}, {legal_name}, {email}, {phone}, {delivery_price}. "
+                "Цена подставляется из способа доставки по умолчанию. Реквизиты меняются в разделе «Контакты "
+                "и сведения о компании», вопросы — в разделе «Вопросы и ответы». HTML не исполняется.",
+            },
+        ),
+    )
+
     def has_add_permission(self, request):
         return super().has_add_permission(request) and not StoreSettings.objects.exists()
 
@@ -25,10 +49,20 @@ class StoreSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(DeliveryMethod)
 class DeliveryMethodAdmin(admin.ModelAdmin):
-    list_display = ["name", "price", "address_required", "active"]
+    list_display = ["name", "price", "is_default", "vat_code", "address_required", "active"]
+    list_editable = ["price"]
     list_filter = ["active"]
     search_fields = ["name"]
     prepopulated_fields = {"slug": ("name",)}
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.active and obj.price and obj.vat_code is None:
+            self.message_user(
+                request,
+                "Укажите ставку НДС доставки перед приёмом платежей с чеками ЮKassa.",
+                messages.WARNING,
+            )
 
 
 class OrderItemInline(admin.TabularInline):

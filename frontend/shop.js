@@ -1,6 +1,7 @@
 import '@fontsource-variable/manrope'
 import '@fontsource/ibm-plex-mono/400.css'
 import './shop.css'
+import './customer.css'
 import Alpine from '@alpinejs/csp'
 import { htmx, installNavigation, syncMetadata } from './shared.js'
 import { registerContentUI } from './content-ui.js'

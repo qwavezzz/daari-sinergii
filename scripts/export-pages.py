@@ -39,6 +39,8 @@ from django.test import Client
 from django.urls import set_urlconf
 from catalog.models import Category, Product
 from content.models import Collection, Document
+from content.customer_content import CUSTOMER_PAGES
+from orders.delivery import default_delivery
 
 BASE = os.environ.get("PAGES_BASE_PATH", "/daari-sinergii/")
 if not re.fullmatch(r"/(?:[a-zA-Z0-9_-]+/)*", BASE):
@@ -141,6 +143,8 @@ class PreviewHTML(HTMLParser):
             output.append((name, value))
         if tag == "html":
             output.extend([("data-static-demo", "true"), ("data-demo-base", BASE)])
+            delivery = default_delivery()
+            output.append(("data-demo-delivery-cents", str(int(delivery.price * 100)) if delivery else "0"))
         if tag == "form" and self.demo_form:
             match = re.search(r"/cart/add/(\d+)/", original["action"])
             if not match:
@@ -182,6 +186,7 @@ with TemporaryDirectory(prefix="dari-pages-") as scratch:
     call_command("migrate", verbosity=0)
     call_command("import_legacy_content", verbosity=0)
     call_command("apply_seo_content", apply=True, verbosity=0)
+    call_command("setup_customer_pages", verbosity=0)
     call_command("seed_demo_catalog", verbosity=0)
 
     products = list(Product.objects.filter(status="published").prefetch_related("images"))
@@ -214,10 +219,8 @@ with TemporaryDirectory(prefix="dari-pages-") as scratch:
     for category in Category.objects.filter(active=True):
         pages.append((True, f"/?category={category.slug}"))
     pages.extend((True, product.get_absolute_url()) for product in products)
-    pages.extend(
-        (True, path)
-        for path in ["/cart/", "/checkout/", "/delivery-and-payment/", "/legal/terms/", "/legal/privacy/"]
-    )
+    pages.extend((True, path) for path in ["/cart/", "/checkout/"])
+    pages.extend((shop, row[1]) for shop in (False, True) for row in CUSTOMER_PAGES.values())
     client = Client()
     for shop, source_path in pages:
         response = client.get(source_path, HTTP_HOST=settings.SHOP_HOST if shop else settings.MAIN_HOST)

@@ -2,10 +2,12 @@
 <div class="cart-content" data-cart-version="{{ cart_version }}" data-cart-count="{{ cart_count }}" hx-history="false">
 {% if cart_items %}
 <div class="cart-summary">
-<div class="cart-total"><span>Сумма товаров</span><strong>{{ cart_total|money }} ₽</strong></div>
+<div class="cart-cost-line"><span>Товары</span><span>{{ cart_total|money }} ₽</span></div>
+{% if cart_delivery_method %}<div class="cart-cost-line"><span>Доставка</span><span>{{ cart_delivery_price|money }} ₽</span></div>{% endif %}
+<div class="cart-total"><span>Итого</span><strong>{{ cart_order_total|money }} ₽</strong></div>
 <p class="cart-quantity">{{ cart_count }} {{ cart_count|ru_products }}</p>
 {% if cart_valid != False %}<a class="shop-button checkout-link" href="{% url 'orders:checkout' %}" hx-target="#main-content" hx-swap="innerHTML show:top">Оформить заказ</a>{% else %}<p class="shop-warning">Проверьте доступность и количество товаров перед оформлением.</p>{% endif %}
-<p class="cart-delivery-note">Способ и стоимость получения — при оформлении.</p>
+<p class="cart-delivery-note">{% if cart_delivery_method %}{{ cart_delivery_method.name }}. Доставка оплачивается вместе с товарами.{% else %}Способ получения пока недоступен. Свяжитесь с нами.{% endif %}</p>
 {% if cart_message %}<p class="cart-notice" role="status">{{ cart_message }}</p>{% endif %}
 {% if cart_error %}<p class="shop-error" role="alert">{{ cart_error }}</p>{% endif %}
 </div>

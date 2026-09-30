@@ -17,16 +17,17 @@ class CheckoutForm(forms.Form):
         empty_label="Выберите способ получения",
     )
     address = forms.CharField(
-        label="Адрес",
+        label="Город и адрес пункта выдачи",
         required=False,
         max_length=1500,
         widget=forms.Textarea(attrs={"rows": 3, "autocomplete": "street-address"}),
+        help_text="Укажите город, улицу и номер дома пункта СДЭК. Если знаете код пункта, добавьте его.",
     )
     comment = forms.CharField(
         label="Комментарий", required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 3})
     )
     accept_terms = forms.BooleanField(
-        label="Принимаю условия продажи и политику обработки персональных данных"
+        label="Принимаю условия покупки и подтверждаю ознакомление с политикой обработки данных"
     )
     checkout_key = forms.UUIDField(widget=forms.HiddenInput)
     quote_token = forms.CharField(widget=forms.HiddenInput)

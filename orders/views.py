@@ -115,7 +115,15 @@ def checkout(request):
     else:
         if not context["cart_items"]:
             return navigation_redirect(request, "/cart/")
-        form = CheckoutForm(initial={"checkout_key": uuid.uuid4(), "quote_token": current_quote})
+        method = context["cart_delivery_method"]
+        initial = {"checkout_key": uuid.uuid4(), "quote_token": current_quote}
+        if method and method.pk in context["delivery_quotes"]:
+            delivery_price = context["delivery_quotes"][method.pk]
+            order_total = context["cart_total"] + delivery_price
+            initial.update(delivery_method=method.pk, confirmed_delivery=method.pk)
+            context["delivery_requires_address"] = method.address_required
+        form = CheckoutForm(initial=initial)
+        form.fields["address"].required = context["delivery_requires_address"]
         status = 200
     context.update(
         {

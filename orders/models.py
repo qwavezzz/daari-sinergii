@@ -11,6 +11,11 @@ class StoreSettings(models.Model):
     terms_text = models.TextField("Условия продажи / оферта", blank=True)
     privacy_text = models.TextField("Политика обработки персональных данных", blank=True)
     delivery_text = models.TextField("Условия получения и оплаты", blank=True)
+    returns_text = models.TextField("Возврат и отмена заказа", blank=True)
+    contacts_text = models.TextField("Введение на странице контактов", blank=True)
+    documents_text = models.TextField("Введение на странице документов", blank=True)
+    faq_text = models.TextField("Введение на странице вопросов и ответов", blank=True)
+    updated_at = models.DateTimeField("Тексты и настройки обновлены", auto_now=True)
 
     class Meta:
         verbose_name = "Настройки магазина"
@@ -33,13 +38,37 @@ class DeliveryMethod(models.Model):
     address_required = models.BooleanField("Необходим адрес", default=True)
     active = models.BooleanField("Доступен", default=False)
     sort_order = models.PositiveIntegerField("Порядок", default=0)
+    is_default = models.BooleanField("По умолчанию в корзине", default=False)
+    vat_code = models.PositiveSmallIntegerField(
+        "Ставка НДС доставки для ЮKassa",
+        null=True,
+        blank=True,
+        choices=[
+            (1, "Без НДС"),
+            (2, "НДС 0%"),
+            (3, "НДС 10%"),
+            (4, "НДС 20%"),
+            (5, "НДС 10/110"),
+            (6, "НДС 20/120"),
+            (7, "НДС 5%"),
+            (8, "НДС 7%"),
+            (9, "НДС 5/105"),
+            (10, "НДС 7/107"),
+            (11, "НДС 22%"),
+            (12, "НДС 22/122"),
+        ],
+        help_text="Выберите с бухгалтером. Для платной доставки без ставки нельзя сформировать чек ЮKassa.",
+    )
 
     class Meta:
         ordering = ["sort_order", "pk"]
         verbose_name = "Способ получения"
         verbose_name_plural = "Способы получения"
         constraints = [
-            models.CheckConstraint(condition=models.Q(price__gte=0), name="delivery_price_nonnegative")
+            models.CheckConstraint(condition=models.Q(price__gte=0), name="delivery_price_nonnegative"),
+            models.UniqueConstraint(
+                fields=["is_default"], condition=models.Q(is_default=True), name="one_default_delivery"
+            ),
         ]
 
     def __str__(self):
@@ -72,6 +101,7 @@ class Order(TimeStampedModel):
     comment = models.TextField("Комментарий", blank=True)
     subtotal = models.DecimalField("Стоимость товаров", max_digits=12, decimal_places=2)
     delivery_price = models.DecimalField("Стоимость получения", max_digits=12, decimal_places=2)
+    delivery_vat_code = models.PositiveSmallIntegerField("НДС доставки в заказе", null=True, editable=False)
     total = models.DecimalField("Итого", max_digits=12, decimal_places=2)
     currency = models.CharField("Валюта", max_length=3, default="RUB", editable=False)
     status = models.CharField("Исполнение", max_length=20, choices=Status, default=Status.NEW)

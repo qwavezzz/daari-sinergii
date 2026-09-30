@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T11:21:20.747Z",
+  "title": "Design System: Дары Синергии — информация для покупателей",
+  "extensions": {
+    "colorMeta": {
+      "customer-ink": {
+        "role": "primary",
+        "displayName": "Основной navy",
+        "tonalRamp": [
+          "oklch(15.00% 0.05018 254.43)",
+          "oklch(26.43% 0.05018 254.43)",
+          "oklch(37.86% 0.05018 254.43)",
+          "oklch(49.29% 0.05018 254.43)",
+          "oklch(60.71% 0.05018 254.43)",
+          "oklch(72.14% 0.05018 254.43)",
+          "oklch(83.57% 0.05018 254.43)",
+          "oklch(95.00% 0.05018 254.43)"
+        ]
+      },
+      "site-bg": {
+        "role": "neutral",
+        "displayName": "Светлый фон материалов",
+        "tonalRamp": [
+          "oklch(15.00% 0.00942 222.06)",
+          "oklch(26.43% 0.00942 222.06)",
+          "oklch(37.86% 0.00942 222.06)",
+          "oklch(49.29% 0.00942 222.06)",
+          "oklch(60.71% 0.00942 222.06)",
+          "oklch(72.14% 0.00942 222.06)",
+          "oklch(83.57% 0.00942 222.06)",
+          "oklch(95.00% 0.00942 222.06)"
+        ]
+      },
+      "site-muted": {
+        "role": "neutral",
+        "displayName": "Вторичный текст основного сайта",
+        "tonalRamp": [
+          "oklch(15.00% 0.05202 237.59)",
+          "oklch(26.43% 0.05202 237.59)",
+          "oklch(37.86% 0.05202 237.59)",
+          "oklch(49.29% 0.05202 237.59)",
+          "oklch(60.71% 0.05202 237.59)",
+          "oklch(72.14% 0.05202 237.59)",
+          "oklch(83.57% 0.05202 237.59)",
+          "oklch(95.00% 0.05202 237.59)"
+        ]
+      },
+      "site-line": {
+        "role": "neutral",
+        "displayName": "Разделитель основного сайта",
+        "tonalRamp": [
+          "oklch(15.00% 0.02587 229.19)",
+          "oklch(26.43% 0.02587 229.19)",
+          "oklch(37.86% 0.02587 229.19)",
+          "oklch(49.29% 0.02587 229.19)",
+          "oklch(60.71% 0.02587 229.19)",
+          "oklch(72.14% 0.02587 229.19)",
+          "oklch(83.57% 0.02587 229.19)",
+          "oklch(95.00% 0.02587 229.19)"
+        ]
+      },
+      "shop-bg": {
+        "role": "neutral",
+        "displayName": "Белый фон магазина",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
+        ]
+      },
+      "shop-muted": {
+        "role": "neutral",
+        "displayName": "Вторичный текст магазина",
+        "tonalRamp": [
+          "oklch(15.00% 0.03301 251.72)",
+          "oklch(26.43% 0.03301 251.72)",
+          "oklch(37.86% 0.03301 251.72)",
+          "oklch(49.29% 0.03301 251.72)",
+          "oklch(60.71% 0.03301 251.72)",
+          "oklch(72.14% 0.03301 251.72)",
+          "oklch(83.57% 0.03301 251.72)",
+          "oklch(95.00% 0.03301 251.72)"
+        ]
+      },
+      "shop-line": {
+        "role": "neutral",
+        "displayName": "Разделитель магазина",
+        "tonalRamp": [
+          "oklch(15.00% 0.01018 238.52)",
+          "oklch(26.43% 0.01018 238.52)",
+          "oklch(37.86% 0.01018 238.52)",
+          "oklch(49.29% 0.01018 238.52)",
+          "oklch(60.71% 0.01018 238.52)",
+          "oklch(72.14% 0.01018 238.52)",
+          "oklch(83.57% 0.01018 238.52)",
+          "oklch(95.00% 0.01018 238.52)"
+        ]
+      },
+      "selection": {
+        "role": "primary",
+        "displayName": "Выделение текста",
+        "tonalRamp": [
+          "oklch(15.00% 0.05441 243.37)",
+          "oklch(26.43% 0.05441 243.37)",
+          "oklch(37.86% 0.05441 243.37)",
+          "oklch(49.29% 0.05441 243.37)",
+          "oklch(60.71% 0.05441 243.37)",
+          "oklch(72.14% 0.05441 243.37)",
+          "oklch(83.57% 0.05441 243.37)",
+          "oklch(95.00% 0.05441 243.37)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Название страницы",
+        "purpose": "Один h1, строка до 22ch."
+      },
+      "headline": {
+        "displayName": "Раздел",
+        "purpose": "H2; до 768 px размер 22 px."
+      },
+      "body": {
+        "displayName": "Основной текст",
+        "purpose": "До 72ch; до 768 px размер 16 px."
+      },
+      "label": {
+        "displayName": "Служебная подпись",
+        "purpose": "Хлебные крошки и дата обновления."
+      },
+      "navigation": {
+        "displayName": "Каталог разделов",
+        "purpose": "Текущая ссылка получает вес 700 и подчёркивание."
+      },
+      "facts": {
+        "displayName": "Реквизиты",
+        "purpose": "Подпись и значение, табличные цифры у значения."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "customer-mobile-max",
+        "value": "767px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Каталог разделов",
+      "kind": "nav",
+      "refersTo": "directory-link",
+      "description": "Тонкие разделители, текущая страница через aria-current; на телефоне блок расположен после текста.",
+      "html": "<nav class=\"ds-customer ds-directory\" aria-label=\"Информация для покупателей\"><a href=\"/contacts/\" aria-current=\"page\">Контакты и реквизиты</a><a href=\"/product-documents/\">Документы на продукцию</a><a href=\"/faq/\">Вопросы и ответы</a></nav>",
+      "css": ".ds-customer{--customer-ink:#06182e;--customer-muted:#34556a;--customer-line:#b7cbd5;background:#edf5f8;color:var(--customer-ink);font-family:'Manrope Variable',Arial,sans-serif;font-size:17px;line-height:1.75}.ds-customer a{color:inherit;text-decoration:underline;text-underline-offset:4px}.ds-customer a:hover{opacity:.8}.ds-customer :focus-visible{outline:2px solid currentColor;outline-offset:5px}.ds-directory{display:flex;flex-direction:column;max-width:240px}.ds-directory a{padding:12px 0;border-bottom:1px solid var(--customer-line);font-size:15px;line-height:1.5}.ds-directory a[aria-current]{font-weight:700}"
+    },
+    {
+      "name": "Реквизиты",
+      "kind": "custom",
+      "refersTo": "facts-row",
+      "description": "Семантическая пара подпись/значение; на мобильном одна колонка.",
+      "html": "<dl class=\"ds-customer ds-facts\"><div><dt>Продавец</dt><dd>ИП Бобко Роман Викторович</dd></div></dl>",
+      "css": ".ds-customer{--customer-ink:#06182e;--customer-muted:#34556a;--customer-line:#b7cbd5;background:#edf5f8;color:var(--customer-ink);font-family:'Manrope Variable',Arial,sans-serif;font-size:17px;line-height:1.75}.ds-customer a{color:inherit;text-decoration:underline;text-underline-offset:4px}.ds-customer a:hover{opacity:.8}.ds-customer :focus-visible{outline:2px solid currentColor;outline-offset:5px}.ds-facts{margin:0 0 24px;font-size:15px}.ds-facts>div{display:grid;grid-template-columns:minmax(140px,1fr) 2fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--customer-line)}.ds-facts dt{color:var(--customer-muted)}.ds-facts dd{margin:0;font-variant-numeric:tabular-nums}@media(max-width:767px){.ds-facts>div{grid-template-columns:1fr;gap:4px}}"
+    },
+    {
+      "name": "Вопрос и ответ",
+      "kind": "custom",
+      "refersTo": "faq-summary",
+      "description": "Нативный details с браузерным индикатором, без зависимости от JavaScript.",
+      "html": "<div class=\"ds-customer ds-faq\"><details><summary>Как связаться с продавцом?</summary><div><p><a href=\"/contacts/\">Контакты и реквизиты</a></p></div></details></div>",
+      "css": ".ds-customer{--customer-ink:#06182e;--customer-muted:#34556a;--customer-line:#b7cbd5;background:#edf5f8;color:var(--customer-ink);font-family:'Manrope Variable',Arial,sans-serif;font-size:17px;line-height:1.75}.ds-customer a{color:inherit;text-decoration:underline;text-underline-offset:4px}.ds-customer a:hover{opacity:.8}.ds-customer :focus-visible{outline:2px solid currentColor;outline-offset:5px}.ds-faq details{border-bottom:1px solid var(--customer-line)}.ds-faq summary{cursor:pointer;padding:20px 8px 20px 0;font-weight:600;line-height:1.5}.ds-faq details[open] summary{padding-bottom:12px}.ds-faq p{margin:0 0 20px}@media(max-width:767px){.ds-faq{font-size:16px}}"
+    },
+    {
+      "name": "Способ получения и стоимость",
+      "kind": "custom",
+      "refersTo": "delivery-row",
+      "description": "Переносимая строка; содержимое примера обозначает поля данных, а не тариф.",
+      "html": "<div class=\"ds-customer ds-delivery\"><span>Название способа получения</span><strong>Стоимость из настроек</strong></div>",
+      "css": ".ds-customer{--customer-ink:#06182e;--customer-muted:#34556a;--customer-line:#b7cbd5;background:#edf5f8;color:var(--customer-ink);font-family:'Manrope Variable',Arial,sans-serif;font-size:17px;line-height:1.75}.ds-customer a{color:inherit;text-decoration:underline;text-underline-offset:4px}.ds-customer a:hover{opacity:.8}.ds-customer :focus-visible{outline:2px solid currentColor;outline-offset:5px}.ds-delivery{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:20px 0;border-block:1px solid var(--customer-line);margin-bottom:20px}@media(max-width:767px){.ds-delivery{font-size:16px}}"
+    },
+    {
+      "name": "Запись декларации",
+      "kind": "custom",
+      "refersTo": "document-entry",
+      "description": "Заголовок и обычная ссылка на реальный PDF; реквизиты документа используют компонент списка сведений.",
+      "html": "<article class=\"ds-customer ds-document\"><h2>Генераторы озона O3 1, O3 2, O3 M</h2><a href=\"/documents/ozone-generator-declaration.pdf\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть оригинал декларации (PDF)</a></article>",
+      "css": ".ds-customer{--customer-ink:#06182e;--customer-muted:#34556a;--customer-line:#b7cbd5;background:#edf5f8;color:var(--customer-ink);font-family:'Manrope Variable',Arial,sans-serif;font-size:17px;line-height:1.75}.ds-customer a{color:inherit;text-decoration:underline;text-underline-offset:4px}.ds-customer a:hover{opacity:.8}.ds-customer :focus-visible{outline:2px solid currentColor;outline-offset:5px}.ds-document{padding-bottom:24px;border-bottom:1px solid var(--customer-line);max-width:72ch;overflow-wrap:anywhere}.ds-document h2{font-size:24px;font-weight:500;line-height:1.3;margin:40px 0 16px;text-wrap:balance}@media(max-width:767px){.ds-document{font-size:16px}.ds-document h2{font-size:22px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Справочные страницы в существующей оболочке сайта.",
+    "overview": "Система продолжает светлые материалы основного сайта и белую оболочку магазина. Manrope, navy-текст, свободная строка и тонкие разделители поддерживают чтение длинных условий, реквизитов и ответов.",
+    "keyCharacteristics": [
+      "Светлый фон основного сайта и белый фон магазина с общим navy-текстом.",
+      "Одна типографическая семья, длинный текст ограниченной ширины.",
+      "Разделители вместо карточек; обычные ссылки и нативные раскрытия FAQ.",
+      "Навигация слева на широком экране и после текста на мобильном."
+    ],
+    "rules": [
+      {
+        "name": "The Host Palette Rule",
+        "body": "Один шаблон использует палитру текущего сайта; внутри справочного текста новая цветовая тема не появляется.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reading Order Rule",
+        "body": "На узком экране текст страницы предшествует списку остальных разделов.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Do сохранять палитру текущего домена, Manrope и ограниченную ширину текста.",
+      "Do сохранять обычные ссылки, семантику реквизитов, native details/summary и видимый фокус.",
+      "Do брать сведения, суммы и документы из опубликованных данных."
+    ],
+    "donts": [
+      "Don't переносить сценографию и анимации лендинга в справочный текст.",
+      "Don't заменять плоские текстовые группы декоративными карточками.",
+      "Don't выдавать наличие страницы или PDF за подтверждение безопасности продукции либо одобрение платёжного провайдера."
+    ]
+  }
+}

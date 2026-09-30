@@ -37,8 +37,20 @@ def payment_payload(order):
                 }
             )
         if order.delivery_price:
-            # Delivery taxation must be explicitly provided; there is no safe inferred rate.
-            raise PaymentUnavailable("Для платной доставки требуется согласовать налоговые параметры чека.")
+            if order.delivery_vat_code is None:
+                raise PaymentUnavailable(
+                    "Для платной доставки требуется согласовать налоговые параметры чека."
+                )
+            items.append(
+                {
+                    "description": ("Доставка: " + order.delivery_method)[:128],
+                    "quantity": "1",
+                    "amount": {"value": str(order.delivery_price), "currency": order.currency},
+                    "vat_code": order.delivery_vat_code,
+                    "payment_subject": "service",
+                    "payment_mode": "full_payment",
+                }
+            )
         payload["receipt"] = {"customer": {"email": order.email}, "items": items}
     return payload
 

@@ -30,5 +30,5 @@
       <section class="material-contact"><h2>{{ site_content.materials_contact_title }}</h2><p>{{ site_content.materials_contact_copy }}</p>{% if site_settings.email %}<a href="mailto:{{ site_settings.email }}?subject={{ material_title|urlencode }}" hx-boost="false">Написать в компанию {% include "site/partials/material_arrow.html" %}</a>{% endif %}{% if site_settings.phone %}<a href="tel:{{ site_settings.phone }}" hx-boost="false">{{ site_settings.phone_label }}</a>{% endif %}</section>
     </div>
   </main>
-  <footer class="materials-footer"><p>{{ site_settings.footer_label }}</p><a href="/">Вернуться на главную</a></footer>
+  <footer class="materials-footer"><p>{{ site_settings.footer_label }}</p><a href="/">Вернуться на главную</a>{% include 'customer/links.html' %}</footer>
 </div>

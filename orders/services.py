@@ -11,6 +11,8 @@ from catalog.models import Product
 from core.models import AuditEntry
 from .models import DeliveryMethod, Notification, Order, OrderItem, StockReservation, StoreSettings
 from .notifications import manager_email
+from content.customer_content import render_customer_text, seller_details, text_values
+from content.models import SiteSettings
 
 
 class QuoteChanged(ValidationError):
@@ -39,13 +41,22 @@ def quote_data(cart):
             for item in cart.items.select_related("product").order_by("product_id")
         ],
         "delivery": [
-            [m.pk, str(m.price), m.name, m.address_required]
+            [m.pk, str(m.price), m.name, m.address_required, m.vat_code]
             for m in DeliveryMethod.objects.filter(active=True).order_by("pk")
         ],
-        "terms": hashlib.sha256(
-            ((store.terms_text + "\n" + store.privacy_text) if store else "").encode()
-        ).hexdigest(),
+        "terms": hashlib.sha256(purchase_terms(store).encode()).hexdigest(),
     }
+
+
+def purchase_terms(store):
+    if not store:
+        return ""
+    values = text_values()
+    texts = [store.terms_text, store.delivery_text, store.returns_text, store.privacy_text]
+    details = seller_details(SiteSettings.objects.first())
+    if details:
+        texts.append("\n".join(f"{label}: {value}" for label, value in details))
+    return "\n\n".join(render_customer_text(text, values) for text in texts)
 
 
 def sign_quote(cart):
@@ -139,9 +150,10 @@ def create_order(cart, data, session_key):
         comment=data.get("comment", ""),
         subtotal=subtotal,
         delivery_price=method.price,
+        delivery_vat_code=method.vat_code,
         total=subtotal + method.price,
         terms_accepted_at=timezone.now(),
-        terms_snapshot=store.terms_text,
+        terms_snapshot=purchase_terms(store),
     )
     for item in items:
         product = locked[item.product_id]

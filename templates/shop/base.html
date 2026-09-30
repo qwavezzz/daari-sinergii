@@ -29,7 +29,7 @@
 <a href="{% url 'catalog:index' %}" class="shop-brand">{% include 'shared/brand_mark.html' with brand_sizes='(max-width: 767px) 32px, 40px' %}Дары Синергии</a>
 <nav id="shop-navigation" class="shop-navigation" :class="menuClass" aria-label="Навигация магазина">
 <a href="{% url 'catalog:index' %}" @click="closeMenu">Каталог</a>
-<a href="{{ site_url }}/materials/" hx-boost="false">Документы</a>
+<a href="/product-documents/">Документы</a>
 <a href="{{ site_url }}/#process" hx-boost="false">О компании</a>
 </nav>
 <a href="{% url 'cart:detail' %}" id="cart-toggle" class="shop-cart-toggle" hx-boost="false" @click.prevent.stop="openCart($event)" aria-haspopup="dialog" aria-controls="cart-dialog">
@@ -41,8 +41,8 @@
 <main id="main-content" tabindex="-1" hx-history-elt>{% block content %}{% endblock %}</main>
 <footer class="shop-footer shop-container">
 <a class="shop-brand" href="{{ site_url }}/" hx-boost="false">{% include 'shared/brand_mark.html' with brand_sizes='(max-width: 767px) 32px, 40px' %}Дары Синергии</a>
-<div class="shop-footer-links"><a href="{{ site_url }}/#contact" hx-boost="false">Связаться с нами</a><a href="{{ site_url }}/materials/" hx-boost="false">Документы</a><a href="{% url 'catalog:conditions' %}">Доставка и оплата</a><a href="{% url 'catalog:legal' slug='terms' %}">Условия покупки</a><a href="{% url 'catalog:legal' slug='privacy' %}">Политика обработки данных</a></div>
-{% if site_settings.legal_name %}<p>{{ site_settings.legal_name }}</p>{% endif %}
+{% include 'customer/links.html' %}
+{% if site_settings.legal_name %}<p>{{ site_settings.legal_name }}{% if site_settings.inn %} · ИНН {{ site_settings.inn }}{% endif %}{% if site_settings.registration_number %} · {% if site_settings.seller_type == 'ip' %}ОГРНИП{% else %}ОГРН{% endif %} {{ site_settings.registration_number }}{% endif %}</p>{% endif %}
 <p class="shop-muted">© {% now "Y" %} Дары Синергии</p>
 </footer>
 </div>
