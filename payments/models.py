@@ -1,6 +1,33 @@
 import uuid
 from django.db import models
+from django.urls import reverse
 from core.models import TimeStampedModel
+
+
+class TrialPayment(TimeStampedModel):
+    """Permanent rehearsal marker, deliberately outside the bank payment ledger."""
+
+    class State(models.TextChoices):
+        PENDING = "pending", "Проба ожидает завершения"
+        SUCCEEDED = "succeeded", "Проба завершена успешно"
+        CANCELED = "canceled", "Проба отменена"
+
+    order = models.OneToOneField(
+        "orders.Order", on_delete=models.PROTECT, related_name="trial_payment", editable=False
+    )
+    state = models.CharField("Результат пробы", max_length=16, choices=State, default=State.PENDING)
+    action_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    snapshot = models.JSONField("Сохранённый заказ для пробы", editable=False)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Пробная оплата без списания"
+        verbose_name_plural = "Пробные оплаты без списания"
+
+    def get_absolute_url(self):
+        return reverse(
+            "payments:trial", kwargs={"public_id": self.order.public_id}, urlconf="config.shop_urls"
+        )
 
 
 class PaymentAttempt(TimeStampedModel):

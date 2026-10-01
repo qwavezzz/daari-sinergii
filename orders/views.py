@@ -247,6 +247,7 @@ def owned_order(request, public_id):
 @require_GET
 def detail(request, public_id):
     order = owned_order(request, public_id)
+    trial = getattr(order, "trial_payment", None)
 
     return render_page(
         request,
@@ -254,8 +255,10 @@ def detail(request, public_id):
         "shop/partials/order_content.html",
         {
             "order": order,
+            "trial_payment": trial,
             "page_title": "Ваш заказ — Дары Синергии",
             "payment_enabled": settings.ALFABANK_ENABLED
+            and not trial
             and order.financial_status in {"unpaid", "pending"}
             and order.status != "canceled"
             and not order.needs_attention,
@@ -274,6 +277,10 @@ def pay(request, public_id):
 def proceed_to_payment(request, order):
     """Checkout and retry share the same persisted, idempotent payment operation."""
     order_url = order.get_absolute_url()
+    trial = getattr(order, "trial_payment", None)
+    if trial:
+        destination = trial.get_absolute_url() if settings.PAYMENT_STUB_ENABLED else order_url
+        return navigation_redirect(request, destination)
     if (
         not settings.ALFABANK_ENABLED
         or order.needs_attention

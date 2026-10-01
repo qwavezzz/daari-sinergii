@@ -10,7 +10,7 @@ from content.models import SiteSettings
 from core.models import AuditEntry
 from orders.models import Order, StoreSettings
 from orders.services import consume_reservations, queue_notification, release_reservations
-from .models import PaymentAttempt, PaymentEvent, Refund
+from .models import PaymentAttempt, PaymentEvent, Refund, TrialPayment
 from .provider import (
     AlfaBankClient,
     InvalidPayment,
@@ -148,9 +148,11 @@ def payment_payload(order, key=None):
 
 
 def start_payment(order_id, client=None):
-    client = client or AlfaBankClient()
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
+        if TrialPayment.objects.filter(order=order).exists():
+            raise PaymentUnavailable("Пробный заказ нельзя оплатить в банке. Оформите новый заказ.")
+        client = client or AlfaBankClient()
         if order.financial_status in {"paid", "part_refunded", "refunded"} or order.status == "canceled":
             raise ValidationError("Оплата этого заказа недоступна.")
         if order.needs_attention:
@@ -194,7 +196,8 @@ def start_payment(order_id, client=None):
 
 def verify_context(attempt):
     if (
-        attempt.provider != "alfabank"
+        TrialPayment.objects.filter(order_id=attempt.order_id).exists()
+        or attempt.provider != "alfabank"
         or attempt.account_id != settings.ALFABANK_USERNAME
         or attempt.test_mode is not settings.ALFABANK_TEST_MODE
     ):

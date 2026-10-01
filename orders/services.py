@@ -89,6 +89,11 @@ def checkout_snapshot(cart):
 
 
 def queue_notification(order, event, payload=None):
+    # Rehearsal orders never enter the customer/manager delivery queue.
+    from payments.models import TrialPayment
+
+    if TrialPayment.objects.filter(order=order).exists():
+        return
     recipients = [(order.email, Notification.Audience.CUSTOMER)]
     manager = manager_email()
     if manager and manager.casefold() != order.email.casefold():
@@ -198,6 +203,10 @@ def create_order(cart, data, session_key):
     cart.items.all().delete()
     cart.version += 1
     cart.save(update_fields=["version", "updated_at"])
+    if settings.PAYMENT_STUB_ENABLED:
+        from payments.trial import create_trial_payment
+
+        create_trial_payment(order)
     queue_notification(order, "created")
     AuditEntry.objects.create(
         kind="order.created", object_id=str(order.public_id), message="Создан заказ, товары зарезервированы."

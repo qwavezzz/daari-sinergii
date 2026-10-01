@@ -136,6 +136,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 32 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 RESERVATION_MINUTES = int(os.environ.get("RESERVATION_MINUTES", "30"))
 CHECKOUT_ENABLED = os.environ.get("CHECKOUT_ENABLED", "false").lower() == "true"
+PAYMENT_STUB_ENABLED = os.environ.get("PAYMENT_STUB_ENABLED", "false").lower() == "true"
 ALFABANK_ENABLED = os.environ.get("ALFABANK_ENABLED", "false").lower() == "true"
 ALFABANK_USERNAME = os.environ.get("ALFABANK_USERNAME", "")
 ALFABANK_PASSWORD = os.environ.get("ALFABANK_PASSWORD", "")

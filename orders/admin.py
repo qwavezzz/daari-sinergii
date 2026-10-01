@@ -122,16 +122,25 @@ class OrderAdmin(admin.ModelAdmin):
         "total",
         "status",
         "financial_status",
+        "payment_mode",
         "needs_attention",
     ]
     list_filter = ["status", "financial_status", "needs_attention", "created_at"]
     search_fields = ["public_id", "name", "email", "phone"]
     readonly_fields = [
         field.name for field in Order._meta.fields if field.name not in {"id", "session_key", "checkout_key"}
-    ] + ["cdek_pickup", "cdek_tariff", "cdek_waybill"]
+    ] + ["payment_mode", "cdek_pickup", "cdek_tariff", "cdek_waybill"]
     exclude = ["session_key", "checkout_key"]
     inlines = [OrderItemInline, PaymentInline, ReservationInline]
     actions = ["processing", "ready", "completed", "cancel"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("trial_payment")
+
+    @admin.display(description="Режим оплаты")
+    def payment_mode(self, obj):
+        trial = getattr(obj, "trial_payment", None)
+        return f"Пробный заказ: {trial.get_state_display()}" if trial else "Банковская оплата"
 
     @admin.display(description="Пункт СДЭК")
     def cdek_pickup(self, obj):
@@ -144,6 +153,8 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.display(description="Накладная СДЭК")
     def cdek_waybill(self, obj):
+        if getattr(obj, "trial_payment", None):
+            return "Пробный заказ — отправка не требуется"
         return "Оформить вручную после подтверждения оплаты" if obj.delivery_type == "cdek_pvz" else "—"
 
     def has_add_permission(self, request):
