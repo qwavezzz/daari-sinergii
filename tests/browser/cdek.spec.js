@@ -9,6 +9,8 @@ const fakeWidget = `window.CDEKWidget = class {
     button.addEventListener('click', () => options.onChoose('office', {delivery_sum: 1},
       {code: 'TEST1', address: 'Подменённый клиентский адрес'}));
     this.root.append(button);
+    window.cdekWidgetInstances = (window.cdekWidgetInstances || 0) + 1;
+    queueMicrotask(() => options.onReady());
   }
   destroy() { this.root.replaceChildren(); }
 };`
@@ -38,15 +40,24 @@ for (const width of [1440, 390]) {
       route.fulfill({ contentType: 'application/javascript', body: fakeWidget }),
     )
     await startCheckout(page)
+    await expect(page.locator('[data-cdek-list]')).not.toHaveAttribute('open', '')
     await page.getByLabel('Имя получателя').fill('Проверка СДЭК')
     await page.getByLabel('Телефон', { exact: true }).fill('+79000000000')
     await page.getByLabel('Email', { exact: true }).fill('cdek-qa@example.invalid')
     await page.getByRole('button', { name: 'Выбрать пункт на карте' }).click()
+    await expect(page.getByRole('button', { name: 'Скрыть карту' })).toHaveAttribute('aria-expanded', 'true')
+    await page.screenshot({ path: `artifacts/widget-first/map-open-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: 'Выбрать тестовый ПВЗ' }).click()
     await expect(page.locator('[data-delivery-price]')).toHaveText('315,00 ₽')
     await expect(page.locator('[data-order-total]')).toHaveText('1 605,50 ₽')
     await expect(page.locator('[data-cdek-status]')).toContainText('Тестовый адрес, 10')
     await expect(page.locator('[data-cdek-status]')).not.toContainText('Подменённый')
+    await expect(page.locator('#cdek-map')).toBeHidden()
+    await page.getByRole('button', { name: 'Изменить пункт на карте' }).click()
+    await expect(page.getByRole('button', { name: 'Выбрать тестовый ПВЗ' })).toBeVisible()
+    expect(await page.evaluate(() => window.cdekWidgetInstances)).toBe(1)
+    await page.getByRole('button', { name: 'Скрыть карту' }).click()
+    await expect(page.locator('[data-checkout-submit]')).toBeEnabled()
     await page.locator('[name=accept_terms]').check()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: `artifacts/alfa-cdek/checkout-${width}.png`, fullPage: true })
@@ -90,6 +101,7 @@ for (const width of [1440, 390]) {
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
     await startCheckout(page)
+    await page.getByText('Выбрать пункт из списка', { exact: true }).click()
     await page.getByLabel('Город получения', { exact: true }).fill('Тестовый город')
     await page.getByLabel('Город получения', { exact: true }).press('Enter')
     await expect(page.getByLabel('Выберите город')).toBeFocused()
@@ -114,6 +126,7 @@ for (const width of [1440, 390]) {
 
 test('city search recovers from errors without losing contacts', async ({ page }) => {
   await startCheckout(page)
+  await page.getByText('Выбрать пункт из списка', { exact: true }).click()
   await page.getByLabel('Имя получателя').fill('Сохранённое имя')
   await page.route('**/checkout/cdek/cities/**', (route) =>
     route.fulfill({
@@ -130,6 +143,53 @@ test('city search recovers from errors without losing contacts', async ({ page }
   await page.getByRole('button', { name: 'Найти город' }).click()
   await expect(page.getByLabel('Выберите город')).toBeVisible()
   await expect(page.getByLabel('Имя получателя')).toHaveValue('Сохранённое имя')
+})
+
+test('failed widget opens fallback and can be retried without losing contacts', async ({ page }) => {
+  await page.route(widgetUrl, (route) => route.abort())
+  await startCheckout(page)
+  await page.getByLabel('Имя получателя').fill('Сохранённое имя')
+  await page.getByRole('button', { name: 'Выбрать пункт на карте' }).click()
+  await expect(page.locator('[data-cdek-map-message]')).toContainText('Карта не загрузилась')
+  await expect(page.getByLabel('Город получения', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Имя получателя')).toHaveValue('Сохранённое имя')
+  await expect(page.locator('[data-checkout-submit]')).toBeDisabled()
+  await page.unroute(widgetUrl)
+  await page.route(widgetUrl, (route) =>
+    route.fulfill({ contentType: 'application/javascript', body: fakeWidget }),
+  )
+  await page.getByRole('button', { name: 'Повторить загрузку карты' }).click()
+  await expect(page.getByLabel('Город получения', { exact: true })).toBeHidden()
+  await page.getByRole('button', { name: 'Выбрать тестовый ПВЗ' }).click()
+  await expect(page.locator('[data-order-total]')).toHaveText('1 605,50 ₽')
+})
+
+test('a stalled widget releases the list and ignores late selections', async ({ page }) => {
+  await page.route(widgetUrl, (route) =>
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: `window.CDEKWidget = class { constructor(options) { window.stalledCdek = options; } destroy() {} };`,
+    }),
+  )
+  await startCheckout(page)
+  await page.clock.install()
+  await page.getByRole('button', { name: 'Выбрать пункт на карте' }).click()
+  await expect.poll(() => page.evaluate(() => Boolean(window.stalledCdek))).toBe(true)
+  await page.clock.fastForward(21000)
+  await expect(page.locator('[data-cdek-map-message]')).toContainText('Карта не загрузилась')
+  await page.getByLabel('Город получения', { exact: true }).fill('Тестовый город')
+  await page.getByRole('button', { name: 'Найти город' }).click()
+  await page.getByLabel('Выберите город').selectOption('44')
+  await page.getByRole('radio', { name: /Тестовый адрес, 10/ }).check()
+  await page.clock.fastForward(300)
+  await expect(page.locator('[data-checkout-submit]')).toBeEnabled()
+  const quote = await page.locator('[name=delivery_quote]').inputValue()
+  await page.evaluate(() => {
+    window.stalledCdek.onReady()
+    window.stalledCdek.onChoose('office', {}, { code: 'TEST2' })
+  })
+  await expect(page.locator('[name=pvz_code]')).toHaveValue('TEST1')
+  await expect(page.locator('[name=delivery_quote]')).toHaveValue(quote)
 })
 
 test('customer delivery and contacts remain readable on desktop and mobile', async ({ page }) => {

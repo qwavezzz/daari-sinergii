@@ -215,6 +215,19 @@ class CdekCheckoutTests(TestCase):
         self.assertContains(response, "Тестовая, 1")
         self.assertFalse(Order.objects.exists())
 
+    def test_map_is_primary_when_configured_and_list_is_open_without_key(self):
+        self.browser()
+        with override_settings(CDEK_YANDEX_API_KEY="public-browser-test-key"):
+            response = self.client.get("/checkout/", HTTP_HOST="shop.localhost")
+        html = response.content.decode()
+        self.assertLess(html.index("data-open-cdek"), html.index("data-cdek-list"))
+        self.assertNotContains(response, "data-cdek-list open")
+        with override_settings(CDEK_YANDEX_API_KEY=""):
+            response = self.client.get("/checkout/", HTTP_HOST="shop.localhost")
+        self.assertNotContains(response, "data-open-cdek")
+        self.assertContains(response, "data-cdek-list open")
+        self.assertContains(response, "Карта сейчас недоступна")
+
     def test_expired_quote_checkout_retains_input_and_clears_payable_total(self):
         self.browser()
         data = self.data()

@@ -38,6 +38,9 @@ export function installCheckout(form, htmx) {
   const status = form.querySelector('[data-cdek-status]')
   const calculate = form.querySelector('[data-cdek-calculate]')
   const openMap = form.querySelector('[data-open-cdek]')
+  const map = form.querySelector('#cdek-map')
+  const mapMessage = form.querySelector('[data-cdek-map-message]')
+  const listFallback = form.querySelector('[data-cdek-list]')
   const cityQuery = form.querySelector('[data-cdek-city-query]')
   const searchButton = form.querySelector('[data-cdek-city-search]')
   const citySelect = form.querySelector('[data-cdek-cities]')
@@ -56,6 +59,8 @@ export function installCheckout(form, htmx) {
     pickupDelay,
     expiry,
     mapTimeout,
+    mapAttempt = 0,
+    mapReady = false,
     widget,
     destroyed = false
   const money = (value) =>
@@ -120,11 +125,12 @@ export function installCheckout(form, htmx) {
       form.querySelector('[data-order-total]').textContent = money(data.total)
       label.textContent = `${form.dataset.paymentLabel || 'Перейти к оплате'} — ${money(data.total)}`
       status.textContent = `ПВЗ ${data.shipping.pickup.code}: ${data.shipping.pickup.city}, ${data.shipping.pickup.address}. Ориентировочный срок: ${data.shipping.period_min}–${data.shipping.period_max} дн.`
-      const map = form.querySelector('#cdek-map')
       if (map && !map.hidden) {
         map.hidden = true
         openMap.disabled = false
+        openMap.setAttribute('aria-expanded', 'false')
         openMap.textContent = 'Изменить пункт на карте'
+        mapMessage.hidden = true
         status.tabIndex = -1
         status.focus()
       }
@@ -332,53 +338,83 @@ export function installCheckout(form, htmx) {
       clearTimeout(timeout)
     }
   })
+  const closeMap = () => {
+    if (!map) return
+    map.hidden = true
+    mapMessage.hidden = true
+    openMap.disabled = false
+    openMap.setAttribute('aria-expanded', 'false')
+    openMap.textContent = token.value ? 'Изменить пункт на карте' : 'Выбрать пункт на карте'
+    if (!mapReady) {
+      mapAttempt += 1
+      clearTimeout(mapTimeout)
+      widget?.destroy?.()
+      widget = null
+      map.replaceChildren()
+    }
+  }
+  const mapFailed = (attempt) => {
+    if (destroyed || attempt !== mapAttempt) return
+    mapReady = false
+    closeMap()
+    openMap.textContent = 'Повторить загрузку карты'
+    mapMessage.textContent = 'Карта не загрузилась. Выберите пункт из списка или попробуйте снова.'
+    mapMessage.hidden = false
+    listFallback.open = true
+  }
+  listen(listFallback, 'toggle', () => {
+    if (listFallback.open && map && !map.hidden) closeMap()
+  })
   if (openMap && picker.dataset.ready === '1') openMap.hidden = false
   listen(openMap, 'click', async () => {
-    openMap.disabled = true
-    announceError('')
-    const map = form.querySelector('#cdek-map')
+    if (!map.hidden) {
+      closeMap()
+      return
+    }
+    cancelDirectory()
+    listFallback.open = false
     map.hidden = false
+    openMap.setAttribute('aria-expanded', 'true')
+    openMap.textContent = 'Скрыть карту'
+    mapMessage.textContent = mapReady ? 'Выберите удобный пункт выдачи на карте.' : 'Загружаем карту СДЭК…'
+    mapMessage.hidden = false
+    if (widget && mapReady) return
+    const attempt = ++mapAttempt
     try {
       const Widget = await loadWidget()
-      if (destroyed) return
-      if (!widget) {
-        mapTimeout = setTimeout(() => {
-          if (destroyed) return
-          announceError('Карта загружается дольше обычного. Выберите город и пункт из списка.')
-        }, 20000)
-        widget = new Widget({
-          root: 'cdek-map',
-          apiKey: picker.dataset.mapKey,
-          servicePath: picker.dataset.serviceUrl,
-          defaultLocation: 'Тольятти',
-          canChoose: true,
-          lang: 'rus',
-          currency: 'RUB',
-          // Omitting from deliberately uses official selection-only mode: no browser tariff calculation.
-          hideDeliveryOptions: { door: true },
-          forceFilters: { type: 'PVZ' },
-          onReady() {
-            clearTimeout(mapTimeout)
-            cancelDirectory()
-            officeList?.querySelectorAll('input').forEach((input) => {
-              input.checked = false
-            })
-          },
-          onChoose(mode, tariff, point) {
-            if (destroyed || mode !== 'office' || !point?.code) return
-            clearTimeout(mapTimeout)
-            code.value = point.code
-            quote()
-          },
-        })
-      }
-      openMap.textContent = 'Карта пунктов выдачи открыта'
-    } catch (failure) {
-      if (!destroyed) {
-        announceError(failure.message)
-        map.hidden = true
-        openMap.disabled = false
-      }
+      if (destroyed || attempt !== mapAttempt) return
+      mapTimeout = setTimeout(() => mapFailed(attempt), 20000)
+      widget = new Widget({
+        root: 'cdek-map',
+        apiKey: picker.dataset.mapKey,
+        servicePath: picker.dataset.serviceUrl,
+        defaultLocation: 'Тольятти',
+        canChoose: true,
+        lang: 'rus',
+        currency: 'RUB',
+        // Selection only: final price comes from the signed server-side quote.
+        hideDeliveryOptions: { door: true },
+        forceFilters: { type: 'PVZ' },
+        onReady() {
+          if (destroyed || attempt !== mapAttempt) return
+          mapReady = true
+          clearTimeout(mapTimeout)
+          mapMessage.textContent = 'Выберите удобный пункт выдачи на карте.'
+        },
+        onChoose(mode, tariff, point) {
+          if (destroyed || attempt !== mapAttempt || map.hidden || mode !== 'office' || !point?.code) return
+          mapReady = true
+          clearTimeout(mapTimeout)
+          cancelDirectory()
+          officeList?.querySelectorAll('input').forEach((input) => {
+            input.checked = false
+          })
+          code.value = point.code
+          quote()
+        },
+      })
+    } catch {
+      mapFailed(attempt)
     }
   })
   listen(document, 'cart-updated', () =>

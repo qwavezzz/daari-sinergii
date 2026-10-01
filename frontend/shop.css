@@ -34,6 +34,16 @@
 .cdek-map-button {
   margin-block: 8px 16px;
 }
+.cdek-map-message {
+  margin-block: 0 16px;
+}
+.cdek-list-fallback {
+  margin-block: 16px;
+}
+.cdek-list-fallback > summary {
+  cursor: pointer;
+  padding-block: 12px;
+}
 .cdek-search-row {
   display: flex;
   flex-wrap: wrap;
