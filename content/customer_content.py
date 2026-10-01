@@ -38,12 +38,33 @@ def text_values():
         )
     }
     values["phone"] = (site.phone_label or site.phone) if site else ""
+    # Retain the old placeholder for owner-authored static-delivery copy only.
     values["delivery_price"] = (
-        format(method.price, ".2f").replace(".00", "").replace(".", ",") if method else "—"
+        "рассчитывается при выборе пункта выдачи"
+        if method and method.type == "cdek_pvz"
+        else format(method.price, ".2f").replace(".00", "").replace(".", ",")
+        if method
+        else "не определена"
     )
+    values["legal_name"] = values["legal_name"] or "сведения о продавце уточняются"
     values["main_url"] = settings.MAIN_ORIGIN
     values["shop_url"] = settings.SHOP_ORIGIN
     return values
+
+
+def customer_sales_available(store):
+    """Public availability is conservative; API credentials are never exposed in the template."""
+    return bool(
+        store
+        and store.checkout_enabled
+        and settings.CHECKOUT_ENABLED
+        and getattr(settings, "ALFABANK_ENABLED", False)
+        and not getattr(settings, "ALFABANK_TEST_MODE", True)
+        and getattr(settings, "ALFABANK_LIVE_APPROVED", False)
+        and getattr(settings, "ALFABANK_RECEIPT_MODE", "unconfigured") in {"bank", "external"}
+        and getattr(settings, "CDEK_ENABLED", False)
+        and not getattr(settings, "CDEK_TEST_MODE", True)
+    )
 
 
 def render_customer_text(text, values=None):

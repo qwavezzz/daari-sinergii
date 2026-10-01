@@ -1,12 +1,15 @@
 from io import StringIO
+import hashlib
 from decimal import Decimal
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import Document, FAQEntry, SiteSettings
 from .customer_content import CUSTOMER_PAGES
+from .management.commands.setup_customer_pages import load_customer_copy
 from orders.models import StoreSettings, DeliveryMethod
 
 
@@ -45,12 +48,13 @@ class CustomerPagesTests(TestCase):
         self.assertNotContains(response, "<script>alert(1)</script>")
         self.assertContains(response, "{{ request }}")
 
-    def test_faq_respects_publication_order_and_updated_delivery_price(self):
+    def test_faq_respects_publication_order_and_explains_dynamic_delivery(self):
         DeliveryMethod.objects.update(price=Decimal("450.50"))
         FAQEntry.objects.create(question="Скрытый вопрос", answer="Не показывать", active=False)
         FAQEntry.objects.create(question="Вопрос владельца", answer="Ответ владельца", order=99)
         response = self.client.get("/faq/", HTTP_HOST="localhost")
-        self.assertContains(response, "450,50")
+        self.assertContains(response, "Стоимость СДЭК рассчитывается после выбора пункта выдачи")
+        self.assertNotContains(response, "450,50")
         self.assertNotContains(response, "Скрытый вопрос")
         self.assertContains(response, "Ответ владельца")
         self.assertNotContains(response, "300 ₽")
@@ -120,6 +124,7 @@ class CustomerPagesTests(TestCase):
         payload = {
             "name": method.name,
             "slug": method.slug,
+            "type": "static",
             "price": "450.50",
             "active": "on",
             "address_required": "on",
@@ -137,3 +142,82 @@ class CustomerPagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         method.refresh_from_db()
         self.assertEqual(method.price, Decimal("450.50"))
+
+    def test_new_setup_does_not_invent_seller_or_enable_services(self):
+        self.assertEqual(SiteSettings.objects.get().legal_name, "")
+        method = DeliveryMethod.objects.get()
+        self.assertEqual(method.type, "cdek_pvz")
+        self.assertFalse(method.active)
+        self.assertFalse(StoreSettings.objects.get().checkout_enabled)
+        response = self.client.get("/contacts/", HTTP_HOST="shop.localhost")
+        self.assertContains(response, "Сведения о продавце и адрес возврата уточняются")
+        self.assertContains(response, "Онлайн-покупка пока недоступна")
+
+    def test_dynamic_delivery_never_displays_placeholder_price_as_free_or_fixed(self):
+        for price in (Decimal("0"), Decimal("300")):
+            DeliveryMethod.objects.update(active=True, price=price)
+            response = self.client.get("/delivery-and-payment/", HTTP_HOST="shop.localhost")
+            self.assertContains(response, "Расчёт после выбора пункта выдачи")
+            self.assertNotContains(response, "₽ за заказ")
+            self.assertContains(response, "Отсутствие цены не означает бесплатную доставку")
+
+    @override_settings(
+        CHECKOUT_ENABLED=True,
+        ALFABANK_ENABLED=True,
+        ALFABANK_TEST_MODE=True,
+        CDEK_ENABLED=True,
+        CDEK_TEST_MODE=False,
+    )
+    def test_test_gateway_does_not_present_real_sales_as_available(self):
+        StoreSettings.objects.update(checkout_enabled=True)
+        response = self.client.get("/legal/terms/", HTTP_HOST="shop.localhost")
+        self.assertContains(response, "Онлайн-покупка пока недоступна")
+        self.assertContains(response, "демонстрационные позиции")
+
+    def test_refresh_updates_only_matching_seed_and_preserves_editor_and_contacts(self):
+        data, previous = load_customer_copy()
+        old_text = "Предыдущий стандартный текст"
+        previous["pages"]["delivery_text"] = hashlib.sha256(old_text.encode()).hexdigest()
+        question, _ = data["faq"][1]
+        previous["faq"][question] = hashlib.sha256(old_text.encode()).hexdigest()
+        StoreSettings.objects.update(delivery_text=old_text, terms_text="Условия редактора")
+        SiteSettings.objects.update(legal_name="Подтверждённый продавец", email="owner@example.test")
+        FAQEntry.objects.filter(question=question).update(answer=old_text, active=False, order=99)
+        method = DeliveryMethod.objects.get()
+        method.active = True
+        method.price = Decimal("450")
+        method.save()
+        loader = "content.management.commands.setup_customer_pages.load_customer_copy"
+        with patch(loader, return_value=(data, previous)):
+            call_command("setup_customer_pages", refresh_defaults=True, dry_run=True, stdout=StringIO())
+            self.assertEqual(StoreSettings.objects.get().delivery_text, old_text)
+            self.assertEqual(FAQEntry.objects.get(question=question).answer, old_text)
+            call_command("setup_customer_pages", refresh_defaults=True, stdout=StringIO())
+        store = StoreSettings.objects.get()
+        self.assertEqual(store.delivery_text, data["pages"]["delivery_text"])
+        self.assertEqual(store.terms_text, "Условия редактора")
+        self.assertFalse(store.checkout_enabled)
+        site = SiteSettings.objects.get()
+        self.assertEqual(site.legal_name, "Подтверждённый продавец")
+        self.assertEqual(site.email, "owner@example.test")
+        entry = FAQEntry.objects.get(question=question)
+        self.assertEqual(entry.answer, dict(data["faq"])[question])
+        self.assertFalse(entry.active)
+        self.assertEqual(entry.order, 99)
+        method.refresh_from_db()
+        self.assertEqual(method.price, Decimal("450"))
+        self.assertTrue(method.active)
+
+    def test_dry_run_on_empty_database_does_not_create_rows(self):
+        StoreSettings.objects.all().delete()
+        SiteSettings.objects.all().delete()
+        FAQEntry.objects.all().delete()
+        DeliveryMethod.objects.all().delete()
+        call_command("setup_customer_pages", dry_run=True, stdout=StringIO())
+        for model in (StoreSettings, SiteSettings, FAQEntry, DeliveryMethod):
+            self.assertFalse(model.objects.exists())
+
+    def test_refresh_does_not_recreate_deleted_faq(self):
+        FAQEntry.objects.all().delete()
+        call_command("setup_customer_pages", refresh_defaults=True, stdout=StringIO())
+        self.assertFalse(FAQEntry.objects.exists())
