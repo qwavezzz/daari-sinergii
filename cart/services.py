@@ -37,14 +37,16 @@ def cart_context(cart):
             total += subtotal
             count += item.quantity
     delivery = default_delivery() if items else None
-    delivery_price = delivery.price if delivery else Decimal("0.00")
+    delivery_price = (
+        delivery.price if delivery and delivery.type == "static" else None if items else Decimal("0.00")
+    )
     return {
         "cart": cart,
         "cart_items": items,
         "cart_total": total,
         "cart_delivery_method": delivery,
         "cart_delivery_price": delivery_price,
-        "cart_order_total": total + delivery_price,
+        "cart_order_total": total + delivery_price if delivery_price is not None else None,
         "cart_count": count,
         "cart_version": cart.version if cart else 0,
         "cart_valid": bool(items) and all(item["available"] for item in items),

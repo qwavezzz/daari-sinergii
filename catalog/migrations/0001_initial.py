@@ -80,7 +80,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "vat_code",
-                    models.PositiveSmallIntegerField(blank=True, null=True, verbose_name="Ставка НДС ЮKassa"),
+                    models.PositiveSmallIntegerField(
+                        blank=True, null=True, verbose_name="Ставка НДС платёжного сервиса"
+                    ),
                 ),
                 ("sort_order", models.PositiveIntegerField(default=0, verbose_name="Порядок")),
                 (

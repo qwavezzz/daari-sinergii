@@ -30,7 +30,19 @@ class StoreSettings(models.Model):
 
 
 class DeliveryMethod(models.Model):
+    class Type(models.TextChoices):
+        STATIC = "static", "Фиксированная стоимость"
+        CDEK_PVZ = "cdek_pvz", "СДЭК: пункт выдачи"
+
     name = models.CharField("Способ получения", max_length=160)
+    type = models.CharField("Расчёт доставки", max_length=20, choices=Type, default=Type.STATIC)
+    cdek_tariff_code = models.PositiveIntegerField(
+        "Код тарифа СДЭК",
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        help_text="Подтверждённый тариф от склада до ПВЗ. Стоимость рассчитывается API, поле цены не используется.",
+    )
     slug = models.SlugField("Код", unique=True)
     price = models.DecimalField(
         "Стоимость, ₽", decimal_places=2, max_digits=10, validators=[MinValueValidator(0)]
@@ -40,7 +52,7 @@ class DeliveryMethod(models.Model):
     sort_order = models.PositiveIntegerField("Порядок", default=0)
     is_default = models.BooleanField("По умолчанию в корзине", default=False)
     vat_code = models.PositiveSmallIntegerField(
-        "Ставка НДС доставки для ЮKassa",
+        "Код ставки НДС доставки",
         null=True,
         blank=True,
         choices=[
@@ -57,7 +69,7 @@ class DeliveryMethod(models.Model):
             (11, "НДС 22%"),
             (12, "НДС 22/122"),
         ],
-        help_text="Выберите с бухгалтером. Для платной доставки без ставки нельзя сформировать чек ЮKassa.",
+        help_text="Выберите с бухгалтером. Код ставки переводится в формат кассы явно, без изменения значения.",
     )
 
     class Meta:
@@ -97,6 +109,8 @@ class Order(TimeStampedModel):
     phone = models.CharField("Телефон", max_length=32)
     email = models.EmailField("Email")
     delivery_method = models.CharField("Способ получения", max_length=160)
+    delivery_type = models.CharField("Тип доставки", max_length=20, default="static", editable=False)
+    delivery_snapshot = models.JSONField("Проверенный расчёт доставки", default=dict, editable=False)
     address = models.TextField("Адрес", blank=True)
     comment = models.TextField("Комментарий", blank=True)
     subtotal = models.DecimalField("Стоимость товаров", max_digits=12, decimal_places=2)

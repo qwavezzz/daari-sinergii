@@ -49,7 +49,7 @@ class StoreSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(DeliveryMethod)
 class DeliveryMethodAdmin(admin.ModelAdmin):
-    list_display = ["name", "price", "is_default", "vat_code", "address_required", "active"]
+    list_display = ["name", "type", "cdek_tariff_code", "price", "is_default", "vat_code", "active"]
     list_editable = ["price"]
     list_filter = ["active"]
     search_fields = ["name"]
@@ -60,7 +60,7 @@ class DeliveryMethodAdmin(admin.ModelAdmin):
         if obj.active and obj.price and obj.vat_code is None:
             self.message_user(
                 request,
-                "Укажите ставку НДС доставки перед приёмом платежей с чеками ЮKassa.",
+                "Согласуйте ставку НДС доставки и параметры кассы перед приёмом платежей.",
                 messages.WARNING,
             )
 
@@ -128,10 +128,23 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ["public_id", "name", "email", "phone"]
     readonly_fields = [
         field.name for field in Order._meta.fields if field.name not in {"id", "session_key", "checkout_key"}
-    ]
+    ] + ["cdek_pickup", "cdek_tariff", "cdek_waybill"]
     exclude = ["session_key", "checkout_key"]
     inlines = [OrderItemInline, PaymentInline, ReservationInline]
     actions = ["processing", "ready", "completed", "cancel"]
+
+    @admin.display(description="Пункт СДЭК")
+    def cdek_pickup(self, obj):
+        point = obj.delivery_snapshot.get("pickup", {})
+        return f"{point.get('code', '')} · {obj.address}" if point else "—"
+
+    @admin.display(description="Тариф СДЭК")
+    def cdek_tariff(self, obj):
+        return obj.delivery_snapshot.get("tariff_code", "—")
+
+    @admin.display(description="Накладная СДЭК")
+    def cdek_waybill(self, obj):
+        return "Оформить вручную после подтверждения оплаты" if obj.delivery_type == "cdek_pvz" else "—"
 
     def has_add_permission(self, request):
         return False

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import json
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from cart.services import cart_context
@@ -26,16 +27,15 @@ class DeliveryTotalTests(TestCase):
         self.assertEqual(context["cart_delivery_price"], Decimal("300.00"))
         self.assertEqual(context["cart_order_total"], Decimal("990.00"))
         order = create_order(self.cart, checkout_data(self.cart, self.method), self.cart.session_key)
-        with override_settings(YOOKASSA_RECEIPT_MODE="provider"):
+        with override_settings(ALFABANK_RECEIPT_MODE="bank", ALFABANK_TAX_SYSTEM=1):
             payload = payment_payload(order)
-        self.assertEqual(payload["amount"]["value"], "990.00")
-        items = payload["receipt"]["items"]
-        self.assertEqual(items[1]["payment_subject"], "service")
-        self.assertEqual(items[1]["amount"]["value"], "300.00")
-        self.assertEqual(
-            sum(Decimal(i["amount"]["value"]) * Decimal(i["quantity"]) for i in items), Decimal("990.00")
-        )
-        self.assertEqual(payload["receipt"]["customer"]["email"], order.email)
+        self.assertEqual(payload["amount"], 99000)
+        receipt = json.loads(payload["orderBundle"])
+        items = receipt["cartItems"]["items"]
+        self.assertIn({"name": "paymentObject", "value": "4"}, items[1]["itemAttributes"]["attributes"])
+        self.assertEqual(items[1]["itemAmount"], 30000)
+        self.assertEqual(sum(i["itemAmount"] for i in items), 99000)
+        self.assertEqual(receipt["customerDetails"]["email"], order.email)
 
     def test_tariff_changes_require_confirmation_and_do_not_change_existing_order(self):
         data = checkout_data(self.cart, self.method)
@@ -49,10 +49,10 @@ class DeliveryTotalTests(TestCase):
         self.method.vat_code = 11
         self.method.save()
         order.refresh_from_db()
-        with override_settings(YOOKASSA_RECEIPT_MODE="provider"):
+        with override_settings(ALFABANK_RECEIPT_MODE="bank", ALFABANK_TAX_SYSTEM=1):
             payload = payment_payload(order)
-        self.assertEqual(payload["amount"]["value"], "1090.00")
-        self.assertEqual(payload["receipt"]["items"][-1]["vat_code"], 1)
+        self.assertEqual(payload["amount"], 109000)
+        self.assertEqual(json.loads(payload["orderBundle"])["cartItems"]["items"][-1]["tax"]["taxType"], 0)
 
     def test_multiple_items_pay_one_delivery_and_empty_cart_pays_none(self):
         self.cart.items.update(quantity=3)
@@ -65,12 +65,15 @@ class DeliveryTotalTests(TestCase):
         self.method.vat_code = None
         self.method.save()
         order = create_order(self.cart, checkout_data(self.cart, self.method), self.cart.session_key)
-        with override_settings(YOOKASSA_RECEIPT_MODE="provider"), self.assertRaises(PaymentUnavailable):
+        with (
+            override_settings(ALFABANK_RECEIPT_MODE="bank", ALFABANK_TAX_SYSTEM=1),
+            self.assertRaises(PaymentUnavailable),
+        ):
             payment_payload(order)
         order.delivery_price = Decimal("0.00")
         order.total = order.subtotal
-        with override_settings(YOOKASSA_RECEIPT_MODE="provider"):
-            self.assertEqual(len(payment_payload(order)["receipt"]["items"]), 1)
+        with override_settings(ALFABANK_RECEIPT_MODE="bank", ALFABANK_TAX_SYSTEM=1):
+            self.assertEqual(len(json.loads(payment_payload(order)["orderBundle"])["cartItems"]["items"]), 1)
 
     def test_delivery_cannot_be_negative(self):
         self.method.price = Decimal("-1.00")

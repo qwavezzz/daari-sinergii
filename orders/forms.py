@@ -17,21 +17,28 @@ class CheckoutForm(forms.Form):
         empty_label="Выберите способ получения",
     )
     address = forms.CharField(
-        label="Город и адрес пункта выдачи",
+        label="Адрес получения",
         required=False,
         max_length=1500,
         widget=forms.Textarea(attrs={"rows": 3, "autocomplete": "street-address"}),
-        help_text="Укажите город, улицу и номер дома пункта СДЭК. Если знаете код пункта, добавьте его.",
+        help_text="Укажите полный адрес для выбранного способа получения.",
     )
     comment = forms.CharField(
         label="Комментарий", required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 3})
     )
-    accept_terms = forms.BooleanField(
-        label="Принимаю условия покупки и подтверждаю ознакомление с политикой обработки данных"
-    )
+    accept_terms = forms.BooleanField(label="Принимаю условия покупки")
     checkout_key = forms.UUIDField(widget=forms.HiddenInput)
     quote_token = forms.CharField(widget=forms.HiddenInput)
     confirmed_delivery = forms.IntegerField(required=False, widget=forms.HiddenInput)
+    delivery_quote = forms.CharField(required=False, widget=forms.HiddenInput)
+    pvz_code = forms.RegexField(
+        r"^[A-Za-z0-9_-]{1,32}$",
+        label="Код пункта СДЭК",
+        max_length=32,
+        required=False,
+        help_text="Выберите пункт на карте или введите его код с сайта СДЭК.",
+        error_messages={"invalid": "Проверьте код пункта СДЭК."},
+    )
 
     def clean_phone(self):
         value = self.cleaned_data["phone"].strip()
@@ -42,6 +49,8 @@ class CheckoutForm(forms.Form):
     def clean(self):
         values = super().clean()
         method = values.get("delivery_method")
-        if method and method.address_required and not values.get("address"):
+        if method and method.type == "static" and method.address_required and not values.get("address"):
             self.add_error("address", "Для выбранного способа получения укажите адрес.")
+        if method and method.type == "cdek_pvz" and not values.get("delivery_quote"):
+            self.add_error("pvz_code", "Выберите пункт выдачи и рассчитайте доставку перед оплатой.")
         return values

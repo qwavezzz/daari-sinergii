@@ -5,6 +5,7 @@ import './customer.css'
 import Alpine from '@alpinejs/csp'
 import { htmx, installNavigation, syncMetadata } from './shared.js'
 import { registerContentUI } from './content-ui.js'
+import { installCheckout } from './cdek-checkout.js'
 import {
   hasQuantityChanges,
   installQuantityUpdates,
@@ -168,16 +169,12 @@ Alpine.data('productGallery', () => ({
   },
 }))
 Alpine.data('checkoutForm', () => ({
+  disposeCheckout: null,
   init() {
-    // Delivery selection is re-quoted by the server; browser values never establish totals.
-    const select = this.$el.querySelector('[name=delivery_method]')
-    if (!select) return
-    select.addEventListener('change', () => {
-      const form = this.$el
-      const values = Object.fromEntries(new FormData(form).entries())
-      values.requote = '1'
-      htmx.ajax('POST', form.action, { target: '#main-content', swap: 'innerHTML', values })
-    })
+    this.disposeCheckout = installCheckout(this.$el, htmx)
+  },
+  destroy() {
+    this.disposeCheckout?.()
   },
 }))
 window.Alpine = Alpine

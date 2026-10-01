@@ -1,17 +1,67 @@
+from decimal import Decimal
 import uuid
 import json
 from django.conf import settings
 from django.contrib import messages
+from django.core import signing
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils.crypto import salted_hmac
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from cart.services import cart_context, get_cart
 from core.http import navigation_redirect, render_page
 from core.ratelimit import allow_request
 from .forms import CheckoutForm
-from .models import Order
+from .models import Order, DeliveryMethod
 from .services import QuoteChanged, checkout_is_enabled, checkout_snapshot, create_order
+
+
+def checkout_context(cart, context, form, method):
+    from .cdek import configured, DeliveryUnavailable
+    from .shipping import packages_for, verified_delivery
+
+    delivery_price = context["delivery_quotes"].get(method.pk) if method else None
+    context["delivery_requires_address"] = bool(
+        method and method.type == "static" and method.address_required
+    )
+    context["cdek_selected"] = bool(method and method.type == "cdek_pvz")
+    form.fields["address"].required = context["delivery_requires_address"]
+    context["cdek_ready"] = configured()
+    context["cdek_map_key"] = getattr(settings, "CDEK_YANDEX_API_KEY", "") if configured() else ""
+    context["cdek_test_mode"] = getattr(settings, "CDEK_TEST_MODE", True)
+    context["cdek_quote_ttl"] = getattr(settings, "CDEK_QUOTE_TTL_SECONDS", 900)
+    if context["cdek_selected"]:
+        try:
+            if not configured():
+                raise DeliveryUnavailable("Расчёт СДЭК пока не подключён. Товары сохранятся в корзине.")
+            if not method.cdek_tariff_code:
+                raise DeliveryUnavailable("Тариф СДЭК ещё не настроен. Свяжитесь с магазином.")
+            packages_for(cart)
+        except DeliveryUnavailable as exc:
+            context["cdek_unavailable"] = " ".join(exc.messages)
+            context["cdek_ready"] = False
+        if form["delivery_quote"].value():
+            try:
+                shipping = verified_delivery(
+                    cart, method, form["delivery_quote"].value(), form["pvz_code"].value()
+                )
+            except ValidationError:
+                pass
+            else:
+                context["shipping"] = shipping
+                delivery_price = Decimal(shipping["price"])
+    context.update(
+        {
+            "form": form,
+            "checkout_enabled": checkout_is_enabled(),
+            "delivery_price": delivery_price,
+            "order_total": context["cart_total"] + delivery_price if delivery_price is not None else None,
+            "page_title": "Оформление заказа — Дары Синергии",
+        }
+    )
+    return context
 
 
 @require_http_methods(["GET", "POST"])
@@ -20,121 +70,169 @@ def checkout(request):
     if not cart:
         return navigation_redirect(request, "/cart/")
     context, current_quote = checkout_snapshot(cart)
-    context["delivery_requires_address"] = False
-    delivery_price = order_total = None
-    if request.method == "POST" and request.POST.get("requote") == "1":
-        from .models import DeliveryMethod
-
-        method = (
-            DeliveryMethod.objects.filter(pk=request.POST.get("delivery_method") or None, active=True).first()
-            if (request.POST.get("delivery_method") or "").isdigit()
-            else None
-        )
-        initial = request.POST.dict()
-        initial["quote_token"] = current_quote
-        initial["confirmed_delivery"] = method.pk if method else ""
-        form = CheckoutForm(initial=initial)
-        if method and method.pk in context["delivery_quotes"]:
-            delivery_price = context["delivery_quotes"][method.pk]
-            order_total = context["cart_total"] + delivery_price
-            context["delivery_requires_address"] = method.address_required
-            form.fields["address"].required = method.address_required
-        context.update(
-            {
-                "form": form,
-                "checkout_enabled": checkout_is_enabled(),
-                "delivery_price": delivery_price,
-                "order_total": order_total,
-                "page_title": "Оформление заказа — Дары Синергии",
-            }
-        )
-        return render_page(request, "shop/checkout.html", "shop/partials/checkout_content.html", context)
+    status = 200
     if request.method == "POST":
-        if not allow_request(request, "checkout", 10, 60):
+        if not allow_request(request, "checkout", 20, 60):
             return HttpResponse("Слишком много попыток. Повторите через минуту.", status=429)
-        form = CheckoutForm(request.POST)
-        valid = form.is_valid()
-        selected_method = form.cleaned_data.get("delivery_method")
-        if selected_method:
-            context["delivery_requires_address"] = selected_method.address_required
-            form.fields["address"].required = selected_method.address_required
-            delivery_price = context["delivery_quotes"].get(selected_method.pk)
-            order_total = context["cart_total"] + delivery_price if delivery_price is not None else None
-        if valid:
-            method = form.cleaned_data["delivery_method"]
-            delivery_price = context["delivery_quotes"].get(method.pk)
-            order_total = context["cart_total"] + delivery_price if delivery_price is not None else None
-            if form.cleaned_data.get("confirmed_delivery") != method.pk:
-                updated = request.POST.copy()
-                updated["confirmed_delivery"] = str(method.pk)
-                form.data = updated
-                context.update(
-                    {
-                        "form": form,
-                        "checkout_enabled": checkout_is_enabled(),
-                        "delivery_price": delivery_price,
-                        "order_total": order_total,
-                        "page_title": "Подтверждение заказа — Дары Синергии",
-                    }
-                )
-                return render_page(
-                    request, "shop/checkout.html", "shop/partials/checkout_content.html", context
-                )
-            try:
-                order = create_order(cart, form.cleaned_data, request.session.session_key)
-            except ValidationError as exc:
-                form.add_error(None, exc)
-                if isinstance(exc, QuoteChanged):
-                    context, current_quote = checkout_snapshot(cart)
-                    method.refresh_from_db()
-                    context["delivery_requires_address"] = method.address_required
-                    delivery_price = context["delivery_quotes"].get(method.pk)
-                    order_total = (
-                        context["cart_total"] + delivery_price if delivery_price is not None else None
+        method_id = request.POST.get("delivery_method", "")
+        method = (
+            DeliveryMethod.objects.filter(pk=method_id, active=True).first() if method_id.isdigit() else None
+        )
+        if request.POST.get("requote") == "1" or request.POST.get("shipping_requote") == "1":
+            initial = request.POST.dict()
+            initial.update(
+                quote_token=current_quote, confirmed_delivery=method.pk if method else "", delivery_quote=""
+            )
+            if request.POST.get("shipping_requote") == "1" and method:
+                from .shipping import quote_delivery
+
+                try:
+                    result = quote_delivery(
+                        cart, method, request.POST.get("pvz_code", ""), request.session.session_key
                     )
+                    initial.update(delivery_quote=result["delivery_quote"], quote_token=result["quote_token"])
+                except ValidationError as exc:
+                    context["error"] = " ".join(exc.messages)
+                    status = 422
+            form = CheckoutForm(initial=initial)
+        else:
+            form = CheckoutForm(request.POST)
+            if form.is_valid():
+                method = form.cleaned_data["delivery_method"]
+                if form.cleaned_data.get("confirmed_delivery") != method.pk:
                     updated = request.POST.copy()
-                    updated["quote_token"] = current_quote
-                    updated["confirmed_delivery"] = str(method.pk) if method.active else ""
-                    # Keep entered values and a visible price-change error.
+                    updated["confirmed_delivery"] = str(method.pk)
                     form.data = updated
+                else:
+                    try:
+                        order = create_order(cart, form.cleaned_data, request.session.session_key)
+                    except ValidationError as exc:
+                        form.add_error(None, exc)
+                        status = 422
+                        if isinstance(exc, QuoteChanged):
+                            context, current_quote = checkout_snapshot(cart)
+                            method.refresh_from_db()
+                            updated = request.POST.copy()
+                            updated.update(
+                                quote_token=current_quote,
+                                delivery_quote="",
+                                confirmed_delivery=str(method.pk) if method.active else "",
+                            )
+                            form.data = updated
+                    else:
+                        response = proceed_to_payment(request, order)
+                        actual_cart = cart_context(cart)
+                        response["HX-Trigger"] = json.dumps(
+                            {
+                                "cart-updated": {
+                                    "count": actual_cart["cart_count"],
+                                    "version": actual_cart["cart_version"],
+                                }
+                            }
+                        )
+                        response["X-Cart-Version"] = str(actual_cart["cart_version"])
+                        return response
             else:
-                # create_order has committed before the external payment request starts.
-                response = proceed_to_payment(request, order)
-                actual_cart = cart_context(cart)
-                response["HX-Trigger"] = json.dumps(
-                    {
-                        "cart-updated": {
-                            "count": actual_cart["cart_count"],
-                            "version": actual_cart["cart_version"],
-                        }
-                    }
-                )
-                response["X-Cart-Version"] = str(actual_cart["cart_version"])
-                return response
-        status = 422
+                status = 422
     else:
         if not context["cart_items"]:
             return navigation_redirect(request, "/cart/")
         method = context["cart_delivery_method"]
-        initial = {"checkout_key": uuid.uuid4(), "quote_token": current_quote}
-        if method and method.pk in context["delivery_quotes"]:
-            delivery_price = context["delivery_quotes"][method.pk]
-            order_total = context["cart_total"] + delivery_price
-            initial.update(delivery_method=method.pk, confirmed_delivery=method.pk)
-            context["delivery_requires_address"] = method.address_required
-        form = CheckoutForm(initial=initial)
-        form.fields["address"].required = context["delivery_requires_address"]
-        status = 200
-    context.update(
-        {
-            "form": form,
-            "checkout_enabled": checkout_is_enabled(),
-            "delivery_price": delivery_price,
-            "order_total": order_total,
-            "page_title": "Оформление заказа — Дары Синергии",
-        }
-    )
+        form = CheckoutForm(
+            initial={
+                "checkout_key": uuid.uuid4(),
+                "quote_token": current_quote,
+                "delivery_method": method.pk if method else "",
+                "confirmed_delivery": method.pk if method else "",
+            }
+        )
+    context = checkout_context(cart, context, form, method)
     return render_page(request, "shop/checkout.html", "shop/partials/checkout_content.html", context, status)
+
+
+@require_POST
+def cdek_quote(request):
+    from .shipping import quote_delivery
+    from .services import quote_data
+
+    if not allow_request(request, "cdek-quote", 12, 60):
+        return JsonResponse({"message": "Слишком много расчётов. Повторите через минуту."}, status=429)
+    cart = get_cart(request)
+    if not cart or not checkout_is_enabled():
+        return JsonResponse(
+            {"message": "Добавьте товары в корзину или повторите оформление позже."}, status=400
+        )
+    method_id = request.POST.get("delivery_method", "")
+    method = (
+        DeliveryMethod.objects.filter(pk=method_id, active=True, type="cdek_pvz").first()
+        if method_id.isdigit()
+        else None
+    )
+    if not method:
+        return JsonResponse({"message": "Выберите доступную доставку СДЭК."}, status=400)
+    try:
+        presented = signing.loads(request.POST.get("quote_token", ""), salt="checkout-quote", max_age=3600)
+        if presented != quote_data(cart):
+            raise signing.BadSignature()
+    except signing.BadSignature:
+        return JsonResponse(
+            {"message": "Корзина или условия изменились. Обновите страницу оформления и повторите расчёт."},
+            status=422,
+        )
+    try:
+        result = quote_delivery(cart, method, request.POST.get("pvz_code", ""), request.session.session_key)
+    except ValidationError as exc:
+        return JsonResponse({"message": " ".join(exc.messages)}, status=422)
+    response = JsonResponse(result)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@require_GET
+def cdek_widget(request):
+    from .cdek import CdekClient
+
+    # v3 service contract, selection-only: no browser calculator or arbitrary API route.
+    if not get_cart(request) or not checkout_is_enabled():
+        return JsonResponse({"message": "Откройте оформление заказа из корзины."}, status=403)
+    if not allow_request(request, "cdek-widget", 120, 60):
+        return JsonResponse({"message": "Повторите поиск через минуту."}, status=429)
+    if request.GET.get("action") != "offices":
+        return JsonResponse({"message": "Действие недоступно."}, status=400)
+    filters = {}
+    for key in ("city_code", "region_code"):
+        value = request.GET.get(key)
+        if value:
+            if not value.isdigit() or not 0 < int(value) < 10000000:
+                return JsonResponse({"message": "Проверьте город поиска."}, status=400)
+            filters[key] = int(value)
+    # Official v3 first asks size=1 and then parallel pages of 500 using X-Total-Elements.
+    for key, default, maximum in (("page", "0", 10000), ("size", "500", 500)):
+        value = request.GET.get(key) or default
+        if not value.isdigit() or not 0 <= int(value) <= maximum or key == "size" and int(value) == 0:
+            return JsonResponse({"message": "Проверьте параметры поиска."}, status=400)
+        filters[key] = int(value)
+    from .shipping import shipment_identity
+
+    cache_key = "cdek-offices:" + salted_hmac("cdek-offices", str([shipment_identity(), filters])).hexdigest()
+    cached = cache.get(cache_key)
+    upstream_headers = {}
+    try:
+        if cached:
+            offices, upstream_headers = cached
+        else:
+            offices = CdekClient().offices(filters, response_headers=upstream_headers)
+            if "X-Total-Elements" not in upstream_headers:
+                # A server without the pagination contract must not silently show a partial list.
+                raise ValidationError("Список пунктов пока недоступен. Введите код ПВЗ вручную.")
+            cache.set(cache_key, (offices, upstream_headers), 300)
+    except ValidationError as exc:
+        return JsonResponse({"message": " ".join(exc.messages)}, status=503)
+    response = JsonResponse(offices, safe=False)
+    response["X-Service-Version"] = "3.11.1"
+    response["X-Total-Elements"] = upstream_headers["X-Total-Elements"]
+    response["Cache-Control"] = "private, max-age=300"
+    return response
 
 
 def owned_order(request, public_id):
@@ -157,7 +255,7 @@ def detail(request, public_id):
         {
             "order": order,
             "page_title": "Ваш заказ — Дары Синергии",
-            "payment_enabled": settings.YOOKASSA_ENABLED
+            "payment_enabled": settings.ALFABANK_ENABLED
             and order.financial_status in {"unpaid", "pending"}
             and order.status != "canceled"
             and not order.needs_attention,
@@ -177,7 +275,7 @@ def proceed_to_payment(request, order):
     """Checkout and retry share the same persisted, idempotent payment operation."""
     order_url = order.get_absolute_url()
     if (
-        not settings.YOOKASSA_ENABLED
+        not settings.ALFABANK_ENABLED
         or order.needs_attention
         or order.financial_status not in {"unpaid", "pending"}
         or order.status == "canceled"

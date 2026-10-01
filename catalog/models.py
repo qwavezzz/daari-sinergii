@@ -57,7 +57,19 @@ class Product(TimeStampedModel):
     purchasable = models.BooleanField("Доступен для покупки", default=False)
     stock = models.PositiveIntegerField("Количество на складе", default=0)
     reserved_stock = models.PositiveIntegerField("В резерве", default=0, editable=False)
-    vat_code = models.PositiveSmallIntegerField("Ставка НДС ЮKassa", null=True, blank=True)
+    vat_code = models.PositiveSmallIntegerField("Код ставки НДС", null=True, blank=True)
+    package_weight_g = models.PositiveIntegerField(
+        "Вес одного упакованного товара, г", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    package_length_cm = models.PositiveIntegerField(
+        "Длина упаковки, см", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    package_width_cm = models.PositiveIntegerField(
+        "Ширина упаковки, см", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    package_height_cm = models.PositiveIntegerField(
+        "Высота упаковки, см", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
     sort_order = models.PositiveIntegerField("Порядок", default=0)
 
     class Meta:

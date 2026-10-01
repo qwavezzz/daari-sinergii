@@ -13,8 +13,10 @@ class Command(BaseCommand):
     help = "Добавить 16 вымышленных товаров для локального просмотра. Существующие записи не меняются."
 
     def handle(self, *args, **options):
-        if not settings.DEBUG or settings.CHECKOUT_ENABLED or settings.YOOKASSA_ENABLED:
-            raise CommandError("Демокаталог доступен только локально, при выключенных оформлении и ЮKassa.")
+        if not settings.DEBUG or settings.CHECKOUT_ENABLED or settings.ALFABANK_ENABLED:
+            raise CommandError(
+                "Демокаталог доступен только локально, при выключенных оформлении и Альфа-Банка."
+            )
 
         asset_dir = Path(__file__).resolve().parents[2] / "demo_assets"
         images = {key: (asset_dir / f"{key}.webp").read_bytes() for key in {p["image"] for p in PRODUCTS}}
