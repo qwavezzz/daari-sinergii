@@ -22,7 +22,7 @@ def _work():
         time.sleep(15)
         try:
             close_old_connections()
-            if settings.YOOKASSA_ENABLED and settings.YOOKASSA_SHOP_ID and settings.YOOKASSA_SECRET_KEY:
+            if settings.ALFABANK_ENABLED and settings.ALFABANK_USERNAME and settings.ALFABANK_PASSWORD:
                 call_command("reconcile_payments", limit=10, stdout=StringIO())
             if not smtp_configuration_error():
                 call_command("send_notifications", limit=10, stdout=StringIO())

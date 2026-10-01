@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PaymentAttempt, PaymentEvent, Refund
+from .models import PaymentAttempt, PaymentEvent, Refund, TrialPayment
 
 
 class FinancialAdmin(admin.ModelAdmin):
@@ -18,10 +18,26 @@ class FinancialAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentAttempt)
 class PaymentAttemptAdmin(FinancialAdmin):
-    list_display = ["order", "provider_id", "amount", "state", "last_checked_at", "last_error"]
-    list_filter = ["state", "created_at"]
+    list_display = [
+        "order",
+        "provider",
+        "test_mode",
+        "provider_id",
+        "amount",
+        "state",
+        "last_checked_at",
+        "last_error",
+    ]
+    list_filter = ["provider", "test_mode", "state", "created_at"]
     search_fields = ["provider_id", "order__public_id"]
     exclude = ["request_payload", "confirmation_url"]
+
+
+@admin.register(TrialPayment)
+class TrialPaymentAdmin(FinancialAdmin):
+    list_display = ["order", "state", "created_at", "updated_at"]
+    list_filter = ["state", "created_at"]
+    search_fields = ["order__public_id"]
 
 
 @admin.register(Refund)

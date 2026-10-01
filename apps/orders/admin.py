@@ -21,6 +21,7 @@ from .services import TRANSITIONS, transition_order
 
 @admin.register(StoreSettings)
 class StoreSettingsAdmin(admin.ModelAdmin):
+    readonly_fields = ("updated_at",)
     fieldsets = [
         (
             "Уведомления о заказах",
@@ -39,7 +40,16 @@ class StoreSettingsAdmin(admin.ModelAdmin):
         (
             "Условия для покупателей",
             {
-                "fields": ["delivery_text", "terms_text", "privacy_text"],
+                "fields": [
+                    "delivery_text",
+                    "terms_text",
+                    "privacy_text",
+                    "returns_text",
+                    "contacts_text",
+                    "documents_text",
+                    "faq_text",
+                    "updated_at",
+                ],
                 "description": "Здесь публикуются утверждённые бизнесом условия. Изменения видны покупателям после сохранения.",
             },
         ),
@@ -54,10 +64,20 @@ class StoreSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(DeliveryMethod)
 class DeliveryMethodAdmin(admin.ModelAdmin):
-    list_display = ["name", "price", "address_required", "active"]
+    list_display = ["name", "type", "cdek_tariff_code", "price", "is_default", "vat_code", "active"]
+    list_editable = ["price"]
     list_filter = ["active"]
     search_fields = ["name"]
     prepopulated_fields = {"slug": ("name",)}
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.active and obj.price and obj.vat_code is None:
+            self.message_user(
+                request,
+                "Согласуйте ставку НДС доставки и параметры кассы перед приёмом платежей.",
+                messages.WARNING,
+            )
 
 
 class OrderItemInline(admin.TabularInline):
@@ -124,6 +144,7 @@ class OrderAdmin(admin.ModelAdmin):
         "total",
         "work_status",
         "financial_status",
+        "payment_mode",
         "needs_attention",
         "test_mode",
     ]
@@ -140,6 +161,7 @@ class OrderAdmin(admin.ModelAdmin):
                 "fields": [
                     "work_status",
                     "financial_status",
+                    "payment_mode",
                     "test_mode",
                     "created_at",
                     "needs_attention",
@@ -149,7 +171,20 @@ class OrderAdmin(admin.ModelAdmin):
         ),
         (
             "Покупатель и получение",
-            {"fields": ["name", "phone", "email", "delivery_method", "address", "comment"]},
+            {
+                "fields": [
+                    "name",
+                    "phone",
+                    "email",
+                    "delivery_method",
+                    "address",
+                    "cdek_pickup",
+                    "cdek_tariff",
+                    "cdek_waybill",
+                    "delivery_snapshot",
+                    "comment",
+                ]
+            },
         ),
         ("Сумма заказа", {"fields": ["subtotal", "delivery_price", "total"]}),
         (
@@ -162,7 +197,37 @@ class OrderAdmin(admin.ModelAdmin):
     ]
     inlines = [OrderItemInline, PaymentInline, ReservationInline]
     actions = ["processing", "ready", "completed", "cancel"]
-    readonly_fields = [*readonly_fields, "work_status"]
+    readonly_fields = [
+        *readonly_fields,
+        "work_status",
+        "payment_mode",
+        "cdek_pickup",
+        "cdek_tariff",
+        "cdek_waybill",
+    ]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("trial_payment")
+
+    @admin.display(description="Режим оплаты")
+    def payment_mode(self, obj):
+        trial = getattr(obj, "trial_payment", None)
+        return f"Пробный заказ: {trial.get_state_display()}" if trial else "Банковская оплата"
+
+    @admin.display(description="Пункт СДЭК")
+    def cdek_pickup(self, obj):
+        point = obj.delivery_snapshot.get("pickup", {})
+        return f"{point.get('code', '')} · {obj.address}" if point else "—"
+
+    @admin.display(description="Тариф СДЭК")
+    def cdek_tariff(self, obj):
+        return obj.delivery_snapshot.get("tariff_code", "—")
+
+    @admin.display(description="Накладная СДЭК")
+    def cdek_waybill(self, obj):
+        if getattr(obj, "trial_payment", None):
+            return "Пробный заказ — отправка не требуется"
+        return "Оформить вручную после подтверждения оплаты" if obj.delivery_type == "cdek_pvz" else "—"
 
     @admin.display(description="Заказ", ordering="pk")
     def order_number(self, obj):

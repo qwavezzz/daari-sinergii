@@ -1,0 +1,63 @@
+{% load shop_tags %}{% include 'shared/meta.html' %}
+<section class="shop-container order-page" data-page="trial-payment" hx-history="false">
+  <h1>{% if trial.state == 'succeeded' %}Проба завершена{% elif trial.state == 'canceled' %}Проба отменена{% else %}Пробная оплата{% endif %}</h1>
+  <p class="order-lead"><strong>Деньги не списываются.</strong> Данные карты не нужны. Это проверка оформления, без банковского платежа, кассового чека и отправки заказа.</p>
+  <p class="shop-muted">Заказ {{ order.public_id }}</p>
+  {% if error %}<p class="shop-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="order-layout">
+    <div>
+      <h2>Сохранённый заказ</h2>
+      {% for item in snapshot.items %}
+      <div class="order-summary-line">
+        <div>{{ item.name }}<span>{{ item.quantity }} шт. × {{ item.unit_price|money }} ₽</span></div>
+        <strong>{{ item.subtotal|money }} ₽</strong>
+      </div>
+      {% endfor %}
+      <dl class="order-totals">
+        <div><dt>Товары</dt><dd>{{ snapshot.subtotal|money }} ₽</dd></div>
+        <div><dt>Доставка</dt><dd>{{ snapshot.delivery_price|money }} ₽</dd></div>
+        <div><dt>Итого в пробе</dt><dd>{{ snapshot.total|money }} ₽</dd></div>
+      </dl>
+      <h2>Получение</h2>
+      <p>{{ snapshot.delivery_method }}</p>
+      {% if snapshot.address %}<p>{{ snapshot.address }}</p>{% endif %}
+      {% if snapshot.pickup.code %}<p class="shop-muted">ПВЗ {{ snapshot.pickup.code }}</p>{% endif %}
+    </div>
+    <div>
+      <h2>Результат пробы</h2>
+      {% if trial.state == 'succeeded' %}
+        <p role="status">Сценарий успешной оплаты проверен. Реальная оплата не получена; товар не будет отправлен.</p>
+      {% elif trial.state == 'canceled' %}
+        <p role="status">Вы отменили пробную оплату. Сохранённый состав и суммы доступны для повторной проверки.</p>
+      {% else %}
+        <p>Завершите пробу или проверьте отмену. Обе кнопки сохранят только результат проверки.</p>
+      {% endif %}
+      <div class="order-actions">
+        {% if can_simulate %}
+          {% if trial.state == 'pending' %}
+          <form method="post" action="{% url 'payments:trial_action' order.public_id %}" hx-post="{% url 'payments:trial_action' order.public_id %}" hx-target="#main-content" hx-sync="this:drop">
+            {% csrf_token %}<input type="hidden" name="action_key" value="{{ trial.action_key }}">
+            <input type="hidden" name="action" value="success">
+            <button type="submit" class="shop-button"><span class="button-idle">Завершить пробную оплату</span><span class="button-busy">Сохраняем результат…</span></button>
+          </form>
+          <form method="post" action="{% url 'payments:trial_action' order.public_id %}" hx-post="{% url 'payments:trial_action' order.public_id %}" hx-target="#main-content" hx-sync="this:drop">
+            {% csrf_token %}<input type="hidden" name="action_key" value="{{ trial.action_key }}">
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="shop-button secondary">Отменить пробную оплату</button>
+          </form>
+          {% elif trial.state == 'canceled' %}
+          <form method="post" action="{% url 'payments:trial_action' order.public_id %}" hx-post="{% url 'payments:trial_action' order.public_id %}" hx-target="#main-content" hx-sync="this:drop">
+            {% csrf_token %}<input type="hidden" name="action_key" value="{{ trial.action_key }}">
+            <input type="hidden" name="action" value="retry">
+            <button type="submit" class="shop-button">Повторить пробную оплату</button>
+          </form>
+          {% endif %}
+        {% else %}
+          <p class="shop-error">Состояние заказа изменилось. Откройте заказ для проверки.</p>
+        {% endif %}
+        <a href="{{ order.get_absolute_url }}" class="shop-link">Посмотреть заказ</a>
+        <a href="{% url 'catalog:index' %}" class="shop-link">Вернуться в каталог</a>
+      </div>
+    </div>
+  </div>
+</section>

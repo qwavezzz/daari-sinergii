@@ -26,6 +26,7 @@ if [ -L /srv/dari/current ]; then
 fi
 systemd-run --quiet --wait --pipe --collect --uid=dari --gid=www-data -p SupplementaryGroups=dari --working-directory="$release_path" -p EnvironmentFile=/etc/dari/dari.env "$release_path/.venv/bin/python" manage.py migrate --noinput
 systemd-run --quiet --wait --pipe --collect --uid=dari --gid=www-data -p SupplementaryGroups=dari --working-directory="$release_path" -p EnvironmentFile=/etc/dari/dari.env "$release_path/.venv/bin/python" manage.py setup_roles
+systemd-run --quiet --wait --pipe --collect --uid=dari --gid=www-data -p SupplementaryGroups=dari --working-directory="$release_path" -p EnvironmentFile=/etc/dari/dari.env "$release_path/.venv/bin/python" manage.py apply_seo_content --apply
 systemd-run --quiet --wait --pipe --collect --uid=dari --gid=www-data -p SupplementaryGroups=dari --working-directory="$release_path" -p EnvironmentFile=/etc/dari/dari.env "$release_path/.venv/bin/python" manage.py collectstatic --noinput
 ln -sfn "$release_path" /srv/dari/current.next
 mv -Tf /srv/dari/current.next /srv/dari/current

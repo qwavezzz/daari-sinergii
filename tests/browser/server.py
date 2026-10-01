@@ -22,7 +22,15 @@ settings.MAIN_ORIGIN = "http://localhost:8001"
 settings.SHOP_ORIGIN = "http://shop.localhost:8001"
 settings.CSRF_TRUSTED_ORIGINS = [settings.MAIN_ORIGIN, settings.SHOP_ORIGIN]
 settings.CHECKOUT_ENABLED = True
-settings.YOOKASSA_ENABLED = False
+settings.ALFABANK_ENABLED = False
+settings.PAYMENT_STUB_ENABLED = True
+# Explicit test-only CDEK adapter. This file always uses a disposable SQLite database.
+settings.CDEK_ENABLED = True
+settings.CDEK_TEST_MODE = True
+settings.CDEK_CLIENT_ID = "browser-fixture"
+settings.CDEK_CLIENT_SECRET = "browser-fixture-not-a-credential"
+settings.CDEK_FROM_CITY_CODE = 99999
+settings.CDEK_YANDEX_API_KEY = "browser-fixture"
 settings.TEMPLATES[0]["APP_DIRS"] = False
 settings.TEMPLATES[0]["OPTIONS"]["loaders"] = [
     "django.template.loaders.filesystem.Loader",
@@ -41,6 +49,7 @@ from datetime import date
 call_command("migrate", verbosity=0)
 call_command("flush", interactive=False, verbosity=0)
 call_command("import_legacy_content", verbosity=0)
+call_command("apply_seo_content", apply=True, verbosity=0)
 category = Category.objects.create(name="Тестовые масла", slug="test-oils")
 Category.objects.create(name="Тестовая пустая категория", slug="test-empty")
 for index in range(20):
@@ -56,6 +65,10 @@ for index in range(20):
         short_description="Только тестовые данные для проверки интерфейса. Не предложение о продаже.",
         description="Описание тестовой позиции. Проверяем чтение подробностей без JavaScript.",
         sort_order=index,
+        package_weight_g=400,
+        package_length_cm=20,
+        package_width_cm=10,
+        package_height_cm=10,
     )
     product.categories.add(category)
     ProductAttribute.objects.create(product=product, name="Назначение", value="Проверка интерфейса")
@@ -139,4 +152,78 @@ OrderItem.objects.create(
     unit_price="1290.50",
     quantity=1,
 )
+
+DeliveryMethod.objects.create(
+    name="Тестовый СДЭК до ПВЗ",
+    slug="test-cdek",
+    type="cdek_pvz",
+    price="0",
+    address_required=False,
+    active=True,
+    cdek_tariff_code=136,
+)
+
+from apps.orders import cdek, shipping
+from apps.orders.cdek import DeliveryUnavailable
+
+
+class BrowserCdekClient:
+    """Deterministic network-free fixture; never imported by application runtime."""
+
+    token_key = "browser-fixture-cdek"
+
+    def cities(self, query):
+        return {
+            "cities": [{"code": 44, "city": "Тестовый город", "region": "Тестовая область"}],
+            "has_more": False,
+        }
+
+    def office_choices(self, city_code, page):
+        return {
+            "offices": [
+                {
+                    "code": "TEST1",
+                    "name": "Тестовый пункт выдачи",
+                    "address": "Тестовый адрес, 10",
+                    "work_time": "Пн–Пт 9–18",
+                }
+            ],
+            "next_page": None,
+        }
+
+    def pickup(self, code):
+        if code not in {"TEST1", "TEST2"}:
+            raise DeliveryUnavailable("Тестовый пункт не найден. Выберите другой пункт выдачи.")
+        return {
+            "code": code,
+            "city_code": 44,
+            "city": "Тестовый город",
+            "address": "Тестовый адрес, 10",
+            "name": "Тестовый пункт выдачи",
+        }
+
+    def calculate(self, tariff, pickup, packages):
+        return {"price": "315.00", "period_min": 2, "period_max": 4}
+
+    def offices(self, filters=None, *, response_headers=None):
+        if response_headers is not None:
+            response_headers["X-Total-Elements"] = "1"
+        return [
+            {
+                "code": "TEST1",
+                "name": "Тестовый пункт выдачи",
+                "type": "PVZ",
+                "location": {
+                    "city_code": 44,
+                    "city": "Тестовый город",
+                    "address": "Тестовый адрес, 10",
+                    "latitude": 53.5,
+                    "longitude": 49.4,
+                },
+            }
+        ]
+
+
+shipping.CdekClient = BrowserCdekClient
+cdek.CdekClient = BrowserCdekClient
 call_command("runserver", "127.0.0.1:8001", use_reloader=False)

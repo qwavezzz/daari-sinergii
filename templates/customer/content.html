@@ -1,0 +1,35 @@
+{% load shop_tags %}{% include 'shared/meta.html' %}
+<div class="customer-shell{% if customer_is_shop %} customer-shop{% endif %}" data-page="customer">
+{% if not customer_is_shop %}
+<a class="skip-link" href="#customer-content">Перейти к содержанию</a>
+<header class="materials-header"><a class="materials-brand" href="/">{% include 'shared/brand_mark.html' with brand_sizes='44px' %}{{ site_settings.company_name }}</a><nav aria-label="Навигация"><a href="/">Главная</a><a href="{{ shop_url }}/" hx-boost="false">Магазин</a><a href="/contacts/">Контакты</a></nav></header>
+{% endif %}
+<article id="customer-content" class="customer-page">
+<nav class="customer-breadcrumbs" aria-label="Хлебные крошки"><a href="/">{% if customer_is_shop %}Магазин{% else %}Главная{% endif %}</a><span aria-hidden="true">/</span><span aria-current="page">{{ customer_title }}</span></nav>
+<h1>{{ customer_title }}</h1>
+{% if payment_stub_enabled %}<p class="customer-status">Пробная оплата: карта не нужна, деньги не списываются.</p>{% endif %}
+{% if customer_updated_at and customer_page == 'privacy' or customer_updated_at and customer_page == 'terms' or customer_updated_at and customer_page == 'returns' %}<p class="customer-meta">Обновлено {{ customer_updated_at|date:'d.m.Y' }}</p>{% endif %}
+<div class="customer-layout">
+<aside class="customer-directory">{% include 'customer/links.html' %}</aside>
+<div class="customer-copy">
+{% for block in customer_blocks %}{% if block.kind == 'heading' %}<h2>{{ block.text }}</h2>{% else %}<p>{{ block.text|urlize|linebreaksbr }}</p>{% endif %}{% endfor %}
+{% if customer_page == 'delivery' %}
+<section class="customer-delivery" aria-labelledby="delivery-methods-title"><h2 id="delivery-methods-title">Стоимость доставки</h2>
+{% for method in delivery_methods %}<div class="customer-delivery-row"><span>{{ method.name }}</span><strong>{% if method.type == 'cdek_pvz' %}Расчёт после выбора пункта выдачи{% else %}{{ method.price|money }} ₽ за заказ{% endif %}</strong></div>{% empty %}<p>Расчёт доставки сейчас недоступен. Попробуйте позднее или свяжитесь с нами через страницу контактов.</p>{% endfor %}
+<p>Доставка включается в сумму заказа. Итоговая сумма видна до перехода к оплате.</p>
+<p><a href="https://www.cdek.ru/ru/offices/" target="_blank" rel="noopener noreferrer" hx-boost="false">Найти пункт выдачи СДЭК</a> · <a href="https://www.cdek.ru/ru/calculate/" target="_blank" rel="noopener noreferrer" hx-boost="false">Уточнить срок по маршруту</a></p></section>
+{% endif %}
+{% if customer_page == 'contacts' %}
+<section aria-labelledby="contact-title"><h2 id="contact-title">Связаться с нами</h2>
+<div class="customer-contact-links">{% if site_settings.phone %}<a href="tel:{{ site_settings.phone }}" hx-boost="false">{{ site_settings.phone_label|default:site_settings.phone }}</a>{% endif %}{% if site_settings.email %}<a href="mailto:{{ site_settings.email }}" hx-boost="false">{{ site_settings.email }}</a>{% endif %}</div>
+{% if site_settings.working_hours %}<p>{{ site_settings.working_hours }}</p>{% endif %}</section>
+<section aria-labelledby="seller-title"><h2 id="seller-title">Реквизиты продавца</h2>{% include 'customer/seller.html' %}</section>
+{% elif customer_page == 'privacy' or customer_page == 'terms' %}<section aria-labelledby="seller-title"><h2 id="seller-title">{% if customer_page == 'privacy' %}Оператор персональных данных{% else %}Продавец{% endif %}</h2>{% include 'customer/seller.html' %}<p><a href="/contacts/">Контакты для обращений</a></p></section>{% endif %}
+{% if customer_page == 'returns' %}{% if site_settings.return_address %}<h2>Адрес возврата</h2><p>{{ site_settings.return_address|linebreaksbr }}</p>{% endif %}<p><a href="/contacts/">Связаться по вопросу возврата</a></p>{% endif %}
+{% if customer_page == 'documents' %}
+<section aria-label="Декларации соответствия">{% for document in declarations %}<article class="customer-document"><h2>{{ document.title }}</h2>{% if document.description %}<p>{{ document.description }}</p>{% endif %}<dl>{% if document.category %}<div><dt>Продукция</dt><dd>{{ document.category }}</dd></div>{% endif %}<div><dt>Регистрационный номер</dt><dd>{{ document.registration }}</dd></div><div><dt>Срок действия</dt><dd>{{ document.valid_until_label }}</dd></div></dl><a href="{{ site_url }}{{ document.file_url }}" hx-boost="false" target="_blank" rel="noopener noreferrer">Открыть оригинал декларации (PDF)</a></article>{% empty %}<p>Документы на конкретную продукцию можно запросить у продавца.</p>{% endfor %}</section>
+{% endif %}
+{% if customer_page == 'faq' %}<div class="customer-faq">{% for entry in faq_entries %}<details><summary>{{ entry.question }}</summary><div>{{ entry.answer|urlize|linebreaks }}</div></details>{% empty %}<p>Задайте вопрос по телефону или электронной почте на странице контактов.</p>{% endfor %}</div><p><a href="/contacts/">Задать другой вопрос</a></p>{% endif %}
+</div></div></article>
+{% if not customer_is_shop %}<footer class="customer-footer"><p>{{ site_settings.legal_name }}{% if site_settings.inn %} · ИНН {{ site_settings.inn }}{% endif %}</p><a href="/">Вернуться на главную</a></footer>{% endif %}
+</div>

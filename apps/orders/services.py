@@ -11,6 +11,8 @@ from apps.catalog.models import Product
 from apps.core.models import AuditEntry
 from .models import DeliveryMethod, Notification, Order, OrderItem, StockReservation, StoreSettings
 from .notifications import manager_email
+from apps.content.customer_content import render_customer_text, seller_details, text_values
+from apps.content.models import SiteSettings
 
 
 class QuoteChanged(ValidationError):
@@ -33,19 +35,38 @@ def quote_data(cart):
     store = StoreSettings.objects.filter(pk=1).first()
     return {
         "cart": cart.pk,
+        "owner": hashlib.sha256(cart.session_key.encode()).hexdigest(),
         "version": cart.version,
         "items": [
-            [item.product_id, item.quantity, str(item.product.price)]
+            [
+                item.product_id,
+                item.quantity,
+                str(item.product.price),
+                item.product.vat_code,
+                item.product.package_weight_g,
+                item.product.package_length_cm,
+                item.product.package_width_cm,
+                item.product.package_height_cm,
+            ]
             for item in cart.items.select_related("product").order_by("product_id")
         ],
         "delivery": [
-            [m.pk, str(m.price), m.name, m.address_required]
+            [m.pk, str(m.price), m.name, m.address_required, m.vat_code, m.type, m.cdek_tariff_code]
             for m in DeliveryMethod.objects.filter(active=True).order_by("pk")
         ],
-        "terms": hashlib.sha256(
-            ((store.terms_text + "\n" + store.privacy_text) if store else "").encode()
-        ).hexdigest(),
+        "terms": hashlib.sha256(purchase_terms(store).encode()).hexdigest(),
     }
+
+
+def purchase_terms(store):
+    if not store:
+        return ""
+    values = text_values()
+    texts = [store.terms_text, store.delivery_text, store.returns_text, store.privacy_text]
+    details = seller_details(SiteSettings.objects.first())
+    if details:
+        texts.append("\n".join(f"{label}: {value}" for label, value in details))
+    return "\n\n".join(render_customer_text(text, values) for text in texts)
 
 
 def sign_quote(cart):
@@ -63,11 +84,16 @@ def checkout_snapshot(cart):
     list(StoreSettings.objects.select_for_update())
     context = cart_context(cart)
     quote = quote_data(cart)
-    context["delivery_quotes"] = {row[0]: Decimal(row[1]) for row in quote["delivery"]}
+    context["delivery_quotes"] = {row[0]: Decimal(row[1]) for row in quote["delivery"] if row[5] == "static"}
     return context, signing.dumps(quote, salt="checkout-quote", compress=True)
 
 
 def queue_notification(order, event, payload=None):
+    # Rehearsal orders never enter the customer/manager delivery queue.
+    from apps.payments.models import TrialPayment
+
+    if TrialPayment.objects.filter(order=order).exists():
+        return
     recipients = [(order.email, Notification.Audience.CUSTOMER)]
     manager = manager_email()
     if manager and manager.casefold() != order.email.casefold():
@@ -110,7 +136,7 @@ def create_order(cart, data, session_key):
         or not store.privacy_text.strip()
     ):
         raise ValidationError("Оформление временно недоступно. Условия магазина готовятся к публикации.")
-    if not method.active or (method.address_required and not data.get("address")):
+    if not method.active or (method.type == "static" and method.address_required and not data.get("address")):
         raise ValidationError("Проверьте способ получения и адрес.")
     try:
         quoted = signing.loads(data["quote_token"], salt="checkout-quote", max_age=3600)
@@ -122,6 +148,15 @@ def create_order(cart, data, session_key):
         raise QuoteChanged(
             "Цена, состав корзины или условия получения изменились. Проверьте итог и подтвердите заказ ещё раз."
         )
+    shipping = {}
+    delivery_price = method.price
+    address = data.get("address", "") if method.address_required else ""
+    if method.type == "cdek_pvz":
+        from .shipping import verified_delivery
+
+        shipping = verified_delivery(cart, method, data.get("delivery_quote"), data.get("pvz_code"))
+        delivery_price = Decimal(shipping["price"])
+        address = f"{shipping['pickup']['city']}, {shipping['pickup']['address']}"
     subtotal = Decimal("0.00")
     for item in items:
         product = locked[item.product_id]
@@ -135,14 +170,17 @@ def create_order(cart, data, session_key):
         phone=data["phone"],
         email=data["email"],
         delivery_method=method.name,
-        address=data.get("address", "") if method.address_required else "",
+        delivery_type=method.type,
+        delivery_snapshot=shipping,
+        address=address,
         comment=data.get("comment", ""),
         subtotal=subtotal,
-        delivery_price=method.price,
-        total=subtotal + method.price,
-        test_mode=settings.YOOKASSA_TEST_MODE,
+        delivery_price=delivery_price,
+        delivery_vat_code=method.vat_code,
+        total=subtotal + delivery_price,
+        test_mode=settings.PAYMENT_STUB_ENABLED or settings.ALFABANK_TEST_MODE,
         terms_accepted_at=timezone.now(),
-        terms_snapshot=store.terms_text,
+        terms_snapshot=purchase_terms(store),
     )
     for item in items:
         product = locked[item.product_id]
@@ -166,6 +204,10 @@ def create_order(cart, data, session_key):
     cart.items.all().delete()
     cart.version += 1
     cart.save(update_fields=["version", "updated_at"])
+    if settings.PAYMENT_STUB_ENABLED:
+        from apps.payments.trial import create_trial_payment
+
+        create_trial_payment(order)
     queue_notification(order, "created")
     AuditEntry.objects.create(
         kind="order.created", object_id=str(order.public_id), message="Создан заказ, товары зарезервированы."

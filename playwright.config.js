@@ -13,10 +13,13 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: `"${process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python'}" tests/browser/server.py`,
-    url: 'http://localhost:8001/health/',
-    timeout: 120000,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer:
+    process.env.BROWSER_TEST_EXTERNAL_SERVER === '1'
+      ? undefined
+      : {
+          command: `"${process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python'}" tests/browser/server.py`,
+          url: 'http://localhost:8001/health/',
+          timeout: 120000,
+          reuseExistingServer: !process.env.CI,
+        },
 })

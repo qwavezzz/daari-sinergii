@@ -11,6 +11,7 @@ import { registerLandingUI } from './landing/menu.js'
 import { initLanding, destroyLanding } from './landing/loader.js'
 import './styles/landing-fallbacks.css'
 import './styles/site.css'
+import './customer.css'
 
 const legacy = location.hash.match(/^#\/materials(?:\/([a-z0-9-]+))?\/?$/)
 if (legacy)

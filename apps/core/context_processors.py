@@ -14,6 +14,6 @@ def public_settings(request):
         "shop_url": settings.SHOP_ORIGIN,
         "noindex": should_noindex(request),
         "checkout_enabled": checkout_is_enabled() if getattr(request, "is_shop", False) else False,
-        "payment_enabled": settings.YOOKASSA_ENABLED,
-        "test_payments": settings.YOOKASSA_ENABLED and settings.YOOKASSA_TEST_MODE,
+        "payment_enabled": settings.ALFABANK_ENABLED or settings.PAYMENT_STUB_ENABLED,
+        "payment_stub_enabled": settings.PAYMENT_STUB_ENABLED,
     }

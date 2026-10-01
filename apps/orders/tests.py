@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from unittest.mock import Mock, patch
@@ -14,7 +15,7 @@ from django.test import (
     skipUnlessDBFeature,
 )
 from apps.payments.models import PaymentAttempt
-from apps.payments.provider import PaymentUnavailable, VerifiedPayment
+from apps.payments.provider import PaymentUnavailable, PaymentNotFound, VerifiedPayment
 from apps.catalog.admin import ProductAdmin, ProductAdminForm
 from apps.catalog.models import Product
 from apps.cart.models import Cart, CartItem
@@ -199,6 +200,14 @@ class OrderTests(TestCase):
     def checkout_provider(self, fail_first=False):
         provider = Mock()
         calls = []
+        registered = []
+
+        def get_payment(provider_id=None, *, order_number=None):
+            if not registered:
+                raise PaymentNotFound("not registered")
+            return registered[0]
+
+        provider.get_payment.side_effect = get_payment
 
         def create_payment(payload, key):
             calls.append((payload, key))
@@ -207,51 +216,58 @@ class OrderTests(TestCase):
             result = VerifiedPayment(
                 "checkout-payment-id",
                 "pending",
-                Decimal(payload["amount"]["value"]),
+                Decimal(payload["amount"]) / 100,
                 "RUB",
-                payload["metadata"]["order_id"],
+                json.loads(payload["jsonParams"])["order_id"],
                 "test-shop",
                 True,
                 False,
-                "https://yookassa.ru/checkout/test",
+                "https://alfa.rbsuat.com/payment/merchants/test/payment_ru.html?mdOrder=checkout-payment-id",
+                order_number=str(key),
             )
-            provider.get_payment.return_value = result
+            registered.append(result)
             return result
 
         provider.create_payment.side_effect = create_payment
         return provider, calls
 
-    @override_settings(YOOKASSA_ENABLED=True, YOOKASSA_SHOP_ID="test-shop", YOOKASSA_TEST_MODE=True)
+    @override_settings(ALFABANK_ENABLED=True, ALFABANK_USERNAME="test-shop", ALFABANK_TEST_MODE=True)
     def test_enabled_checkout_redirects_directly_to_persisted_provider_payment(self):
         client, values = self.checkout_client()
         values["confirmed_delivery"] = self.method.pk
         provider, calls = self.checkout_provider()
-        with patch("apps.payments.services.YooKassaClient", return_value=provider):
+        with patch("apps.payments.services.AlfaBankClient", return_value=provider):
             response = client.post("/checkout/", values)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "https://yookassa.ru/checkout/test")
+        self.assertEqual(
+            response["Location"],
+            "https://alfa.rbsuat.com/payment/merchants/test/payment_ru.html?mdOrder=checkout-payment-id",
+        )
         self.assertEqual(Order.objects.count(), 1)
         self.assertEqual(PaymentAttempt.objects.get().provider_id, "checkout-payment-id")
         self.assertEqual(len(calls), 1)
 
-    @override_settings(YOOKASSA_ENABLED=True, YOOKASSA_SHOP_ID="test-shop", YOOKASSA_TEST_MODE=True)
+    @override_settings(ALFABANK_ENABLED=True, ALFABANK_USERNAME="test-shop", ALFABANK_TEST_MODE=True)
     def test_enabled_htmx_checkout_uses_full_external_redirect(self):
         client, values = self.checkout_client()
         values["confirmed_delivery"] = self.method.pk
         provider, _ = self.checkout_provider()
-        with patch("apps.payments.services.YooKassaClient", return_value=provider):
+        with patch("apps.payments.services.AlfaBankClient", return_value=provider):
             response = client.post("/checkout/", values, HTTP_HX_REQUEST="true")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["HX-Redirect"], "https://yookassa.ru/checkout/test")
+        self.assertEqual(
+            response["HX-Redirect"],
+            "https://alfa.rbsuat.com/payment/merchants/test/payment_ru.html?mdOrder=checkout-payment-id",
+        )
         self.assertNotIn("HX-Location", response.headers)
         self.assertIn('"count": 0', response["HX-Trigger"])
 
-    @override_settings(YOOKASSA_ENABLED=True, YOOKASSA_SHOP_ID="test-shop", YOOKASSA_TEST_MODE=True)
+    @override_settings(ALFABANK_ENABLED=True, ALFABANK_USERNAME="test-shop", ALFABANK_TEST_MODE=True)
     def test_checkout_payment_timeout_keeps_order_and_retry_reuses_same_operation(self):
         client, values = self.checkout_client()
         values["confirmed_delivery"] = self.method.pk
         provider, calls = self.checkout_provider(fail_first=True)
-        with patch("apps.payments.services.YooKassaClient", return_value=provider):
+        with patch("apps.payments.services.AlfaBankClient", return_value=provider):
             response = client.post("/checkout/", values)
             order = Order.objects.get()
             self.assertEqual(response["Location"], order.get_absolute_url())
@@ -260,7 +276,10 @@ class OrderTests(TestCase):
             self.assertContains(status_page, "Платёж пока не подтверждён")
             retry = client.post("/checkout/", values)
             duplicate = client.post("/checkout/", values)
-        self.assertEqual(retry["Location"], "https://yookassa.ru/checkout/test")
+        self.assertEqual(
+            retry["Location"],
+            "https://alfa.rbsuat.com/payment/merchants/test/payment_ru.html?mdOrder=checkout-payment-id",
+        )
         self.assertEqual(duplicate["Location"], retry["Location"])
         self.assertEqual(Order.objects.count(), 1)
         self.assertEqual(PaymentAttempt.objects.count(), 1)
@@ -269,7 +288,7 @@ class OrderTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.reserved_stock, 1)
 
-    @override_settings(YOOKASSA_ENABLED=True)
+    @override_settings(ALFABANK_ENABLED=True)
     def test_order_attention_shows_safe_copy_without_internal_reason_or_payment_button(self):
         client, _ = self.checkout_client()
         order = self.create()

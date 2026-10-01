@@ -25,8 +25,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Timer uses flock; all state transitions remain safe if two workers overlap.
-        candidates = PaymentAttempt.objects.filter(order__test_mode=settings.YOOKASSA_TEST_MODE).exclude(
-            state="canceled"
+        # Canceled attempts are still checked: a late capture must remain visible.
+        # Archive rows are never sent to the new bank, even if their IDs look valid.
+        candidates = PaymentAttempt.objects.filter(
+            provider="alfabank", test_mode=settings.ALFABANK_TEST_MODE, account_id=settings.ALFABANK_USERNAME
         )
         if options["refund_days"] > 0:
             candidates = candidates.filter(
@@ -49,13 +51,13 @@ class Command(BaseCommand):
                     last_checked_at=timezone.now(),
                     last_error="Автоматическая сверка не завершена; требуется повтор.",
                 )
-                if not attempt.provider_id and attempt.created_at < timezone.now() - timedelta(hours=23):
+                if not attempt.provider_id and attempt.created_at < timezone.now() - timedelta(hours=24):
                     Order.objects.filter(pk=attempt.order_id).update(
                         needs_attention=True,
-                        attention_reason="Платёж не определён дольше срока безопасного повтора. Проверить вручную в ЮKassa; резерв удерживается.",
+                        attention_reason="Платёж не определён больше суток. Проверить вручную в Альфа-Банке; резерв удерживается.",
                     )
         expiring = Order.objects.filter(
-            test_mode=settings.YOOKASSA_TEST_MODE,
+            test_mode=settings.ALFABANK_TEST_MODE,
             reservations__state="active",
             reservations__expires_at__lte=timezone.now(),
             paid_attempt_id__isnull=True,

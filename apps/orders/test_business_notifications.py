@@ -1,6 +1,7 @@
 import json
 from io import BytesIO, StringIO
 from unittest.mock import patch
+from urllib.parse import parse_qs
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -10,7 +11,8 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.payments.provider import InvalidPayment, YooKassaClient
+from apps.payments.models import PaymentAttempt
+from apps.payments.provider import AlfaBankClient, PaymentUnavailable
 from apps.payments.services import reconcile_attempt, start_payment
 from .models import StoreSettings
 from .notifications import build_notification
@@ -19,10 +21,10 @@ from .test_support import checkout_data, fixture_cart
 
 
 @override_settings(
-    YOOKASSA_ENABLED=True,
-    YOOKASSA_TEST_MODE=True,
-    YOOKASSA_SHOP_ID="12345",
-    YOOKASSA_SECRET_KEY="test-fixture-key",
+    ALFABANK_ENABLED=True,
+    ALFABANK_TEST_MODE=True,
+    ALFABANK_USERNAME="12345",
+    ALFABANK_PASSWORD="test-fixture-key",
 )
 class NotificationFlowTests(TestCase):
     def setUp(self):
@@ -31,15 +33,19 @@ class NotificationFlowTests(TestCase):
         self.order = create_order(cart, checkout_data(cart, method), cart.session_key)
 
     def payment(self, status="pending"):
+        attempt = PaymentAttempt.objects.get(order=self.order)
         return {
-            "id": "fixture-payment-1",
-            "status": status,
-            "paid": status == "succeeded",
-            "amount": {"value": str(self.order.total), "currency": "RUB"},
-            "metadata": {"order_id": str(self.order.public_id)},
-            "recipient": {"account_id": "12345"},
-            "test": True,
-            "confirmation": {"confirmation_url": "https://yoomoney.ru/checkout/fixture"},
+            "errorCode": "0",
+            "orderNumber": str(attempt.idempotence_key),
+            "orderStatus": 2 if status == "succeeded" else 0,
+            "actionCode": 0,
+            "amount": 15000,
+            "currency": "643",
+            "merchantOrderParams": [{"name": "order_id", "value": str(self.order.public_id)}],
+            "attributes": [{"name": "mdOrder", "value": "fixture-payment-1"}],
+            "paymentAmountInfo": {"depositedAmount": 15000, "refundedAmount": 0}
+            if status == "succeeded"
+            else {},
         }
 
     def test_api_boundary_creates_and_confirms_test_payment_then_sends_four_role_specific_emails(self):
@@ -47,23 +53,27 @@ class NotificationFlowTests(TestCase):
 
         def api(request, timeout):
             calls.append((request.method, request.full_url))
-            if request.full_url.endswith("/me"):
-                result = {"account_id": "12345", "test": True}
-            elif request.method == "POST":
-                self.assertIn("Idempotence-key", request.headers)
-                self.assertEqual(json.loads(request.data)["amount"]["value"], "150.00")
-                result = self.payment()
+            self.assertEqual(request.method, "POST")
+            payload = parse_qs(request.data.decode())
+            self.assertEqual(payload["userName"], ["12345"])
+            if len(calls) == 1:
+                result = {"errorCode": "6"}
+            elif request.full_url.endswith("register.do"):
+                self.assertEqual(payload["amount"], ["15000"])
+                result = {
+                    "orderId": "fixture-payment-1",
+                    "formUrl": "https://alfa.rbsuat.com/payment/merchants/test/payment_ru.html?mdOrder=fixture-payment-1",
+                }
             else:
-                result = self.payment("succeeded")
+                result = self.payment("pending" if len(calls) == 3 else "succeeded")
             return BytesIO(json.dumps(result).encode())
 
-        with patch("apps.payments.provider.urlopen", side_effect=api):
+        with patch("apps.payments.provider.build_opener") as build:
+            build.return_value.open.side_effect = api
             attempt = start_payment(self.order.pk)
-            # Refund enumeration is separate from this payment/notification scenario.
-            with patch.object(YooKassaClient, "list_refunds", return_value=[]):
-                reconcile_attempt(attempt.pk)
-                reconcile_attempt(attempt.pk)
-        self.assertEqual(calls[0], ("GET", "https://api.yookassa.ru/v3/me"))
+            reconcile_attempt(attempt.pk)
+            reconcile_attempt(attempt.pk)
+        self.assertTrue(calls[0][1].endswith("getOrderStatusExtended.do"))
         self.order.refresh_from_db()
         self.assertEqual(self.order.financial_status, "paid")
         self.assertEqual(self.order.notifications.count(), 4)
@@ -82,15 +92,20 @@ class NotificationFlowTests(TestCase):
         call_command("send_notifications", stdout=StringIO())
         self.assertEqual(len(mail.outbox), 4)
 
-    def test_wrong_shop_or_live_credentials_are_rejected_before_payment_creation(self):
-        for data in ({"account_id": "12345", "test": False}, {"account_id": "other", "test": True}):
-            with (
-                self.subTest(data=data),
-                patch.object(YooKassaClient, "request", return_value=data) as request,
-            ):
-                with self.assertRaises(InvalidPayment):
-                    YooKassaClient().create_payment({}, "fixture-key")
-                request.assert_called_once_with("GET", "me")
+    def test_changed_account_or_environment_is_rejected_before_network(self):
+        attempt = PaymentAttempt.objects.create(
+            order=self.order,
+            amount=self.order.total,
+            provider="alfabank",
+            account_id="12345",
+            test_mode=True,
+        )
+        for change in ({"ALFABANK_TEST_MODE": False}, {"ALFABANK_USERNAME": "other"}):
+            with self.subTest(change=change), override_settings(**change):
+                with patch.object(AlfaBankClient, "request") as request:
+                    with self.assertRaises(PaymentUnavailable):
+                        reconcile_attempt(attempt.pk)
+                    request.assert_not_called()
 
     def test_changing_manager_affects_new_events_without_duplicate_mail(self):
         StoreSettings.objects.filter(pk=1).update(manager_email=self.order.email)

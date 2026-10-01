@@ -42,10 +42,12 @@ def sitemap(request):
         origin = settings.SHOP_ORIGIN
     else:
         from apps.content.models import Collection
+        from apps.content.customer_content import CUSTOMER_PAGES
 
         paths = ["/", "/materials/"] + [
             f"/materials/{slug}/" for slug in Collection.objects.published().values_list("slug", flat=True)
         ]
+        paths += [row[1] for row in CUSTOMER_PAGES.values()]
         origin = settings.MAIN_ORIGIN
     body = "".join(f"<url><loc>{escape(origin + path)}</loc></url>" for path in paths)
     return HttpResponse(

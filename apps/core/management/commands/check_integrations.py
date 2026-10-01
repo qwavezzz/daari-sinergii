@@ -1,14 +1,16 @@
+import uuid
+
 from django.conf import settings
 from django.core.mail import EmailMessage, get_connection
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.orders.models import StoreSettings
 from apps.orders.notifications import smtp_configuration_error
-from apps.payments.provider import PaymentError, YooKassaClient
+from apps.payments.provider import AlfaBankClient, PaymentError, PaymentNotFound
 
 
 class Command(BaseCommand):
-    help = "Проверить тестовую ЮKassa и SMTP. Письмо отправляется только с --send-test-email."
+    help = "Проверить тестовый Альфа-Банк и SMTP. Письмо отправляется только с --send-test-email."
 
     def add_arguments(self, parser):
         parser.add_argument("--send-test-email", action="store_true")
@@ -17,18 +19,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         failures = []
         if options["only"] != "email":
-            if not settings.YOOKASSA_TEST_MODE:
-                failures.append("ЮKassa: проверка разрешена только в тестовом режиме.")
+            if not settings.ALFABANK_TEST_MODE:
+                failures.append("Альфа-Банк: проверка разрешена только в тестовом режиме.")
             else:
                 try:
-                    YooKassaClient().verify_shop()
+                    AlfaBankClient().get_payment(order_number=str(uuid.uuid4()))
+                except PaymentNotFound:
+                    self.stdout.write(
+                        self.style.SUCCESS("Альфа-Банк: тестовый API доступен. Платёж не создавался.")
+                    )
                 except PaymentError as exc:
-                    failures.append("ЮKassa: " + str(exc))
+                    failures.append("Альфа-Банк: " + str(exc))
                 else:
                     self.stdout.write(
-                        self.style.SUCCESS(
-                            "ЮKassa: доступ к тестовому магазину подтверждён. Платёж не создавался."
-                        )
+                        self.style.SUCCESS("Альфа-Банк: тестовый API доступен. Платёж не создавался.")
                     )
         if options["only"] != "payments":
             error = smtp_configuration_error()

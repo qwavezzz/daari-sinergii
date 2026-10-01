@@ -3,6 +3,8 @@ import { quantityRequestFailed, syncQuantityFeedback } from '../shared/cart-quan
 const catalog = JSON.parse(document.getElementById('demo-products').textContent)
 const products = new Map(catalog.map((product) => [String(product.id), product]))
 const base = document.documentElement.dataset.demoBase
+const deliveryValue = document.documentElement.dataset.demoDeliveryCents || ''
+const deliveryCents = /^\d+$/.test(deliveryValue) ? Number(deliveryValue) : null
 const storageKey = `dari-preview-cart:v1:${base}`
 let items = {}
 const money = (cents) =>
@@ -47,7 +49,7 @@ function contents(scope) {
     return '<div class="cart-content"><div class="cart-empty"><h2>Корзина пока пуста</h2><p>Добавьте товары из демонстрационного каталога.</p></div></div>'
   const count = rows.reduce((sum, [, quantity]) => sum + quantity, 0)
   const total = rows.reduce((sum, [id, quantity]) => sum + products.get(id).price * quantity, 0)
-  return `<div class="cart-content"><div class="cart-summary"><div class="cart-total"><span>Сумма товаров</span><strong>${money(total)}</strong></div><p class="cart-quantity">Количество: ${count}</p><button type="button" class="shop-button" disabled>Оформить заказ</button><p class="cart-delivery-note">Демонстрационная корзина. Заказы и оплата недоступны.</p></div><div class="cart-items">${rows
+  return `<div class="cart-content"><div class="cart-summary"><div class="cart-cost-line"><span>Товары</span><span>${money(total)}</span></div><div class="cart-cost-line"><span>Доставка</span><span>${deliveryCents === null ? 'После подключения СДЭК' : money(deliveryCents)}</span></div><div class="cart-total"><span>${deliveryCents === null ? 'Товары без доставки' : 'Итого'}</span><strong>${money(total + (deliveryCents ?? 0))}</strong></div><p class="cart-quantity">Количество: ${count}</p><button type="button" class="shop-button" disabled>Оформить заказ</button><p class="cart-delivery-note">Демонстрационная корзина. Заказы и оплата недоступны.</p></div><div class="cart-items">${rows
     .map(([id, quantity]) => {
       const product = products.get(id)
       const inputId = `${scope}-quantity-${id}`

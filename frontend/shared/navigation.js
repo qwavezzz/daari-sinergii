@@ -35,6 +35,23 @@ export function syncMetadata(root = document) {
     }
     robots.content = 'noindex, nofollow'
   } else robots?.remove()
+  // HTMX intentionally strips script tags. Carry JSON as escaped data and replace
+  // only our head element, so schema never describes the page we navigated away from.
+  let schema = document.getElementById('page-structured-data')
+  if (meta.dataset.structuredData && meta.dataset.noindex !== 'true') {
+    try {
+      const data = JSON.parse(meta.dataset.structuredData)
+      if (!schema) {
+        schema = document.createElement('script')
+        schema.id = 'page-structured-data'
+        schema.type = 'application/ld+json'
+        document.head.append(schema)
+      }
+      schema.textContent = JSON.stringify(data)
+    } catch {
+      schema?.remove()
+    }
+  } else schema?.remove()
 }
 
 export function installNavigation({ beforePage = () => {}, afterPage = () => {} } = {}) {

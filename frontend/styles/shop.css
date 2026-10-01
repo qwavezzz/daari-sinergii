@@ -20,6 +20,94 @@
 .product-grid {
   @apply shop:grid;
 }
+.cdek-picker {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cdek-map {
+  width: 100%;
+  height: min(600px, 75dvh);
+}
+.cdek-status {
+  margin-block: 16px;
+}
+.cdek-map-button {
+  margin-block: 8px 16px;
+}
+.cdek-map-message {
+  margin-block: 0 16px;
+}
+.cdek-list-fallback {
+  margin-block: 16px;
+}
+.cdek-list-fallback > summary {
+  cursor: pointer;
+  padding-block: 12px;
+}
+.cdek-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cdek-search-row input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.cdek-search-status {
+  margin-block: 0 16px;
+}
+.checkout-form .cdek-office-results legend {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.cdek-office {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 8px;
+  border-bottom: 1px solid var(--shop-color-shop-line);
+  cursor: pointer;
+}
+.cdek-office:hover,
+.cdek-office:has(input:checked) {
+  background: var(--shop-color-shop-tint);
+}
+.cdek-office input {
+  width: 20px;
+  height: 20px;
+  margin-top: 3px;
+  flex: 0 0 auto;
+  accent-color: var(--shop-color-shop-action);
+}
+.cdek-office strong,
+.cdek-office small {
+  display: block;
+}
+.cdek-office small {
+  color: var(--shop-color-shop-muted);
+  margin-top: 4px;
+}
+.cdek-office-results > button {
+  margin-top: 16px;
+}
+[data-cdek-offices] {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.cdek-manual {
+  margin-block: 16px;
+}
+.cdek-manual summary {
+  cursor: pointer;
+  padding-block: 12px;
+}
+.checkout-final dd {
+  overflow-wrap: anywhere;
+}
+.js .delivery-update {
+  display: none;
+}
 .shop-header-inner {
   @apply shop:flex shop:items-center;
 }

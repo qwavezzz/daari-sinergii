@@ -47,10 +47,28 @@ class ResponsePolicyMiddleware:
         patch_vary_headers(response, ["HX-Request", "HX-History-Restore-Request"])
         response["X-Request-ID"] = getattr(request, "request_id", "")
         image_origin = settings.MAIN_ORIGIN if getattr(request, "is_shop", False) else ""
+        map_sources = ""
+        widget_source = ""
+        if settings.CDEK_ENABLED and getattr(request, "is_shop", False) and request.path == "/checkout/":
+            # Checkout enters through a full navigation: HTMX cannot relax a document's CSP.
+            # CDEK API and credentials remain on our server; only map assets are external.
+            map_sources = (
+                " https://api-maps.yandex.ru https://*.maps.yandex.ru"
+                " https://*.maps.yandex.net https://yastatic.net"
+            )
+            widget_source = (
+                " https://cdn.jsdelivr.net/npm/@cdek-it/widget@3.11.1"
+                " https://cdn.jsdelivr.net/npm/@cdek-it/widget@3.11.1/"
+            )
         response.setdefault(
             "Content-Security-Policy",
             (
-                f"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: {image_origin}; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+                f"default-src 'self'; script-src 'self'{widget_source}{map_sources}; "
+                f"style-src 'self' 'unsafe-inline'{map_sources}; "
+                f"img-src 'self' data: {image_origin}{map_sources}; "
+                f"media-src 'self'; font-src 'self'{map_sources}; "
+                f"connect-src 'self'{map_sources}; frame-src 'none'; object-src 'none'; "
+                "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
             ),
         )
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")

@@ -1,8 +1,10 @@
 from django.urls import path
 from .views import webhook
+from .trial_views import trial_action, trial_page
 
 app_name = "payments"
 urlpatterns = [
-    path("yookassa/webhook/", webhook, {"test_mode": False}, name="webhook"),
-    path("yookassa/test/webhook/", webhook, {"test_mode": True}, name="test_webhook"),
+    path("alfabank/webhook/", webhook, name="webhook"),
+    path("trial/<uuid:public_id>/", trial_page, name="trial"),
+    path("trial/<uuid:public_id>/action/", trial_action, name="trial_action"),
 ]

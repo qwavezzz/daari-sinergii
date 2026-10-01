@@ -76,6 +76,50 @@ class SiteSettings(models.Model):
     )
     phone_label = models.CharField("Телефон для отображения", max_length=40, blank=True)
     address = models.TextField("Адрес", blank=True)
+    seller_type = models.CharField(
+        "Тип продавца",
+        max_length=20,
+        default="ip",
+        choices=[("ip", "Индивидуальный предприниматель"), ("company", "Организация")],
+    )
+    inn = models.CharField(
+        "ИНН",
+        max_length=12,
+        blank=True,
+        validators=[RegexValidator(r"^(\d{10}|\d{12})$", "ИНН: 10 или 12 цифр.")],
+    )
+    registration_number = models.CharField(
+        "ОГРН / ОГРНИП",
+        max_length=15,
+        blank=True,
+        validators=[RegexValidator(r"^(\d{13}|\d{15})$", "ОГРН: 13 цифр; ОГРНИП: 15 цифр.")],
+    )
+    registration_authority = models.CharField("Регистрирующий орган", max_length=300, blank=True)
+    kpp = models.CharField(
+        "КПП (для организации)",
+        max_length=9,
+        blank=True,
+        validators=[RegexValidator(r"^\d{9}$", "КПП: 9 цифр.")],
+    )
+    postal_address = models.TextField("Почтовый адрес для обращений", blank=True)
+    return_address = models.TextField("Адрес возврата товаров", blank=True)
+    working_hours = models.CharField("Часы связи с покупателями", max_length=250, blank=True)
+    bank_name = models.CharField("Банк", max_length=250, blank=True)
+    bank_bik = models.CharField(
+        "БИК", max_length=9, blank=True, validators=[RegexValidator(r"^\d{9}$", "БИК: 9 цифр.")]
+    )
+    bank_account = models.CharField(
+        "Расчётный счёт",
+        max_length=20,
+        blank=True,
+        validators=[RegexValidator(r"^\d{20}$", "Счёт: 20 цифр.")],
+    )
+    correspondent_account = models.CharField(
+        "Корреспондентский счёт",
+        max_length=20,
+        blank=True,
+        validators=[RegexValidator(r"^\d{20}$", "Счёт: 20 цифр.")],
+    )
     footer_label = models.CharField("Подпись в подвале", max_length=300, blank=True)
 
     class Meta:
@@ -100,6 +144,23 @@ class SiteText(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class FAQEntry(models.Model):
+    question = models.CharField("Вопрос", max_length=300)
+    answer = models.TextField(
+        "Ответ", help_text="Обычный текст. Переменные: {delivery_price}, {email}, {phone}."
+    )
+    active = models.BooleanField("Показывать на сайте", default=True)
+    order = models.PositiveIntegerField("Порядок", default=0)
+
+    class Meta:
+        ordering = ("order", "pk")
+        verbose_name = "Вопрос и ответ"
+        verbose_name_plural = "Вопросы и ответы"
+
+    def __str__(self):
+        return self.question
 
 
 class Collection(Publication):

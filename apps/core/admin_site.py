@@ -68,15 +68,15 @@ class BusinessAdminSite(AdminSite):
             )
             context["payment_configuration"] = (
                 "Тестовая оплата: ключи заданы, требуется проверка подключения."
-                if settings.YOOKASSA_ENABLED
-                and settings.YOOKASSA_SHOP_ID
-                and settings.YOOKASSA_SECRET_KEY
-                and settings.YOOKASSA_TEST_MODE
+                if settings.ALFABANK_ENABLED
+                and settings.ALFABANK_USERNAME
+                and settings.ALFABANK_PASSWORD
+                and settings.ALFABANK_TEST_MODE
                 else "Рабочая оплата настроена."
-                if settings.YOOKASSA_ENABLED
-                and settings.YOOKASSA_SHOP_ID
-                and settings.YOOKASSA_SECRET_KEY
-                and settings.YOOKASSA_LIVE_APPROVED
+                if settings.ALFABANK_ENABLED
+                and settings.ALFABANK_USERNAME
+                and settings.ALFABANK_PASSWORD
+                and settings.ALFABANK_LIVE_APPROVED
                 else "Оплата не подключена. Настройку выполняет разработчик."
             )
         if request.user.has_perm("orders.view_notification"):

@@ -12,6 +12,7 @@ from .models import (
     CollectionSection,
     Document,
     DocumentAlias,
+    FAQEntry,
     Industry,
     PublicationStatus,
     SiteSettings,
@@ -134,11 +135,58 @@ class PublicationAdmin(admin.ModelAdmin):
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (
+            "Продавец",
+            {
+                "fields": (
+                    "company_name",
+                    "legal_name",
+                    "seller_type",
+                    "inn",
+                    "registration_number",
+                    "registration_authority",
+                    "kpp",
+                )
+            },
+        ),
+        (
+            "Связь и адреса",
+            {
+                "fields": (
+                    "email",
+                    "phone",
+                    "phone_label",
+                    "working_hours",
+                    "address",
+                    "postal_address",
+                    "return_address",
+                )
+            },
+        ),
+        (
+            "Банковские реквизиты (необязательно)",
+            {
+                "fields": ("bank_name", "bank_bik", "bank_account", "correspondent_account"),
+                "classes": ("collapse",),
+            },
+        ),
+        ("Подвал сайта", {"fields": ("footer_label",)}),
+    )
+
     def has_add_permission(self, request):
         return not SiteSettings.objects.exists() and super().has_add_permission(request)
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(FAQEntry)
+class FAQEntryAdmin(admin.ModelAdmin):
+    list_display = ("question", "active", "order")
+    list_editable = ("active", "order")
+    search_fields = ("question", "answer")
+    list_filter = ("active",)
 
 
 @admin.register(SiteText)

@@ -1,5 +1,14 @@
 # Тестовая оплата и письма
 
+После обновления от 1 октября 2026 года платежи работают через Альфа-Банк.
+Актуальная инструкция: [Альфа-Банк и СДЭК](ALFA-CDEK-READINESS.md).
+Разделы о ЮKassa ниже сохранены как история предыдущей интеграции и больше не применяются.
+Настройки SMTP и `var/local-settings.json` продолжают использоваться. Для банка файл принимает
+`ALFABANK_ENABLED`, `ALFABANK_USERNAME`, `ALFABANK_PASSWORD`, `ALFABANK_TEST_MODE`,
+`ALFABANK_LIVE_APPROVED`, `ALFABANK_RECEIPT_MODE`, `ALFABANK_TAX_SYSTEM` и `PAYMENT_STUB_ENABLED`.
+Команда `check_integrations --only payments` проверяет тестовый API Альфа-Банка запросом
+статуса случайного номера заказа; она не создаёт платёж.
+
 Ключи и пароль отправителя не входят в репозиторий. Локальные команды читают
 `var/local-settings.json` только при `config.settings_dev`. В production используются
 переменные окружения из `/etc/dari/dari.env`; тесты не читают локальный файл.

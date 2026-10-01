@@ -17,7 +17,9 @@ os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings_dev"
 # A preview never inherits a production database, payment flag or storage path.
 os.environ.pop("DATABASE_URL", None)
 os.environ["CHECKOUT_ENABLED"] = "false"
-os.environ["YOOKASSA_ENABLED"] = "false"
+os.environ["ALFABANK_ENABLED"] = "false"
+os.environ["PAYMENT_STUB_ENABLED"] = "false"
+os.environ["CDEK_ENABLED"] = "false"
 
 import django
 from django.conf import settings
@@ -28,6 +30,7 @@ settings.MAIN_HOST = "pages-main.local"
 settings.SHOP_HOST = "pages-shop.local"
 settings.MAIN_ORIGIN = "http://pages-main.local"
 settings.SHOP_ORIGIN = "http://pages-shop.local"
+settings.SITE_INDEXING_ENABLED = False
 settings.ALLOWED_HOSTS = [settings.MAIN_HOST, settings.SHOP_HOST]
 django.setup()
 
@@ -38,6 +41,8 @@ from django.test import Client
 from django.urls import set_urlconf
 from apps.catalog.models import Category, Product
 from apps.content.models import Collection, Document
+from apps.content.customer_content import CUSTOMER_PAGES
+from apps.orders.delivery import default_delivery
 
 BASE = os.environ.get("PAGES_BASE_PATH", "/daari-sinergii/")
 if not re.fullmatch(r"/(?:[a-zA-Z0-9_-]+/)*", BASE):
@@ -140,6 +145,9 @@ class PreviewHTML(HTMLParser):
             output.append((name, value))
         if tag == "html":
             output.extend([("data-static-demo", "true"), ("data-demo-base", BASE)])
+            delivery = default_delivery()
+            delivery_cents = str(int(delivery.price * 100)) if delivery and delivery.type == "static" else ""
+            output.append(("data-demo-delivery-cents", delivery_cents))
         if tag == "form" and self.demo_form:
             match = re.search(r"/cart/add/(\d+)/", original["action"])
             if not match:
@@ -180,6 +188,8 @@ with TemporaryDirectory(prefix="dari-pages-") as scratch:
     settings.MEDIA_ROOT = Path(scratch) / "media"
     call_command("migrate", verbosity=0)
     call_command("import_legacy_content", verbosity=0)
+    call_command("apply_seo_content", apply=True, verbosity=0)
+    call_command("setup_customer_pages", verbosity=0)
     call_command("seed_demo_catalog", verbosity=0)
 
     products = list(Product.objects.filter(status="published").prefetch_related("images"))
@@ -212,10 +222,8 @@ with TemporaryDirectory(prefix="dari-pages-") as scratch:
     for category in Category.objects.filter(active=True):
         pages.append((True, f"/?category={category.slug}"))
     pages.extend((True, product.get_absolute_url()) for product in products)
-    pages.extend(
-        (True, path)
-        for path in ["/cart/", "/checkout/", "/delivery-and-payment/", "/legal/terms/", "/legal/privacy/"]
-    )
+    pages.extend((True, path) for path in ["/cart/", "/checkout/"])
+    pages.extend((shop, row[1]) for shop in (False, True) for row in CUSTOMER_PAGES.values())
     client = Client()
     for shop, source_path in pages:
         response = client.get(source_path, HTTP_HOST=settings.SHOP_HOST if shop else settings.MAIN_HOST)

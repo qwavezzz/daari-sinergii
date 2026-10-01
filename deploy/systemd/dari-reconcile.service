@@ -1,5 +1,5 @@
 [Unit]
-Description=Verify YooKassa payments and reconcile reservations
+Description=Verify Alfa-Bank payments and reconcile reservations
 After=postgresql.service network-online.target
 
 [Service]
