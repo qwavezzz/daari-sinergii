@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
                         max_length=64,
                         null=True,
                         unique=True,
-                        verbose_name="ID ЮKassa",
+                        verbose_name="ID платёжного сервиса",
                     ),
                 ),
                 ("amount", models.DecimalField(decimal_places=2, max_digits=12, verbose_name="Сумма")),

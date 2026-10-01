@@ -18,8 +18,17 @@ class FinancialAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentAttempt)
 class PaymentAttemptAdmin(FinancialAdmin):
-    list_display = ["order", "provider_id", "amount", "state", "last_checked_at", "last_error"]
-    list_filter = ["state", "created_at"]
+    list_display = [
+        "order",
+        "provider",
+        "test_mode",
+        "provider_id",
+        "amount",
+        "state",
+        "last_checked_at",
+        "last_error",
+    ]
+    list_filter = ["provider", "test_mode", "state", "created_at"]
     search_fields = ["provider_id", "order__public_id"]
     exclude = ["request_payload", "confirmation_url"]
 

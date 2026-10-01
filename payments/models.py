@@ -13,9 +13,18 @@ class PaymentAttempt(TimeStampedModel):
         CANCELED = "canceled", "Отменён"
 
     order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, related_name="payment_attempts")
+    provider = models.CharField(
+        "Платёжный сервис",
+        max_length=16,
+        choices=[("legacy", "Архивный сервис"), ("alfabank", "Альфа-Банк")],
+        default="alfabank",
+        editable=False,
+    )
+    account_id = models.CharField("Учётная запись магазина", max_length=100, blank=True, editable=False)
+    test_mode = models.BooleanField("Тестовая среда", default=True, editable=False)
     idempotence_key = models.UUIDField("Ключ операции", default=uuid.uuid4, unique=True, editable=False)
     provider_id = models.CharField(
-        "ID ЮKassa", max_length=64, unique=True, null=True, blank=True, editable=False
+        "ID платёжного сервиса", max_length=64, unique=True, null=True, blank=True, editable=False
     )
     amount = models.DecimalField("Сумма", max_digits=12, decimal_places=2)
     currency = models.CharField("Валюта", max_length=3, default="RUB")
