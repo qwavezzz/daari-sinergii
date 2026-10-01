@@ -17,7 +17,8 @@ os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings_dev"
 # A preview never inherits a production database, payment flag or storage path.
 os.environ.pop("DATABASE_URL", None)
 os.environ["CHECKOUT_ENABLED"] = "false"
-os.environ["YOOKASSA_ENABLED"] = "false"
+os.environ["ALFABANK_ENABLED"] = "false"
+os.environ["CDEK_ENABLED"] = "false"
 
 import django
 from django.conf import settings
@@ -144,7 +145,8 @@ class PreviewHTML(HTMLParser):
         if tag == "html":
             output.extend([("data-static-demo", "true"), ("data-demo-base", BASE)])
             delivery = default_delivery()
-            output.append(("data-demo-delivery-cents", str(int(delivery.price * 100)) if delivery else "0"))
+            delivery_cents = str(int(delivery.price * 100)) if delivery and delivery.type == "static" else ""
+            output.append(("data-demo-delivery-cents", delivery_cents))
         if tag == "form" and self.demo_form:
             match = re.search(r"/cart/add/(\d+)/", original["action"])
             if not match:

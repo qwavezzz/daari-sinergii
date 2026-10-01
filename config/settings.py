@@ -136,12 +136,24 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 32 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 RESERVATION_MINUTES = int(os.environ.get("RESERVATION_MINUTES", "30"))
 CHECKOUT_ENABLED = os.environ.get("CHECKOUT_ENABLED", "false").lower() == "true"
-YOOKASSA_ENABLED = os.environ.get("YOOKASSA_ENABLED", "false").lower() == "true"
-YOOKASSA_SHOP_ID = os.environ.get("YOOKASSA_SHOP_ID", "")
-YOOKASSA_SECRET_KEY = os.environ.get("YOOKASSA_SECRET_KEY", "")
-YOOKASSA_TEST_MODE = os.environ.get("YOOKASSA_TEST_MODE", "true").lower() == "true"
-YOOKASSA_LIVE_APPROVED = os.environ.get("YOOKASSA_LIVE_APPROVED", "false").lower() == "true"
-YOOKASSA_RECEIPT_MODE = os.environ.get("YOOKASSA_RECEIPT_MODE", "unconfigured")
+ALFABANK_ENABLED = os.environ.get("ALFABANK_ENABLED", "false").lower() == "true"
+ALFABANK_USERNAME = os.environ.get("ALFABANK_USERNAME", "")
+ALFABANK_PASSWORD = os.environ.get("ALFABANK_PASSWORD", "")
+ALFABANK_TEST_MODE = os.environ.get("ALFABANK_TEST_MODE", "true").lower() == "true"
+ALFABANK_LIVE_APPROVED = os.environ.get("ALFABANK_LIVE_APPROVED", "false").lower() == "true"
+ALFABANK_RECEIPT_MODE = os.environ.get("ALFABANK_RECEIPT_MODE", "unconfigured")
+ALFABANK_TAX_SYSTEM = (
+    int(os.environ["ALFABANK_TAX_SYSTEM"]) if os.environ.get("ALFABANK_TAX_SYSTEM") else None
+)
+CDEK_ENABLED = os.environ.get("CDEK_ENABLED", "false").lower() == "true"
+CDEK_TEST_MODE = os.environ.get("CDEK_TEST_MODE", "true").lower() == "true"
+CDEK_CLIENT_ID = os.environ.get("CDEK_CLIENT_ID", "")
+CDEK_CLIENT_SECRET = os.environ.get("CDEK_CLIENT_SECRET", "")
+# Use the CDEK directory code for the actual sender city; never infer it from a name.
+CDEK_FROM_CITY_CODE = int(os.environ.get("CDEK_FROM_CITY_CODE") or "0")
+CDEK_YANDEX_API_KEY = os.environ.get("CDEK_YANDEX_API_KEY", "")
+CDEK_QUOTE_TTL_SECONDS = int(os.environ.get("CDEK_QUOTE_TTL_SECONDS", "900"))
+CDEK_TIMEOUT_SECONDS = int(os.environ.get("CDEK_TIMEOUT_SECONDS", "10"))
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))

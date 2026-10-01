@@ -1,59 +1,50 @@
-# Linux release and operations
+# Эксплуатация магазина: Альфа-Банк и СДЭК
 
-Current handoff and remaining launch tasks: [2026-09-16](HANDOFF-2026-09-16.md). Email changes are prepared in the repository, not yet deployed to the VPS; delivery integrations are researched, not implemented. Previous deployment: [VPS migration, 2026-09-15](HANDOFF-2026-09-15.md).
+Изменения подготовлены локально. Договоры/API ещё подключаются; продавец и касса пока не определены. Демо-товары сохранены, реальные операции по умолчанию выключены. Список оставшихся данных: [подготовка к запуску](../docs/ALFA-CDEK-READINESS.md).
 
-The production target is Ubuntu 24.04 LTS, Python 3.12 (Ubuntu security updates), PostgreSQL 16, Nginx from the Ubuntu security repository, Node.js 22 LTS for builds only, and the exact Python/npm dependencies in the repository. Local Windows validation uses Python 3.14 and explicit SQLite development settings. PostgreSQL is mandatory in production; concurrency acceptance must run against PostgreSQL.
+## Окружение и установка
 
-## First installation
+Рабочая среда: PostgreSQL, Django/Gunicorn за Nginx и HTTPS. Node нужен для сборки. Настройки берутся из окружения; `.env` автоматически не загружается. Заполненный EnvironmentFile хранится вне кода/статики с ограниченными правами, значения секретов не публикуются.
 
-1. Prepare a VPS with SSH, a restricted deployment account, backups, monitoring and DNS for the main and shop hosts. Run `sudo bash deploy/bootstrap.sh`. Install a verified Node.js 22 distribution. Create a dedicated PostgreSQL role/database with no superuser or database-creation rights. Bind PostgreSQL to loopback; close external port 5432.
-2. Fill `/etc/dari/dari.env` from `.env.example`. Generate a random Django secret. Keep the file `root:dari`, mode `0640`, outside releases and static directories. `EnvironmentFile` does not execute shell substitutions; use proper systemd quoting for JSON. Never commit the completed file.
-3. Configure PostgreSQL backup access through `PGSERVICE`, `PGSERVICEFILE` and a private `PGPASSFILE` (mode `0600`). The service file identifies the same database as `DATABASE_URL`. Set these environment variables for `dari-backup.service` in the env file. Credentials are not passed as shell command arguments.
-   All application units and transient management commands use `SupplementaryGroups=dari` in addition to `Group=www-data`. This grants traversal of `/etc/dari` (`root:dari`, `0750`) and access to its service file (`root:dari`, `0640`), while preserving Nginx access to the Gunicorn socket. The password file must belong to `dari` with mode `0600`. For manual `systemd-run --uid=dari --gid=www-data` commands, include `-p SupplementaryGroups=dari` as well.
-4. Obtain a Let's Encrypt certificate for all three configured names (main, www, shop). Use a temporary HTTP-only ACME virtual host before installing the final TLS config. Disable Ubuntu's example default server so there is exactly one `default_server` per listening address/port. The supplied configuration uses `listen 443 ssl http2`, compatible with Ubuntu's Nginx 1.24.
-5. Prepare an immutable checkout in `/srv/dari/releases/<release-id>`, then run `sudo bash deploy/release.sh /srv/dari/releases/<release-id>`. The script creates the venv, installs locked dependencies, builds assets, checks production settings, backs up an existing installation, migrates, installs roles, collects static files, switches the release and verifies both hosts. Do not run migration procedures concurrently.
-6. On the initial release run `manage.py import_legacy_content` with the production environment to import original content and protected documents, then create a superuser. Both commands must run under the `dari` account and the same environment (`systemd-run` pattern in `release.sh`). Do not place admin/session cookies on a shared parent domain.
+Перед выпуском проверьте резервную копию и возможность восстановления в отдельную БД. Выполните сборку `npm run build`, `manage.py check`, миграции и `collectstatic` под рабочим окружением, затем проверьте оба домена. Не запускайте `scripts/browser_server.py` на рабочей базе: это отдельный стенд, который очищает только свою тестовую базу. Сохраняйте существующие файлы окружения и пользовательские загрузки.
 
-## Enabling orders and payment
+В репозитории остались конфигурации `nginx.conf`, `dari-proxy.conf` и systemd units. Старые bootstrap/release/backup shell-скрипты отсутствуют; перед эксплуатацией проверьте пути ExecStart у установленных служб, в частности резервного копирования. Этот раздел не запускает публикацию или изменение сервера.
 
-The store initially has no products, prices, delivery promises or legal texts. Add real SKUs, confirmed prices, images, stock and product tax codes in Admin. Add the agreed `DeliveryMethod` records with explicit prices, publish terms/privacy/delivery texts in `StoreSettings`, enable its checkout toggle, and set `CHECKOUT_ENABLED=true`. Both switches and the required documents are checked on the server.
+## Подключение оплаты
 
-Use a YooKassa test shop first. Set its credentials, `YOOKASSA_ENABLED=true` and `YOOKASSA_TEST_MODE=true`; register `/payments/yookassa/webhook/` on the shop domain for payment succeeded/canceled/waiting_for_capture and refund succeeded. No card data is accepted by Django. Callback payloads are untrusted hints: authenticated provider requests verify the shop account, order UUID, amount, currency, test flag and status before changing finances. Returning to an order page does not establish payment; its protected POST refresh and the reconciliation timer verify it.
+1. Получите тестовые реквизиты прямого REST-эквайринга Альфа-Банка. Укажите `ALFABANK_USERNAME`, `ALFABANK_PASSWORD`; оставьте `ALFABANK_TEST_MODE=true`, включите `ALFABANK_ENABLED` только на тестовом стенде.
+2. Согласуйте callback `https://shop.dari-sinergii.ru/payments/alfabank/webhook/`. Уведомление лишь запускает авторизованную сверку. Возврат браузера сам по себе не доказывает оплату.
+3. Банк получает сохранённый итог заказа в копейках: товары плюс доставка. Стабильный `orderNumber` соответствует сохранённой попытке. После таймаута статус запрашивается по номеру, новая независимая операция не создаётся.
+4. Проверьте успешную/отменённую оплату, потерю ответа, повтор нажатия, поздний callback, частичный и полный возврат. `getOrderStatusExtended.do` должен возвращать версию ответа 03 с `paymentAmountInfo`, включая списанную и возвращённую сумму.
+5. Настройте и проверьте кассовые чеки. `ALFABANK_RECEIPT_MODE=bank` формирует банковскую корзину с товарами и доставкой; нужны согласованные ставки и `ALFABANK_TAX_SYSTEM`. `external` означает отдельно работающую и согласованную кассу, этот проект её не подключает. Факт включения флага не подтверждает отправку чека.
+6. После приёмки переключите учётные данные и режим, подтвердите `ALFABANK_LIVE_APPROVED`. Нельзя проводить реальные платежи за демо-товары. Старые платёжные попытки сохраняются как `legacy` и не направляются в новый банк.
 
-Do not enable live payments until the seller, agreement, delivery, tax rates, receipt timing and return process have been agreed and tested. Live mode additionally requires `YOOKASSA_LIVE_APPROVED=true` and `YOOKASSA_RECEIPT_MODE=provider` or `external`. Provider mode currently supports product receipts with explicitly configured VAT codes and rejects paid delivery until delivery fiscalization has been implemented for the approved scheme. `external` is only for an approved externally operated cash register; no external fiscalization integration is included here. This is a launch dependency, not a free-delivery default.
+Возвраты выполняются в кабинете Альфа-Банка. Сверка импортирует подтверждённую накопленную сумму возвратов. Администратор не может вручную объявить заказ оплаченным. Физический возврат товара на склад — отдельное действие.
 
-Refunds are performed in the YooKassa dashboard; authenticated webhook/reconciliation imports their confirmed state. Admin cannot set a financial status. A refund does not automatically return goods to stock. Order fulfillment transitions use guarded Admin actions. Orders and payment history cannot be deleted through Admin.
+## Подключение СДЭК
 
-## Routine operation
+Отправка — Тольятти. Укажите `CDEK_CLIENT_ID`, `CDEK_CLIENT_SECRET`, `CDEK_FROM_CITY_CODE` из справочника СДЭК и публичный `CDEK_YANDEX_API_KEY`, ограниченный доменами магазина. Для рабочего договора нужен `CDEK_TEST_MODE=false`; до проверки оставьте `CDEK_ENABLED=false`.
 
-Nginx workers run as `www-data` and must be able to traverse `/srv/dari` itself,
-not only `/srv/dari/shared/static`. Keep `/srv/dari` owned by `dari:www-data`
-with mode `0750`; `bootstrap.sh` and `release.sh` enforce the required group and
-mode. If HTML works but all static assets return 403, inspect the full path with
-`namei -l` and the Nginx error log. Do not recursively relax permissions on
-private media, backups, or `/etc/dari`. Release checks include fetching collected
-admin CSS through Nginx on both hosts in addition to Django health checks.
+В Admin добавьте способ типа `cdek_pvz`, выберите тариф для фактической передачи перевозчику (сдача в ПВЗ или забор курьером) и налоговую ставку доставки. Укажите вес в граммах и размеры в сантиметрах каждого упакованного товара. Схема расчёта считает каждую единицу отдельным грузовым местом; если несколько товаров объединяются в коробку, до запуска нужен согласованный алгоритм упаковки и проверка тарифа на реальных корзинах.
 
-The static locations explicitly enable gzip for CSS/JavaScript/SVG. Verify `nginx -t` before reload,
-then request an actual hashed JS/CSS URL with `Accept-Encoding: gzip` and check `Content-Encoding: gzip`
-and `Vary: Accept-Encoding`. Local Django development measurements do not include this saving.
-Private HTML/API response compression is not enabled by these static-location directives.
+Виджет 3.11.1 выбирает ПВЗ; собственный сервер получает данные пункта и рассчитывает цену. Клиентская цена не принимается. Цена и срок действуют ограниченное время (`CDEK_QUOTE_TTL_SECONDS`, по умолчанию 900 секунд) и связаны с составом корзины, упаковками, тарифом и ПВЗ. При ошибке нельзя подставлять бесплатную доставку.
 
-`dari-reconcile.timer` checks payment attempts, retries unknown creation with its original payload/key only within a conservative 23-hour window (provider guarantee: 24 hours), imports refunds and releases only reserves without unresolved payments. An unknown payment beyond that window keeps its reservation and flags the order for manual review. Do not create a replacement payment until its outcome is established. Delayed successful payments are retained and stock conflicts are visible in Admin. Confirmed successful status never regresses.
+Накладная оформляется **вручную после подтверждённой оплаты** по снимку доставки в заказе. Проверьте вес/места, тариф, получателя и код ПВЗ. Если доставка оплачена в составе заказа, не назначайте повторную оплату доставки или наложенный платёж покупателю. Передайте трек-номер покупателю, затем переведите заказ в передачу в доставку.
 
-`dari-notifications.timer` retries durable notification records. SMTP errors never roll back orders or money. A stable Message-ID reduces duplicates, but ordinary SMTP cannot guarantee exactly-once delivery if the process dies after the mail server accepted a message. The order/payment state itself is idempotent.
+## Документы и проверка готовности
 
-See [order email setup](EMAIL.md) for SMTP configuration, editable manager/Reply-To addresses,
-delivery checks and retry behavior. Apply migrations and `setup_roles` before using the new admin section.
+`manage.py setup_customer_pages --dry-run --refresh-defaults` показывает безопасное обновление стандартных текстов. Уберите `--dry-run` после просмотра; редакторские правки требуют ручной актуализации. Существующие реквизиты нужно подтвердить: заполненное поле не доказывает актуальность продавца.
 
-Monitor `systemctl status dari*`, `journalctl -u dari`, both `/health/` endpoints, failed timers, disk space, certificate expiry, orders needing attention, stale payment checks and unsent notifications. Logs exclude credentials and provider/card payloads. Run `clearsessions` regularly and arrange retention of expired carts/rate buckets according to the agreed personal-data policy.
+`manage.py check_store_readiness` — проверка заполнения, без сети и изменений. `--strict` даёт ненулевой код при пробелах. Она не заменяет проверку юридических текстов, договоров, налогов, чеков и решение банка.
 
-## Backups, restore drill and rollback
+Для заказов требуются `CHECKOUT_ENABLED=true` и включение в Admin. До повторной заявки нужны реальные описания и ассортимент, реквизиты продавца, доставка со сроком передачи перевозчику и сроком в пути, порядок оплаты/возвратов, политика и применимые документы продукции. Демо-каталог подходит для тренировки.
 
-The backup timer makes a PostgreSQL custom-format dump and an archive of public/private uploads outside web roots. Configure encrypted off-server copy and retention with the chosen storage provider before launch. Local copies alone are insufficient. For a consistent recovery point during active uploads/orders, run the pre-release copy under a maintenance window or use database point-in-time recovery plus versioned/object storage; a sequential SQL/media dump is not a cross-system atomic snapshot.
+## Регулярные задачи
 
-Test restoration into a **separate** PostgreSQL database and separate media directories: verify SHA256 checksums, create the empty restore database, run `pg_restore --no-owner --no-privileges` into that database, extract the archive into the separate restore directory, run Django checks and compare content, orders, payment IDs and all document checksums. Do not connect a restore drill to live payment credentials or email delivery. Record restore duration and recovered order timestamps; agree RPO/RTO before launch.
+`dari-reconcile.timer` запускает `reconcile_payments`: авторизованная сверка платежей/возвратов и освобождение резервов без неопределённых платежей. Сверка не создаёт платёж за покупателя. Неопределённая попытка удерживает резерв и требует выяснения результата; не создавайте замену до проверки.
 
-To roll back application code, first check database migration compatibility, point `/srv/dari/current` to `/srv/dari/previous`, and restart Gunicorn. Keep old hashed static assets until all relevant releases and browser caches have expired. Do not run `collectstatic --clear` during release. Never overwrite the live database with an old dump after orders have arrived. Use forward migrations or a reviewed data-preserving recovery process. DNS/domain switching, backup restoration and real payment tests remain deployment acceptance tasks on the actual server.
+`dari-notifications.timer` отправляет устойчивую очередь уведомлений. Настройте SMTP/адрес отправителя в окружении; менеджера и Reply-To можно задать в Admin. `manage.py send_notifications --check` проверяет заполнение без отправки. Обычный SMTP не гарантирует отсутствие дубликата при потере ответа.
 
-References: [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/), [Django 5.2.17 security release](https://www.djangoproject.com/weblog/2026/aug/04/security-releases/), [YooKassa notifications](https://yookassa.ru/developers/using-api/webhooks), [YooKassa idempotency](https://yookassa.ru/developers/using-api/interaction-format).
+Проверяйте HTTPS и продление сертификата, состояние служб/timers, дисковое место, резервные копии, заказы «требует внимания» и неотправленные уведомления. В логах не должны появляться реквизиты карт, секреты API или полные тела запросов с персональными данными. Обработка и хранение данных должны соответствовать опубликованным условиям.
+
+Источники: [подключение и требования Альфа-Банка](https://alfabank.ru/sme/payservice/internet-acquiring/docs/process/), [REST API](https://alfabank.ru/sme/payservice/internet-acquiring/docs/connection-options/api/rest/), [официальный виджет СДЭК](https://github.com/cdek-it/widget), [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/).

@@ -10,10 +10,12 @@ class HostAndRoleTests(TestCase):
     def test_htmx_redirect_preserves_in_domain_navigation(self):
         request = RequestFactory().post("/", HTTP_HX_REQUEST="true")
         internal = navigation_redirect(request, "/orders/example/")
-        external = navigation_redirect(request, "https://yookassa.ru/checkout/test")
+        external = navigation_redirect(request, "https://alfa.rbsuat.com/payment/merchants/test/payment.html")
         self.assertIn("HX-Location", internal.headers)
         self.assertNotIn("HX-Redirect", internal.headers)
-        self.assertEqual(external["HX-Redirect"], "https://yookassa.ru/checkout/test")
+        self.assertEqual(
+            external["HX-Redirect"], "https://alfa.rbsuat.com/payment/merchants/test/payment.html"
+        )
 
     def test_unknown_host_is_rejected_and_admin_only_on_shop(self):
         self.assertEqual(self.client.get("/health/", HTTP_HOST="evil.example").status_code, 400)
