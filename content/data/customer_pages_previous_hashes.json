@@ -1,25 +1,74 @@
 {
   "pages": {
-    "privacy_text": "6f1df3c56df5bfcbaa6fc637793ece1689e6fc9a2d2e66b406c992c261d1f1a0",
-    "terms_text": "c47988c52824062c38b721c78538649063f595b6b28c18486f0300f96cd2985d",
-    "delivery_text": "6eaabb63ba189259192ddf3056234d127b90daad735551d3b93fc2bee4f2c345",
-    "returns_text": "c03ab1afef2cf6722aa635dfc4fdcc157c98268aa4f724de624c55ac312e2010",
-    "contacts_text": "cc9ffad5bce6f69ad775d7ff0c95535f176020e3db18dc182af8d0623111c869",
-    "documents_text": "3e45d1842bfbc5017536938fb7ec84faf65adc76625e0a5edd148b99da773741",
-    "faq_text": "790e1fc11edb202e4435dbb8ae9d387f7d4ade256e314e7d811e4ee05f576bb7"
+    "privacy_text": [
+      "6f1df3c56df5bfcbaa6fc637793ece1689e6fc9a2d2e66b406c992c261d1f1a0",
+      "fded9f834c29ddb37e276ebdafa7860aa39c48d49d591c5fb00ff013c92d1fda"
+    ],
+    "terms_text": [
+      "c47988c52824062c38b721c78538649063f595b6b28c18486f0300f96cd2985d",
+      "c03bd402193e06b764be19a324b0f40aa2637fcaa57842a4da5b7a842f822767"
+    ],
+    "delivery_text": [
+      "6eaabb63ba189259192ddf3056234d127b90daad735551d3b93fc2bee4f2c345",
+      "5e7704ca4a063c8859dc01a2d386c8ccff4e965117a514e08d659505ab32d8ea"
+    ],
+    "returns_text": [
+      "c03ab1afef2cf6722aa635dfc4fdcc157c98268aa4f724de624c55ac312e2010",
+      "323510538f38a231d3954d6ed20f225d6d0ec64d939337dbc91f662505ee5927"
+    ],
+    "contacts_text": [
+      "cc9ffad5bce6f69ad775d7ff0c95535f176020e3db18dc182af8d0623111c869"
+    ],
+    "documents_text": [
+      "3e45d1842bfbc5017536938fb7ec84faf65adc76625e0a5edd148b99da773741"
+    ],
+    "faq_text": [
+      "790e1fc11edb202e4435dbb8ae9d387f7d4ade256e314e7d811e4ee05f576bb7"
+    ]
   },
   "faq": {
-    "Что производят «Дары Синергии»?": "ba1e483f4e6a88ad4c681c2a7f66c5d11b2d4cf08d5fa7bc85064312c999ceee",
-    "Как оформить заказ?": "20304dafc4513780b486890cd4ce6288f8f40d4667ccafa9eded20bf3c92c9da",
-    "Сколько стоит доставка?": "a7fdefdff78dd7d5d1e41207bfe1d45223a6cf3cae76bc1e9327a634c8a5d570",
-    "Куда доставляется заказ?": "20d18e5702431be9b00a8e74a754d19907e32413dca75d7115c15b8266f0f23f",
-    "Как выбрать пункт выдачи СДЭК?": "a38f4c6c573a21dfd96e359e795d0e090ba1fac3e467bc237773e535d15527eb",
-    "Как узнать срок доставки?": "1532aa6dd323723b1815f81fd5137fa03de51c7bc94483afb2a98392ecc7ddaa",
-    "Как оплатить товары и доставку?": "2ab8fb9445d87233c5fb8b6ab11b6bc517e49748bc161fec7670de9e4f94b0aa",
-    "Куда придёт кассовый чек?": "3edc2c2d40d494025bab94946b47fc89b784f5b169dcb34f84af75971ca78d1c",
-    "Деньги списались, но заказ ещё не отмечен как оплаченный. Что делать?": "3bf6e4e58ff3667cdbe72971eaab28f9fdcd777a89a01f6764a0cb581a305af3",
-    "Можно ли отменить заказ или вернуть товар?": "be45c3d9683753cf61539067805cb5f4414297cbe845a73f55d0a780adecbc58",
-    "Где посмотреть декларации соответствия?": "d6d6e91b4155208f96ef42adc6f946fe2dd88c8e19159ab378a75f9e1e59f35e",
-    "Как уточнить применение и условия хранения?": "cacd4075a7b2c551f0c8d13e45fc0cadb58f2ecd29d2426b93918ff6ec6c15fc"
+    "Что производят «Дары Синергии»?": [
+      "ba1e483f4e6a88ad4c681c2a7f66c5d11b2d4cf08d5fa7bc85064312c999ceee"
+    ],
+    "Как оформить заказ?": [
+      "20304dafc4513780b486890cd4ce6288f8f40d4667ccafa9eded20bf3c92c9da",
+      "965e19f4c794c04bdcf013088dc40a3574066599eefe3959552cc55a69ac8b75"
+    ],
+    "Сколько стоит доставка?": [
+      "a7fdefdff78dd7d5d1e41207bfe1d45223a6cf3cae76bc1e9327a634c8a5d570",
+      "aa7de30859bc15083b031e40614b235c48b55c1e17e2e615f96bb917af5c28df"
+    ],
+    "Куда доставляется заказ?": [
+      "20d18e5702431be9b00a8e74a754d19907e32413dca75d7115c15b8266f0f23f",
+      "5012f1c93af5fc63d33db980599140954445457e656c1eca46e33a171939f7ef"
+    ],
+    "Как выбрать пункт выдачи СДЭК?": [
+      "a38f4c6c573a21dfd96e359e795d0e090ba1fac3e467bc237773e535d15527eb",
+      "dd768cd3667dd0efa8f2925d425fab5162b8a78d4183c9eb7e8c3f73ddd01a5f"
+    ],
+    "Как узнать срок доставки?": [
+      "1532aa6dd323723b1815f81fd5137fa03de51c7bc94483afb2a98392ecc7ddaa",
+      "1650e74cb9032abd83266fa6e3774e56c8039b7f73cbf55ea7c8f0061487589f"
+    ],
+    "Как оплатить товары и доставку?": [
+      "2ab8fb9445d87233c5fb8b6ab11b6bc517e49748bc161fec7670de9e4f94b0aa",
+      "95700ba7ee75a0a5039ae99661de145f4bd118269c18404112292d561d0c13f7"
+    ],
+    "Куда придёт кассовый чек?": [
+      "3edc2c2d40d494025bab94946b47fc89b784f5b169dcb34f84af75971ca78d1c",
+      "a6296972f45b3488e4e930abe59fbcea71f429b8fbbfc7d7618e75299999bf06"
+    ],
+    "Деньги списались, но заказ ещё не отмечен как оплаченный. Что делать?": [
+      "3bf6e4e58ff3667cdbe72971eaab28f9fdcd777a89a01f6764a0cb581a305af3"
+    ],
+    "Можно ли отменить заказ или вернуть товар?": [
+      "be45c3d9683753cf61539067805cb5f4414297cbe845a73f55d0a780adecbc58"
+    ],
+    "Где посмотреть декларации соответствия?": [
+      "d6d6e91b4155208f96ef42adc6f946fe2dd88c8e19159ab378a75f9e1e59f35e"
+    ],
+    "Как уточнить применение и условия хранения?": [
+      "cacd4075a7b2c551f0c8d13e45fc0cadb58f2ecd29d2426b93918ff6ec6c15fc"
+    ]
   }
 }

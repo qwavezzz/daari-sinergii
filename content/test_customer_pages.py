@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import Document, FAQEntry, SiteSettings
-from .customer_content import CUSTOMER_PAGES
+from .customer_content import CUSTOMER_PAGES, customer_sales_available
 from .management.commands.setup_customer_pages import load_customer_copy
 from orders.models import StoreSettings, DeliveryMethod
 
@@ -151,7 +151,8 @@ class CustomerPagesTests(TestCase):
         self.assertFalse(StoreSettings.objects.get().checkout_enabled)
         response = self.client.get("/contacts/", HTTP_HOST="shop.localhost")
         self.assertContains(response, "Сведения о продавце и адрес возврата уточняются")
-        self.assertContains(response, "Онлайн-покупка пока недоступна")
+        self.assertNotContains(response, "готовится к запуску")
+        self.assertNotContains(response, "Онлайн-покупка пока недоступна")
 
     def test_dynamic_delivery_never_displays_placeholder_price_as_free_or_fixed(self):
         for price in (Decimal("0"), Decimal("300")):
@@ -163,21 +164,69 @@ class CustomerPagesTests(TestCase):
 
     @override_settings(
         CHECKOUT_ENABLED=True,
-        ALFABANK_ENABLED=True,
+        PAYMENT_STUB_ENABLED=True,
+        ALFABANK_ENABLED=False,
         ALFABANK_TEST_MODE=True,
         CDEK_ENABLED=True,
-        CDEK_TEST_MODE=False,
+        CDEK_TEST_MODE=True,
     )
-    def test_test_gateway_does_not_present_real_sales_as_available(self):
+    def test_trial_checkout_is_available_without_claiming_real_payment(self):
         StoreSettings.objects.update(checkout_enabled=True)
+        DeliveryMethod.objects.update(active=True)
         response = self.client.get("/legal/terms/", HTTP_HOST="shop.localhost")
-        self.assertContains(response, "Онлайн-покупка пока недоступна")
-        self.assertContains(response, "демонстрационные позиции")
+        self.assertTrue(response.context["customer_sales_available"])
+        self.assertContains(response, "Пробная оплата: карта не нужна, деньги не списываются")
+        self.assertNotContains(response, "Онлайн-покупка пока недоступна")
+        self.assertNotContains(response, "после запуска")
+
+    def test_order_availability_tracks_checkout_requirements(self):
+        store = StoreSettings.objects.get()
+        self.assertFalse(customer_sales_available(store))
+        store.checkout_enabled = True
+        self.assertFalse(customer_sales_available(store))
+        DeliveryMethod.objects.update(active=True)
+        with override_settings(CHECKOUT_ENABLED=True):
+            self.assertTrue(customer_sales_available(store))
+        with override_settings(CHECKOUT_ENABLED=False):
+            self.assertFalse(customer_sales_available(store))
+        store.privacy_text = ""
+        self.assertFalse(customer_sales_available(store))
+
+    @override_settings(PAYMENT_STUB_ENABLED=False)
+    def test_customer_documents_stay_readable_without_trial_banner(self):
+        for host in ("localhost", "shop.localhost"):
+            for _, path, _ in CUSTOMER_PAGES.values():
+                response = self.client.get(path, HTTP_HOST=host)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, "Пробная оплата: карта не нужна")
+                self.assertNotContains(response, "готовится к запуску")
+                self.assertNotContains(response, "после запуска")
+
+    def test_recent_standard_faq_refreshes_and_older_hashes_are_retained(self):
+        data, previous = load_customer_copy()
+        question = "Куда доставляется заказ?"
+        old_answer = (
+            "После подключения СДЭК — из Тольятти до выбранного доступного пункта выдачи в России. "
+            "Сайт проверяет возможность приёма отправления выбранным пунктом."
+        )
+        self.assertIn(hashlib.sha256(old_answer.encode()).hexdigest(), previous["faq"][question])
+        self.assertIn(
+            "20d18e5702431be9b00a8e74a754d19907e32413dca75d7115c15b8266f0f23f",
+            previous["faq"][question],
+        )
+        FAQEntry.objects.filter(question=question).update(answer=old_answer)
+        edited = FAQEntry.objects.exclude(question=question).first()
+        edited.answer = "Ответ владельца"
+        edited.save(update_fields=["answer"])
+        call_command("setup_customer_pages", refresh_defaults=True, stdout=StringIO())
+        self.assertEqual(FAQEntry.objects.get(question=question).answer, dict(data["faq"])[question])
+        edited.refresh_from_db()
+        self.assertEqual(edited.answer, "Ответ владельца")
 
     def test_refresh_updates_only_matching_seed_and_preserves_editor_and_contacts(self):
         data, previous = load_customer_copy()
         old_text = "Предыдущий стандартный текст"
-        previous["pages"]["delivery_text"] = hashlib.sha256(old_text.encode()).hexdigest()
+        previous["pages"]["delivery_text"] = ["older-baseline", hashlib.sha256(old_text.encode()).hexdigest()]
         question, _ = data["faq"][1]
         previous["faq"][question] = hashlib.sha256(old_text.encode()).hexdigest()
         StoreSettings.objects.update(delivery_text=old_text, terms_text="Условия редактора")

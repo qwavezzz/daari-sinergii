@@ -18,6 +18,7 @@ os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings_dev"
 os.environ.pop("DATABASE_URL", None)
 os.environ["CHECKOUT_ENABLED"] = "false"
 os.environ["ALFABANK_ENABLED"] = "false"
+os.environ["PAYMENT_STUB_ENABLED"] = "false"
 os.environ["CDEK_ENABLED"] = "false"
 
 import django

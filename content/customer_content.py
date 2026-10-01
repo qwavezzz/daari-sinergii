@@ -4,6 +4,7 @@ import re
 
 from django.conf import settings
 from orders.delivery import default_delivery
+from orders.models import DeliveryMethod
 from .models import SiteSettings
 
 
@@ -53,17 +54,14 @@ def text_values():
 
 
 def customer_sales_available(store):
-    """Public availability is conservative; API credentials are never exposed in the template."""
+    """Order access follows checkout readiness, including explicitly enabled trial payments."""
     return bool(
         store
         and store.checkout_enabled
         and settings.CHECKOUT_ENABLED
-        and getattr(settings, "ALFABANK_ENABLED", False)
-        and not getattr(settings, "ALFABANK_TEST_MODE", True)
-        and getattr(settings, "ALFABANK_LIVE_APPROVED", False)
-        and getattr(settings, "ALFABANK_RECEIPT_MODE", "unconfigured") in {"bank", "external"}
-        and getattr(settings, "CDEK_ENABLED", False)
-        and not getattr(settings, "CDEK_TEST_MODE", True)
+        and store.terms_text.strip()
+        and store.privacy_text.strip()
+        and DeliveryMethod.objects.filter(active=True).exists()
     )
 
 

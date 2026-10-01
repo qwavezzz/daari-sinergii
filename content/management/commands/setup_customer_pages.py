@@ -19,6 +19,13 @@ def load_customer_copy():
     )
 
 
+def matches_previous_copy(text, known_hashes):
+    """Accept all shipped baselines while retaining compatibility with the first hash file."""
+    if isinstance(known_hashes, str):
+        known_hashes = [known_hashes]
+    return hashlib.sha256(text.encode()).hexdigest() in (known_hashes or [])
+
+
 class Command(BaseCommand):
     help = "Подготовить страницы покупателей и выключенный способ СДЭК с расчётом цены."
 
@@ -58,7 +65,7 @@ class Command(BaseCommand):
             current = getattr(store, field)
             if current == value:
                 continue
-            is_previous = hashlib.sha256(current.encode()).hexdigest() == previous["pages"].get(field)
+            is_previous = matches_previous_copy(current, previous["pages"].get(field))
             if not current.strip() or (refresh and is_previous):
                 setattr(store, field, value)
                 changed.append(field)
@@ -83,7 +90,7 @@ class Command(BaseCommand):
                 new_answer = answers.get(entry.question)
                 if new_answer is None or entry.answer == new_answer:
                     continue
-                if hashlib.sha256(entry.answer.encode()).hexdigest() == previous["faq"].get(entry.question):
+                if matches_previous_copy(entry.answer, previous["faq"].get(entry.question)):
                     self.stdout.write(f"Обновление FAQ: {entry.pk}.")
                     if not dry_run:
                         entry.answer = new_answer
