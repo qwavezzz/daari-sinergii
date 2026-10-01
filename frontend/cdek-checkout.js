@@ -12,7 +12,7 @@ function loadWidget() {
       clearTimeout(timeout)
       script.remove()
       widgetLoading = null
-      reject(new Error('Карта не загрузилась. Введите код пункта или попробуйте открыть карту снова.'))
+      reject(new Error('Карта не загрузилась. Выберите город и пункт из списка или откройте карту снова.'))
     }
     script.src = widgetSource
     script.async = true
@@ -38,9 +38,22 @@ export function installCheckout(form, htmx) {
   const status = form.querySelector('[data-cdek-status]')
   const calculate = form.querySelector('[data-cdek-calculate]')
   const openMap = form.querySelector('[data-open-cdek]')
+  const cityQuery = form.querySelector('[data-cdek-city-query]')
+  const searchButton = form.querySelector('[data-cdek-city-search]')
+  const citySelect = form.querySelector('[data-cdek-cities]')
+  const cityWrap = form.querySelector('[data-cdek-cities-wrap]')
+  const officeWrap = form.querySelector('[data-cdek-offices-wrap]')
+  const officeList = form.querySelector('[data-cdek-offices]')
+  const moreOffices = form.querySelector('[data-cdek-more]')
+  const changeOffice = form.querySelector('[data-cdek-change-office]')
+  const searchStatus = form.querySelector('[data-cdek-search-status]')
   const cleanup = new AbortController()
   let request,
+    directoryRequest,
+    directoryGeneration = 0,
+    nextPage = null,
     generation = 0,
+    pickupDelay,
     expiry,
     mapTimeout,
     widget,
@@ -55,6 +68,7 @@ export function installCheckout(form, htmx) {
   const invalidate = (message = 'Рассчитайте доставку заново.') => {
     generation += 1
     request?.abort()
+    clearTimeout(pickupDelay)
     clearTimeout(expiry)
     token.value = ''
     submit.disabled = true
@@ -78,7 +92,8 @@ export function installCheckout(form, htmx) {
     announceError('')
     const version = generation
     request = new AbortController()
-    const timeout = setTimeout(() => request?.abort(), 30000)
+    const controller = request
+    const timeout = setTimeout(() => controller.abort(), 30000)
     calculate.disabled = true
     picker.setAttribute('aria-busy', 'true')
     try {
@@ -96,9 +111,14 @@ export function installCheckout(form, htmx) {
       form.elements.quote_token.value = data.quote_token
       form.elements.confirmed_delivery.value = method.value
       code.value = data.shipping.pickup.code
+      if (officeList?.querySelector('input:checked')) {
+        officeWrap.hidden = true
+        changeOffice.hidden = false
+        changeOffice.focus({ preventScroll: true })
+      }
       form.querySelector('[data-delivery-price]').textContent = money(data.shipping.price)
       form.querySelector('[data-order-total]').textContent = money(data.total)
-      label.textContent = `Перейти к оплате — ${money(data.total)}`
+      label.textContent = `${form.dataset.paymentLabel || 'Перейти к оплате'} — ${money(data.total)}`
       status.textContent = `ПВЗ ${data.shipping.pickup.code}: ${data.shipping.pickup.city}, ${data.shipping.pickup.address}. Ориентировочный срок: ${data.shipping.period_min}–${data.shipping.period_max} дн.`
       const map = form.querySelector('#cdek-map')
       if (map && !map.hidden) {
@@ -129,12 +149,169 @@ export function installCheckout(form, htmx) {
     event.stopPropagation()
     quote()
   })
-  listen(code, 'input', () => invalidate('Пункт изменён. Рассчитайте доставку для нового пункта.'))
+  const cancelDirectory = () => {
+    directoryGeneration += 1
+    directoryRequest?.abort()
+    if (searchButton) searchButton.disabled = false
+    if (moreOffices) moreOffices.disabled = false
+    officeWrap?.removeAttribute('aria-busy')
+  }
+  const clearPickup = () => {
+    if (code) code.value = ''
+    invalidate('Выберите пункт выдачи, чтобы рассчитать доставку.')
+    announceError('')
+  }
+  // Independent request generation stops stale city results from replacing a later selection.
+  const directory = async (url, params, onSuccess) => {
+    cancelDirectory()
+    const version = directoryGeneration
+    const controller = new AbortController()
+    directoryRequest = controller
+    const timeout = setTimeout(() => controller.abort(), 30000)
+    searchButton.disabled = true
+    moreOffices.disabled = true
+    officeWrap.setAttribute('aria-busy', 'true')
+    try {
+      const endpoint = new URL(url, window.location.origin)
+      endpoint.search = new URLSearchParams(params).toString()
+      const response = await fetch(endpoint, { signal: controller.signal, credentials: 'same-origin' })
+      const data = await response.json()
+      if (destroyed || version !== directoryGeneration) return
+      if (!response.ok) throw new Error(data.message || 'Не удалось найти пункт. Повторите поиск.')
+      onSuccess(data)
+    } catch (failure) {
+      if (destroyed || version !== directoryGeneration) return
+      searchStatus.textContent =
+        failure.name === 'AbortError' ? 'СДЭК отвечает дольше обычного. Повторите поиск.' : failure.message
+    } finally {
+      clearTimeout(timeout)
+      if (!destroyed && version === directoryGeneration) {
+        searchButton.disabled = false
+        moreOffices.disabled = false
+        officeWrap.removeAttribute('aria-busy')
+      }
+    }
+  }
+  const searchCities = () => {
+    const query = cityQuery.value.trim()
+    if (query.length < 2 || query.length > 80) {
+      searchStatus.textContent = 'Введите название города: от 2 до 80 символов.'
+      cityQuery.focus()
+      return
+    }
+    clearPickup()
+    cityWrap.hidden = true
+    officeWrap.hidden = true
+    changeOffice.hidden = true
+    officeList.replaceChildren()
+    searchStatus.textContent = 'Ищем город в справочнике СДЭК…'
+    directory(picker.dataset.citiesUrl, { q: query }, (data) => {
+      citySelect.replaceChildren(new Option('Выберите город', ''))
+      for (const city of data.cities) {
+        citySelect.add(new Option([city.city, city.region].filter(Boolean).join(', '), city.code))
+      }
+      cityWrap.hidden = data.cities.length === 0
+      searchStatus.textContent = data.cities.length
+        ? data.has_more
+          ? 'Показаны первые 20 городов. Уточните название, если нужного нет.'
+          : 'Выберите город из списка.'
+        : 'Город не найден. Проверьте название и повторите поиск.'
+      if (data.cities.length) citySelect.focus()
+    })
+  }
+  const loadOffices = (page = 0) => {
+    if (!citySelect.value) return
+    searchStatus.textContent = 'Загружаем пункты выдачи…'
+    directory(picker.dataset.officesUrl, { city_code: citySelect.value, page }, (data) => {
+      const existing = new Set(Array.from(officeList.querySelectorAll('input'), (input) => input.value))
+      let firstNew
+      for (const office of data.offices) {
+        if (existing.has(office.code)) continue
+        existing.add(office.code)
+        const row = document.createElement('label')
+        row.className = 'cdek-office'
+        const radio = document.createElement('input')
+        radio.type = 'radio'
+        radio.name = 'cdek_office'
+        radio.value = office.code
+        const info = document.createElement('span')
+        const address = document.createElement('strong')
+        address.textContent = office.address
+        const details = document.createElement('small')
+        details.textContent = [office.name, `ПВЗ ${office.code}`, office.work_time]
+          .filter(Boolean)
+          .join(' · ')
+        info.append(address, details)
+        row.append(radio, info)
+        officeList.append(row)
+        firstNew ||= radio
+      }
+      nextPage = data.next_page
+      moreOffices.hidden = nextPage === null
+      officeWrap.hidden = false
+      searchStatus.textContent = existing.size
+        ? `Загружено пунктов: ${existing.size}. Выберите удобный адрес — стоимость рассчитается автоматически.`
+        : nextPage !== null
+          ? 'На этой странице нет доступных пунктов. Загрузите следующие.'
+          : 'В этом городе нет доступных пунктов выдачи. Выберите другой город.'
+      if (firstNew) firstNew.focus()
+    })
+  }
+  listen(searchButton, 'click', searchCities)
+  listen(cityQuery, 'keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      searchCities()
+    }
+  })
+  listen(cityQuery, 'input', () => {
+    cancelDirectory()
+    clearPickup()
+    cityWrap.hidden = true
+    officeWrap.hidden = true
+    changeOffice.hidden = true
+    citySelect.replaceChildren()
+    officeList.replaceChildren()
+    searchStatus.textContent = ''
+  })
+  listen(citySelect, 'change', () => {
+    cancelDirectory()
+    clearPickup()
+    officeList.replaceChildren()
+    officeWrap.hidden = true
+    changeOffice.hidden = true
+    if (citySelect.value) loadOffices()
+    else searchStatus.textContent = 'Выберите город из списка.'
+  })
+  listen(moreOffices, 'click', () => {
+    if (nextPage !== null) loadOffices(nextPage)
+  })
+  listen(changeOffice, 'click', () => {
+    officeWrap.hidden = false
+    changeOffice.hidden = true
+    officeList.querySelector('input:checked')?.focus()
+  })
+  listen(officeList, 'change', (event) => {
+    if (!event.target.matches('input[type=radio]')) return
+    code.value = event.target.value
+    invalidate('Пункт выбран. Рассчитываем доставку…')
+    // Arrow-key navigation through a radio group should not send a request for every row passed.
+    pickupDelay = setTimeout(quote, 250)
+  })
+  listen(code, 'input', () => {
+    officeList?.querySelectorAll('input').forEach((input) => {
+      input.checked = false
+    })
+    invalidate('Пункт изменён. Рассчитайте доставку для нового пункта.')
+  })
+  if (picker?.dataset.ready === '1') form.querySelector('[data-cdek-search]').hidden = false
   listen(method, 'change', async () => {
+    cancelDirectory()
     invalidate('Обновляем способ получения…')
     const version = generation
     request = new AbortController()
-    const timeout = setTimeout(() => request?.abort(), 30000)
+    const controller = request
+    const timeout = setTimeout(() => controller.abort(), 30000)
     const body = new FormData(form)
     body.set('requote', '1')
     try {
@@ -167,9 +344,7 @@ export function installCheckout(form, htmx) {
       if (!widget) {
         mapTimeout = setTimeout(() => {
           if (destroyed) return
-          announceError(
-            'Карта загружается дольше обычного. Можно ввести код пункта и рассчитать доставку ниже.',
-          )
+          announceError('Карта загружается дольше обычного. Выберите город и пункт из списка.')
         }, 20000)
         widget = new Widget({
           root: 'cdek-map',
@@ -184,6 +359,10 @@ export function installCheckout(form, htmx) {
           forceFilters: { type: 'PVZ' },
           onReady() {
             clearTimeout(mapTimeout)
+            cancelDirectory()
+            officeList?.querySelectorAll('input').forEach((input) => {
+              input.checked = false
+            })
           },
           onChoose(mode, tariff, point) {
             if (destroyed || mode !== 'office' || !point?.code) return
@@ -215,6 +394,8 @@ export function installCheckout(form, htmx) {
     destroyed = true
     generation += 1
     request?.abort()
+    cancelDirectory()
+    clearTimeout(pickupDelay)
     clearTimeout(expiry)
     clearTimeout(mapTimeout)
     cleanup.abort()

@@ -10,7 +10,8 @@ from django.utils import timezone
 from .cdek import CdekClient, DeliveryUnavailable, configured, safe_code
 
 PACKAGE_FIELDS = ("package_weight_g", "package_length_cm", "package_width_cm", "package_height_cm")
-QUOTE_SALT = "cdek-delivery-quote-v1"
+# Invalidate quotes issued before the switch from delivery_sum to full total_sum.
+QUOTE_SALT = "cdek-delivery-quote-v2-total"
 
 
 def shipment_identity():

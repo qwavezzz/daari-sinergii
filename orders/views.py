@@ -1,6 +1,7 @@
 from decimal import Decimal
 import uuid
 import json
+import re
 from django.conf import settings
 from django.contrib import messages
 from django.core import signing
@@ -165,7 +166,7 @@ def cdek_quote(request):
     method_id = request.POST.get("delivery_method", "")
     method = (
         DeliveryMethod.objects.filter(pk=method_id, active=True, type="cdek_pvz").first()
-        if method_id.isdigit()
+        if re.fullmatch(r"[0-9]{1,9}", method_id)
         else None
     )
     if not method:
@@ -189,6 +190,54 @@ def cdek_quote(request):
 
 
 @require_GET
+def cdek_cities(request):
+    query = request.GET.get("q", "").strip()
+    if not 2 <= len(query) <= 80 or not re.fullmatch(r"[\w .,'’()\-]+", query):
+        return JsonResponse({"message": "Введите название города: от 2 до 80 символов."}, status=400)
+    return cdek_directory(request, "cities", query)
+
+
+@require_GET
+def cdek_offices(request):
+    city = request.GET.get("city_code", "")
+    page = request.GET.get("page", "0")
+    if (
+        not re.fullmatch(r"[0-9]{1,7}", city)
+        or int(city) == 0
+        or not re.fullmatch(r"[0-9]{1,3}", page)
+        or int(page) > 199
+    ):
+        return JsonResponse({"message": "Выберите город из результатов поиска."}, status=400)
+    return cdek_directory(request, "office_choices", int(city), int(page))
+
+
+def cdek_directory(request, operation, *args):
+    from .cdek import CdekClient
+
+    cart = get_cart(request)
+    if not cart or not cart.items.exists() or not checkout_is_enabled():
+        return JsonResponse({"message": "Откройте оформление заказа из корзины."}, status=403)
+    if not allow_request(request, "cdek-directory", 40, 60):
+        return JsonResponse({"message": "Повторите поиск через минуту."}, status=429)
+    try:
+        client = CdekClient()  # Check configuration before returning cached provider data.
+        key = (
+            "cdek-directory:"
+            + salted_hmac("cdek-directory", str([client.token_key, operation, args])).hexdigest()
+        )
+        result = cache.get(key)
+        if result is None:
+            # Network operations run after allow_request has released its transaction.
+            result = getattr(client, operation)(*args)
+            cache.set(key, result, 300)
+    except ValidationError as exc:
+        return JsonResponse({"message": " ".join(exc.messages)}, status=503)
+    response = JsonResponse(result)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@require_GET
 def cdek_widget(request):
     from .cdek import CdekClient
 
@@ -203,13 +252,18 @@ def cdek_widget(request):
     for key in ("city_code", "region_code"):
         value = request.GET.get(key)
         if value:
-            if not value.isdigit() or not 0 < int(value) < 10000000:
+            if not re.fullmatch(r"[0-9]{1,7}", value) or not 0 < int(value) < 10000000:
                 return JsonResponse({"message": "Проверьте город поиска."}, status=400)
             filters[key] = int(value)
     # Official v3 first asks size=1 and then parallel pages of 500 using X-Total-Elements.
     for key, default, maximum in (("page", "0", 10000), ("size", "500", 500)):
         value = request.GET.get(key) or default
-        if not value.isdigit() or not 0 <= int(value) <= maximum or key == "size" and int(value) == 0:
+        if (
+            not re.fullmatch(r"[0-9]{1,5}", value)
+            or not 0 <= int(value) <= maximum
+            or key == "size"
+            and int(value) == 0
+        ):
             return JsonResponse({"message": "Проверьте параметры поиска."}, status=400)
         filters[key] = int(value)
     from .shipping import shipment_identity
@@ -224,7 +278,7 @@ def cdek_widget(request):
             offices = CdekClient().offices(filters, response_headers=upstream_headers)
             if "X-Total-Elements" not in upstream_headers:
                 # A server without the pagination contract must not silently show a partial list.
-                raise ValidationError("Список пунктов пока недоступен. Введите код ПВЗ вручную.")
+                raise ValidationError("Карта пока недоступна. Выберите город и пункт из списка.")
             cache.set(cache_key, (offices, upstream_headers), 300)
     except ValidationError as exc:
         return JsonResponse({"message": " ".join(exc.messages)}, status=503)

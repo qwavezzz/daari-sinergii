@@ -51,16 +51,17 @@ for (const width of [1440, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: `artifacts/alfa-cdek/checkout-${width}.png`, fullPage: true })
     await page.locator('[data-checkout-submit]').click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]+\/$/)
-    await expect(page.locator('.order-totals')).toContainText('1 605,50 ₽')
+    await expect(page).toHaveURL(/\/payments\/trial\//)
+    await expect(page.locator('main')).toContainText('1 605,50 ₽')
     await expect(page.locator('main')).toContainText('TEST1')
-    await expect(page.getByRole('heading', { name: 'Не оплачен', exact: true })).toBeVisible()
+    await expect(page.locator('main')).toContainText('Пробная оплата')
     expect(errors).toEqual([])
   })
 }
 
 test('changing pickup invalidates the old total; unavailable delivery can be retried', async ({ page }) => {
   await startCheckout(page)
+  await page.getByText('У меня есть код пункта СДЭК', { exact: true }).click()
   await page.getByLabel('Код пункта СДЭК').fill('TEST1')
   await page.getByRole('button', { name: 'Рассчитать доставку', exact: true }).click()
   await expect(page.locator('[data-checkout-submit]')).toBeEnabled()
@@ -81,6 +82,54 @@ test('changing pickup invalidates the old total; unavailable delivery can be ret
   await page.getByRole('button', { name: 'Рассчитать доставку', exact: true }).click()
   await expect(page.locator('[data-order-total]')).toHaveText('1 605,50 ₽')
   await expect(page.locator('[data-checkout-submit]')).toBeEnabled()
+})
+
+for (const width of [1440, 390]) {
+  test(`city search selects an official office and auto-calculates at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    const errors = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    await startCheckout(page)
+    await page.getByLabel('Город получения', { exact: true }).fill('Тестовый город')
+    await page.getByLabel('Город получения', { exact: true }).press('Enter')
+    await expect(page.getByLabel('Выберите город')).toBeFocused()
+    await page.getByLabel('Выберите город').selectOption('44')
+    const office = page.getByRole('radio', { name: /Тестовый адрес, 10/ })
+    await expect(office).toBeFocused()
+    await office.press('Space')
+    await expect(page.locator('[data-order-total]')).toHaveText('1 605,50 ₽')
+    await expect(page.locator('[data-checkout-submit]')).toBeEnabled()
+    await expect(page.locator('[data-cdek-status]')).toContainText('TEST1')
+    await expect(page.locator('[data-cdek-offices-wrap]')).toBeHidden()
+    await page.getByRole('button', { name: 'Изменить пункт в списке' }).click()
+    await expect(office).toBeFocused()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: `artifacts/working-checkout/picker-${width}.png`, fullPage: true })
+    await page.getByLabel('Город получения', { exact: true }).fill('Другой город')
+    await expect(page.locator('[data-checkout-submit]')).toBeDisabled()
+    await expect(page.locator('[name=delivery_quote]')).toHaveValue('')
+    expect(errors).toEqual([])
+  })
+}
+
+test('city search recovers from errors without losing contacts', async ({ page }) => {
+  await startCheckout(page)
+  await page.getByLabel('Имя получателя').fill('Сохранённое имя')
+  await page.route('**/checkout/cdek/cities/**', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Повторите поиск позже.' }),
+    }),
+  )
+  await page.getByLabel('Город получения', { exact: true }).fill('Тестовый город')
+  await page.getByRole('button', { name: 'Найти город' }).click()
+  await expect(page.locator('[data-cdek-search-status]')).toContainText('Повторите поиск позже')
+  await expect(page.locator('[data-checkout-submit]')).toBeDisabled()
+  await page.unroute('**/checkout/cdek/cities/**')
+  await page.getByRole('button', { name: 'Найти город' }).click()
+  await expect(page.getByLabel('Выберите город')).toBeVisible()
+  await expect(page.getByLabel('Имя получателя')).toHaveValue('Сохранённое имя')
 })
 
 test('customer delivery and contacts remain readable on desktop and mobile', async ({ page }) => {

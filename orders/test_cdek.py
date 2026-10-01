@@ -120,6 +120,10 @@ class CdekCheckoutTests(TestCase):
         data = self.data()
         with patch("django.core.signing.time.time", return_value=10**12), self.assertRaises(QuoteChanged):
             create_order(self.cart, data, self.cart.session_key)
+        with patch("orders.shipping.QUOTE_SALT", "cdek-delivery-quote-v1"):
+            before_total_sum_fix = self.data()
+        with self.assertRaises(QuoteChanged):
+            create_order(self.cart, before_total_sum_fix, self.cart.session_key)
 
     def test_package_price_quantity_tariff_and_environment_changes_invalidate_quote(self):
         result = self.quote()
@@ -283,11 +287,12 @@ class CdekBoundaryTests(TestCase):
     def test_calculator_rejects_bad_money_and_missing_or_reversed_duration(self):
         client = CdekClient()
         for data in (
-            {"delivery_sum": "NaN", "period_min": 1, "period_max": 2},
-            {"delivery_sum": 0, "period_min": 1, "period_max": 2},
-            {"delivery_sum": 100, "period_min": 3, "period_max": 2},
-            {"delivery_sum": 100, "period_min": 1, "period_max": 2, "currency": "USD"},
-            {"delivery_sum": 100},
+            {"total_sum": "NaN", "period_min": 1, "period_max": 2},
+            {"total_sum": 0, "period_min": 1, "period_max": 2},
+            {"total_sum": 100, "period_min": 3, "period_max": 2},
+            {"total_sum": 100, "period_min": 1, "period_max": 2, "currency": "USD"},
+            {"total_sum": 100},
+            {"delivery_sum": 100, "period_min": 1, "period_max": 2},
         ):
             with (
                 self.subTest(data=data),
@@ -302,7 +307,9 @@ class CdekBoundaryTests(TestCase):
         with (
             patch.object(client, "_token", return_value="test-token"),
             patch.object(
-                client, "_request", return_value={"delivery_sum": 100, "period_min": 1, "period_max": 2}
+                client,
+                "_request",
+                return_value={"delivery_sum": 80, "total_sum": 100, "period_min": 1, "period_max": 2},
             ) as request,
         ):
             self.assertEqual(client.calculate(136, PICKUP, [{"weight": 450}])["price"], "100.00")

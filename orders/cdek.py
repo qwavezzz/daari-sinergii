@@ -70,7 +70,7 @@ class CdekClient:
                 result = json.loads(raw)
                 if response_headers is not None:
                     count = response.headers.get("X-Total-Elements", "")
-                    if count.isdigit():
+                    if count.isascii() and count.isdigit() and len(count) <= 7:
                         response_headers["X-Total-Elements"] = count
             if not isinstance(result, (dict, list)) or isinstance(result, dict) and result.get("errors"):
                 raise ValueError("invalid response")
@@ -112,6 +112,70 @@ class CdekClient:
             raise DeliveryUnavailable("Не удалось получить пункты СДЭК. Повторите поиск позже.")
         return result
 
+    def cities(self, query):
+        # Official API /location/cities uses city + country_codes (plural).
+        result = self._request(
+            "location/cities",
+            params={"country_codes": "RU", "city": query, "size": 21, "page": 0, "lang": "rus"},
+            token=self._token(),
+        )
+        if not isinstance(result, list):
+            raise DeliveryUnavailable("Не удалось получить города СДЭК. Повторите поиск.")
+        cities = []
+        for row in result[:20]:
+            if (
+                not isinstance(row, dict)
+                or row.get("country_code") != "RU"
+                or type(row.get("code")) is not int
+                or not 0 < row["code"] < 10_000_000
+                or not isinstance(row.get("city"), str)
+                or not row["city"].strip()
+            ):
+                continue
+            cities.append(
+                {
+                    "code": row["code"],
+                    "city": row["city"][:200],
+                    "region": row.get("region", "")[:200] if isinstance(row.get("region"), str) else "",
+                }
+            )
+        return {"cities": cities, "has_more": len(result) > 20}
+
+    def office_choices(self, city_code, page):
+        headers = {}
+        result = self.offices({"city_code": city_code, "page": page, "size": 50}, response_headers=headers)
+        offices = []
+        for row in result[:50]:
+            location = row.get("location")
+            if (
+                row.get("type") != "PVZ"
+                or row.get("is_handout") is not True
+                or not isinstance(location, dict)
+                or location.get("country_code") != "RU"
+                or location.get("city_code") != city_code
+                or not isinstance(location.get("address"), str)
+                or not location["address"].strip()
+            ):
+                continue
+            try:
+                code = safe_code(row.get("code"))
+            except DeliveryUnavailable:
+                continue
+            offices.append(
+                {
+                    "code": code,
+                    "address": location["address"][:500],
+                    "name": row.get("name", "")[:200] if isinstance(row.get("name"), str) else "",
+                    "work_time": row.get("work_time", "")[:300]
+                    if isinstance(row.get("work_time"), str)
+                    else "",
+                }
+            )
+        count = headers.get("X-Total-Elements", "")
+        # Some environments omit the pagination header. A full page permits one more request.
+        has_more = (page + 1) * 50 < int(count) if count else len(result) >= 50
+        return {"offices": offices, "next_page": page + 1 if has_more and page < 199 else None}
+
     def pickup(self, code):
         code = safe_code(code)
         offices = self.offices({"code": code})
@@ -121,6 +185,7 @@ class CdekClient:
                 office.get("code") == code
                 and office.get("type") == "PVZ"
                 and office.get("is_handout") is True
+                and isinstance(location, dict)
                 and location.get("country_code") == "RU"
             ):
                 try:
@@ -180,7 +245,8 @@ class CdekClient:
             },
         )
         try:
-            price = Decimal(str(result["delivery_sum"]))
+            # total_sum includes VAT and services; delivery_sum alone can undercharge.
+            price = Decimal(str(result["total_sum"]))
             if not all(type(result[key]) is int for key in ("period_min", "period_max")):
                 raise ValueError("period must be integer")
             minimum, maximum = result["period_min"], result["period_max"]

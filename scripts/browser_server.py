@@ -23,6 +23,7 @@ settings.SHOP_ORIGIN = "http://shop.localhost:8001"
 settings.CSRF_TRUSTED_ORIGINS = [settings.MAIN_ORIGIN, settings.SHOP_ORIGIN]
 settings.CHECKOUT_ENABLED = True
 settings.ALFABANK_ENABLED = False
+settings.PAYMENT_STUB_ENABLED = True
 # Explicit test-only CDEK adapter. This file always uses a disposable SQLite database.
 settings.CDEK_ENABLED = True
 settings.CDEK_TEST_MODE = True
@@ -134,6 +135,27 @@ from orders.cdek import DeliveryUnavailable
 
 class BrowserCdekClient:
     """Deterministic network-free fixture; never imported by application runtime."""
+
+    token_key = "browser-fixture-cdek"
+
+    def cities(self, query):
+        return {
+            "cities": [{"code": 44, "city": "Тестовый город", "region": "Тестовая область"}],
+            "has_more": False,
+        }
+
+    def office_choices(self, city_code, page):
+        return {
+            "offices": [
+                {
+                    "code": "TEST1",
+                    "name": "Тестовый пункт выдачи",
+                    "address": "Тестовый адрес, 10",
+                    "work_time": "Пн–Пт 9–18",
+                }
+            ],
+            "next_page": None,
+        }
 
     def pickup(self, code):
         if code not in {"TEST1", "TEST2"}:
