@@ -164,6 +164,48 @@ DeliveryMethod.objects.create(
 
 from apps.orders import cdek, shipping
 from apps.orders.cdek import DeliveryUnavailable
+from apps.orders.models import PackingBox, PackingRecipe, PackingRecipeItem
+
+# Synthetic measured arrangements exist only in the disposable test database.
+packing_products = list(Product.objects.filter(sku__in=["TEST-019", "TEST-020"]).order_by("sku"))
+for product in packing_products:
+    product.shipping_mode = "combined"
+    product.unit_weight_g = 300
+    product.unit_length_mm = 50
+    product.unit_width_mm = 50
+    product.unit_height_mm = 100
+    product.save()
+packing_box = PackingBox.objects.create(
+    name="Тестовая коробка для сборки",
+    code="browser-packing-box",
+    inner_length_mm=200,
+    inner_width_mm=100,
+    inner_height_mm=150,
+    outer_length_mm=210,
+    outer_width_mm=110,
+    outer_height_mm=160,
+    tare_weight_g=50,
+    max_weight_g=5000,
+)
+for name, counts, weight, confirmed in (
+    ("Тестовая пара товаров", (1, 1), 700, True),
+    ("Черновик для проверки замеров", (2, 1), 1000, False),
+):
+    recipe = PackingRecipe.objects.create(
+        name=name,
+        box=packing_box,
+        packing_weight_g=25,
+        measured_weight_g=weight,
+        outer_length_mm=211,
+        outer_width_mm=111,
+        outer_height_mm=161,
+        instructions="Только тест: поставить вертикально и разделить вставками.",
+        active=True,
+    )
+    for product, count in zip(packing_products, counts):
+        PackingRecipeItem.objects.create(recipe=recipe, product=product, quantity=count)
+    if confirmed:
+        recipe.confirm_measurements()
 
 
 class BrowserCdekClient:
@@ -220,7 +262,7 @@ class BrowserCdekClient:
             "name": "Тестовый пункт выдачи",
         }
 
-    def calculate(self, tariff, pickup, packages):
+    def calculate(self, tariff, pickup, packages, *, declared_value=None):
         return {"price": "315.00", "period_min": 2, "period_max": 4}
 
     def offices(self, filters=None, *, response_headers=None):

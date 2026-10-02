@@ -31,7 +31,13 @@ class Command(BaseCommand):
                 ],
             )
             | Permission.objects.filter(
-                content_type__app_label="orders", content_type__model="deliverymethod"
+                content_type__app_label="orders",
+                content_type__model__in=[
+                    "deliverymethod",
+                    "packingbox",
+                    "packingrecipe",
+                    "packingrecipeitem",
+                ],
             )
             | Permission.objects.filter(content_type__app_label="payments", codename__startswith="view_")
         )

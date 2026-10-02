@@ -5,7 +5,8 @@ import json
 import math
 import re
 from http.client import HTTPSConnection, HTTPException
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, DecimalException, InvalidOperation
+from time import monotonic
 from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
@@ -15,6 +16,60 @@ from django.core.exceptions import ValidationError
 
 class DeliveryUnavailable(ValidationError):
     pass
+
+
+class TariffUnavailable(DeliveryUnavailable):
+    """The carrier rejected this packing plan; another plan may be quotable."""
+
+
+def _provider_failure(path, status, result):
+    """Classify a bounded response without exposing the carrier's arbitrary text."""
+    errors = result.get("errors") if isinstance(result, dict) else None
+    rows = errors if isinstance(errors, list) else []
+    codes = []
+    for row in rows[:20]:
+        if not isinstance(row, dict):
+            continue
+        for key in ("code", "additional_code"):
+            value = row.get(key)
+            if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", value):
+                codes.append(value)
+    oauth_code = result.get("error") if isinstance(result, dict) else None
+    if isinstance(oauth_code, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", oauth_code):
+        codes.append(oauth_code)
+
+    exception = DeliveryUnavailable
+    if status == 429:
+        code = "cdek_rate_limited"
+        message = "СДЭК временно ограничил число запросов. Повторите расчёт через минуту."
+    elif status >= 500:
+        code = "cdek_service_unavailable"
+        message = "Сервис СДЭК временно недоступен. Повторите расчёт позже — товары сохранены."
+    elif status in (401, 403) or path == "oauth/token":
+        code = "cdek_authentication"
+        message = "Магазину не удалось подключиться к СДЭК. Сообщите об этом менеджеру — товары сохранены."
+    elif (
+        path == "calculator/tariff"
+        and (200 <= status < 300 or status in (400, 422))
+        and not oauth_code
+        and rows
+        and all(isinstance(row, dict) and row.get("code") == "err_result_service_empty" for row in rows)
+    ):
+        # A recorded CDEK no-tariff response. Do not infer retryability from
+        # translated messages, arbitrary 400s, or errors from other endpoints.
+        exception = TariffUnavailable
+        code = "cdek_tariff_unavailable"
+        message = (
+            "Выбранный тариф СДЭК недоступен для этих посылок и направления. "
+            "Выберите другой пункт выдачи или обратитесь в магазин."
+        )
+    else:
+        code = "cdek_request_rejected"
+        message = "СДЭК отклонил параметры доставки. Обратитесь в магазин для проверки расчёта."
+    failure = exception(message, code=code)
+    failure.status_code = status
+    failure.provider_codes = tuple(dict.fromkeys(codes))
+    return failure
 
 
 def configured():
@@ -30,6 +85,19 @@ def safe_code(value):
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", value):
         raise DeliveryUnavailable("Проверьте код пункта СДЭК и повторите расчёт.")
     return value.upper()
+
+
+def _weight_limits(minimum, maximum, *, unit=1):
+    """Normalize optional CDEK limits; zero maximum means no upper bound."""
+    try:
+        limits = [Decimal(str(value if value is not None else 0)) * unit for value in (minimum, maximum)]
+        if any(not value.is_finite() or value < 0 for value in limits):
+            raise ValueError("weight restriction")
+        if limits[1] and limits[0] > limits[1]:
+            raise ValueError("reversed weight restriction")
+    except (DecimalException, TypeError, ValueError) as exc:
+        raise DeliveryUnavailable("Не удалось проверить ограничения пункта. Выберите другой пункт.") from exc
+    return limits
 
 
 def coordinates(latitude, longitude):
@@ -48,9 +116,10 @@ def coordinates(latitude, longitude):
 
 
 class CdekClient:
-    def __init__(self):
+    def __init__(self, *, deadline=None):
         if not configured():
             raise DeliveryUnavailable("Расчёт СДЭК пока не подключён. Товары сохранятся в корзине.")
+        self.deadline = deadline
         self.base = "https://api.edu.cdek.ru/v2" if settings.CDEK_TEST_MODE else "https://api.cdek.ru/v2"
         identity = f"{self.base}:{settings.CDEK_CLIENT_ID}:{settings.CDEK_CLIENT_SECRET}"
         self.token_key = "cdek-oauth:" + hashlib.sha256(identity.encode()).hexdigest()
@@ -74,7 +143,18 @@ class CdekClient:
             body = json.dumps(payload).encode()
             headers["Content-Type"] = "application/json"
         endpoint = urlsplit(url)
-        connection = HTTPSConnection(endpoint.hostname, timeout=getattr(settings, "CDEK_TIMEOUT_SECONDS", 10))
+        timeout = getattr(settings, "CDEK_TIMEOUT_SECONDS", 10)
+        if self.deadline is not None:
+            remaining = self.deadline - monotonic()
+            if remaining <= 0:
+                raise DeliveryUnavailable(
+                    "СДЭК не успел рассчитать варианты доставки. Повторите расчёт через минуту — товары сохранены.",
+                    code="comparison_timeout",
+                )
+            # This limits each socket operation, not the total duration of a
+            # response (DNS and successive reads can outlast the remaining budget).
+            timeout = min(timeout, remaining)
+        connection = HTTPSConnection(endpoint.hostname, timeout=timeout)
         try:
             # urllib forces Connection: close, which stalls this provider's gateway.
             # HTTP/1.1 defaults to keep-alive; close locally after reading the bounded response.
@@ -86,22 +166,45 @@ class CdekClient:
                 headers=headers,
             )
             with connection.getresponse() as response:
-                if not 200 <= response.status < 300:
-                    raise ValueError("provider status")
-                raw = response.read(8_000_001)
-                if len(raw) > 8_000_000:
-                    raise ValueError("response too large")
-                result = json.loads(raw)
+                success = 200 <= response.status < 300
+                limit = 8_000_000 if success else 64_000
+                raw = response.read(limit + 1)
+                try:
+                    if len(raw) > limit:
+                        raise ValueError("response too large")
+                    result = json.loads(raw)
+                except (ValueError, RecursionError):
+                    if success:
+                        raise DeliveryUnavailable(
+                            "СДЭК прислал некорректный ответ. Повторите расчёт позже или обратитесь в магазин.",
+                            code="cdek_invalid_response",
+                        ) from None
+                    result = None
+                if not success or isinstance(result, dict) and (result.get("errors") or result.get("error")):
+                    failure = _provider_failure(path, response.status, result)
+                    if failure.code == "cdek_authentication":
+                        # Refresh on a later user request; never retry blindly.
+                        cache.delete(self.token_key)
+                    raise failure
+                if not isinstance(result, (dict, list)):
+                    raise DeliveryUnavailable(
+                        "СДЭК прислал некорректный ответ. Повторите расчёт позже или обратитесь в магазин.",
+                        code="cdek_invalid_response",
+                    )
                 if response_headers is not None:
                     count = response.headers.get("X-Total-Elements", "")
                     if count.isascii() and count.isdigit() and len(count) <= 7:
                         response_headers["X-Total-Elements"] = count
-            if not isinstance(result, (dict, list)) or isinstance(result, dict) and result.get("errors"):
-                raise ValueError("invalid response")
             return result
-        except (HTTPException, TimeoutError, OSError, ValueError) as exc:
+        except TimeoutError as exc:
             raise DeliveryUnavailable(
-                "СДЭК не ответил на запрос. Повторите расчёт через минуту — товары сохранены."
+                "СДЭК не ответил вовремя. Повторите расчёт через минуту — товары сохранены.",
+                code="cdek_timeout",
+            ) from exc
+        except (HTTPException, OSError, ValueError) as exc:
+            raise DeliveryUnavailable(
+                "Не удалось связаться со СДЭК. Повторите расчёт через минуту — товары сохранены.",
+                code="cdek_connection_failed",
             ) from exc
         finally:
             connection.close()
@@ -281,16 +384,7 @@ class CdekClient:
                     raise DeliveryUnavailable(
                         "Адрес пункта не подтверждён СДЭК. Выберите другой пункт."
                     ) from exc
-                try:
-                    limits = [
-                        Decimal(str(office.get(key) or 0)) * 1000 for key in ("weight_min", "weight_max")
-                    ]
-                    if any(not value.is_finite() or value < 0 for value in limits):
-                        raise ValueError("weight restriction")
-                except (InvalidOperation, ValueError) as exc:
-                    raise DeliveryUnavailable(
-                        "Не удалось проверить ограничения пункта. Выберите другой пункт."
-                    ) from exc
+                limits = _weight_limits(office.get("weight_min"), office.get("weight_max"), unit=1000)
                 return {
                     "code": code,
                     "city_code": city_code,
@@ -302,27 +396,53 @@ class CdekClient:
                 }
         raise DeliveryUnavailable("Этот пункт СДЭК недоступен для выдачи. Выберите другой пункт.")
 
-    def calculate(self, tariff, pickup, packages):
-        # The official widget converts office limits from kilograms to grams.
-        weight = sum(package["weight"] for package in packages)
-        minimum_weight = Decimal(pickup.get("weight_min_g", "0"))
-        maximum_weight = Decimal(pickup.get("weight_max_g", "0"))
-        if weight < minimum_weight or maximum_weight and weight > maximum_weight:
+    def calculate(self, tariff, pickup, packages, *, declared_value=None):
+        minimum_weight, maximum_weight = _weight_limits(
+            pickup.get("weight_min_g"), pickup.get("weight_max_g")
+        )
+        if not packages or any(
+            not isinstance(package, dict) or type(package.get("weight")) is not int or package["weight"] <= 0
+            for package in packages
+        ):
+            raise DeliveryUnavailable("Не удалось проверить вес упаковок. Повторите расчёт доставки.")
+        # CDEK's official widget applies PVZ limits to each cargo place, not their sum:
+        # https://github.com/cdek-it/widget/blob/main/dist/cdek-widget.es.js
+        if any(
+            package["weight"] < minimum_weight or maximum_weight and package["weight"] > maximum_weight
+            for package in packages
+        ):
             raise DeliveryUnavailable(
                 "Этот пункт не принимает отправления такого веса. Выберите другой пункт."
             )
-        result = self._request(
-            "calculator/tariff",
-            token=self._token(),
-            payload={
-                "type": 1,
-                "currency": 1,
-                "tariff_code": tariff,
-                "from_location": {"code": settings.CDEK_FROM_CITY_CODE},
-                "to_location": {"code": pickup["city_code"]},
-                "packages": packages,
-            },
-        )
+        payload = {
+            "type": 1,
+            "currency": 1,
+            "tariff_code": tariff,
+            "from_location": {"code": settings.CDEK_FROM_CITY_CODE},
+            "to_location": {"code": pickup["city_code"]},
+            "packages": packages,
+        }
+        if declared_value is not None:
+            try:
+                value = Decimal(str(declared_value))
+                if (
+                    isinstance(declared_value, bool)
+                    or not value.is_finite()
+                    or not 0 < value <= Decimal("9999999.99")
+                    or value != value.quantize(Decimal("0.01"))
+                ):
+                    raise ValueError("declared value")
+            except (DecimalException, TypeError, ValueError) as exc:
+                raise DeliveryUnavailable(
+                    "Не удалось подтвердить объявленную стоимость товаров. Проверьте корзину."
+                ) from exc
+            # Official integration: INSURANCE parameter is the merchandise value,
+            # not a fee or percentage. Let CDEK apply the account's actual rate.
+            # https://github.com/cdek-it/wordpress/blob/main/src/Actions/CalculateDeliveryAction.php
+            # SDK uses a JSON number; bounded two-decimal amounts retain their cents
+            # in Python's JSON float serialization. Arithmetic above stays Decimal.
+            payload["services"] = [{"code": "INSURANCE", "parameter": float(value)}]
+        result = self._request("calculator/tariff", token=self._token(), payload=payload)
         try:
             # total_sum includes VAT and services; delivery_sum alone can undercharge.
             price = Decimal(str(result["total_sum"]))

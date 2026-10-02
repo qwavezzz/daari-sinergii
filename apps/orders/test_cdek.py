@@ -1,4 +1,5 @@
 import copy
+import json
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -85,6 +86,7 @@ class CdekCheckoutTests(TestCase):
                 {"weight": 450, "length": 20, "width": 10, "height": 8},
                 {"weight": 450, "length": 20, "width": 10, "height": 8},
             ],
+            declared_value=Decimal("200.00"),
         )
         data = self.data(result)
         data.update(delivery_price="0.01", total="0.01", tariff_code=9999)
@@ -156,7 +158,7 @@ class CdekCheckoutTests(TestCase):
             quote_delivery(self.cart, self.method, "TEST1", "another-owner")
 
     def test_quote_during_cart_mutation_is_rejected(self):
-        def calculate(*args):
+        def calculate(*args, **kwargs):
             mutate_cart(self.cart, "update", quantity=1, item_id=self.cart.items.first().pk)
             return {"price": "321.40", "period_min": 2, "period_max": 5}
 
@@ -277,10 +279,88 @@ class CdekCheckoutTests(TestCase):
 class CdekBoundaryTests(TestCase):
     def test_office_weight_limits_are_enforced_before_calculator(self):
         client = CdekClient()
-        pickup = {**PICKUP, "weight_min_g": "0", "weight_max_g": "500"}
-        with patch.object(client, "_request") as request, self.assertRaises(DeliveryUnavailable):
-            client.calculate(136, pickup, [{"weight": 450}, {"weight": 450}])
-        request.assert_not_called()
+        pickup = {**PICKUP, "weight_min_g": "200", "weight_max_g": "500"}
+        for packages in ([{"weight": 900}], [{"weight": 450}, {"weight": 501}], [{"weight": 150}] * 2):
+            with (
+                self.subTest(packages=packages),
+                patch.object(client, "_token") as token,
+                patch.object(client, "_request") as request,
+                self.assertRaises(DeliveryUnavailable),
+            ):
+                client.calculate(136, pickup, packages)
+            token.assert_not_called()
+            request.assert_not_called()
+
+    def test_office_weight_limits_apply_to_each_package_including_equal_boundaries(self):
+        client = CdekClient()
+        pickup = {**PICKUP, "weight_min_g": "200", "weight_max_g": "500"}
+        packages = [{"weight": 200}, {"weight": 450}, {"weight": 500}]
+        with (
+            patch.object(client, "_token", return_value="test-token"),
+            patch.object(
+                client, "_request", return_value={"total_sum": 100, "period_min": 1, "period_max": 2}
+            ) as request,
+        ):
+            self.assertEqual(client.calculate(136, pickup, packages)["price"], "100.00")
+            self.assertEqual(request.call_args.kwargs["payload"]["packages"], packages)
+            self.assertEqual(
+                client.calculate(136, {**pickup, "weight_max_g": "0"}, [{"weight": 1500}])["price"],
+                "100.00",
+            )
+
+    def test_invalid_office_limits_fail_closed_at_pickup_and_calculation(self):
+        client = CdekClient()
+        office = {
+            "code": "TEST1",
+            "type": "PVZ",
+            "is_handout": True,
+            "location": {"city_code": 123, "city": "Город", "address": "Адрес", "country_code": "RU"},
+        }
+        for minimum, maximum in (("NaN", 1), (0, "Infinity"), (-1, 1), (0, -1), (2, 1), (True, 1)):
+            with self.subTest(minimum=minimum, maximum=maximum):
+                with (
+                    patch.object(
+                        client,
+                        "offices",
+                        return_value=[{**office, "weight_min": minimum, "weight_max": maximum}],
+                    ),
+                    self.assertRaises(DeliveryUnavailable),
+                ):
+                    client.pickup("TEST1")
+                with (
+                    patch.object(client, "_request") as request,
+                    self.assertRaises(DeliveryUnavailable),
+                ):
+                    client.calculate(
+                        136, {**PICKUP, "weight_min_g": minimum, "weight_max_g": maximum}, [{"weight": 450}]
+                    )
+                request.assert_not_called()
+
+    def test_pickup_limits_convert_kilograms_to_grams_without_rounding(self):
+        client = CdekClient()
+        office = {
+            "code": "TEST1",
+            "type": "PVZ",
+            "is_handout": True,
+            "weight_min": "0.1251",
+            "weight_max": "0.5001",
+            "location": {"city_code": 123, "city": "Город", "address": "Адрес", "country_code": "RU"},
+        }
+        with patch.object(client, "offices", return_value=[office]):
+            pickup = client.pickup("TEST1")
+        self.assertEqual(Decimal(pickup["weight_min_g"]), Decimal("125.1"))
+        self.assertEqual(Decimal(pickup["weight_max_g"]), Decimal("500.1"))
+
+    def test_calculator_rejects_missing_or_nonpositive_package_weights(self):
+        client = CdekClient()
+        for packages in ([], [{}], [{"weight": True}], [{"weight": 0}], [{"weight": -1}], [{"weight": 1.5}]):
+            with (
+                self.subTest(packages=packages),
+                patch.object(client, "_request") as request,
+                self.assertRaises(DeliveryUnavailable),
+            ):
+                client.calculate(136, PICKUP, packages)
+            request.assert_not_called()
 
     def test_pickup_is_verified_from_api_and_disabled_or_foreign_points_rejected(self):
         client = CdekClient()
@@ -332,3 +412,38 @@ class CdekBoundaryTests(TestCase):
             self.assertEqual(request.call_args.kwargs["payload"]["from_location"], {"code": 999})
             self.assertEqual(request.call_args.kwargs["payload"]["tariff_code"], 136)
             self.assertEqual(request.call_args.kwargs["payload"]["currency"], 1)
+            self.assertNotIn("services", request.call_args.kwargs["payload"])
+
+    def test_declared_value_is_sent_as_numeric_service_parameter_and_total_includes_it(self):
+        client = CdekClient()
+        for value in (Decimal("0.01"), Decimal("1234.56"), Decimal("9999999.99")):
+            with (
+                self.subTest(value=value),
+                patch.object(client, "_token", return_value="test-token"),
+                patch.object(
+                    client,
+                    "_request",
+                    return_value={"delivery_sum": 80, "total_sum": 100, "period_min": 1, "period_max": 2},
+                ) as request,
+            ):
+                result = client.calculate(136, PICKUP, [{"weight": 450}], declared_value=value)
+                self.assertEqual(result, {"price": "100.00", "period_min": 1, "period_max": 2})
+                payload = request.call_args.kwargs["payload"]
+                self.assertEqual(payload["services"], [{"code": "INSURANCE", "parameter": float(value)}])
+                # Check the actual JSON representation preserves every kopeck and
+                # sends a number rather than a string (including the maximum).
+                serialized = json.loads(json.dumps(payload), parse_float=Decimal)
+                self.assertEqual(serialized["services"][0]["parameter"], value)
+
+    def test_invalid_declared_value_is_rejected_before_provider_request(self):
+        client = CdekClient()
+        for value in (True, False, 0, -1, "NaN", "Infinity", "invalid", "1.001", "10000000.00"):
+            with (
+                self.subTest(value=value),
+                patch.object(client, "_token") as token,
+                patch.object(client, "_request") as request,
+                self.assertRaises(DeliveryUnavailable),
+            ):
+                client.calculate(136, PICKUP, [{"weight": 450}], declared_value=value)
+            token.assert_not_called()
+            request.assert_not_called()

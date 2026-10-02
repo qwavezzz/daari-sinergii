@@ -391,6 +391,10 @@ class PaymentTests(TestCase):
             ({"test_mode": None}, False),
             ({"test_mode": "false"}, False),
             ({"test_mode": False}, True),
+            ({"test_mode": False}, False),
+            ({"test_mode": False, "packing": None}, False),
+            ({"test_mode": False, "packing": {"measurements_confirmed": False}}, False),
+            ({"test_mode": False, "packing": {"measurements_confirmed": "true"}}, False),
         ):
             with self.subTest(snapshot=snapshot, current_test=current_test):
                 self.order.delivery_type = "cdek_pvz"

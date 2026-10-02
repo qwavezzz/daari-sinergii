@@ -1,0 +1,11 @@
+{% if not packing.measurements_confirmed %}<p><strong>Учебные параметры. Перед реальной отправкой нужны подтверждённые замеры.</strong></p>{% endif %}
+{% for parcel in packing.parcels %}
+<div>
+  <h3>Посылка {{ forloop.counter }}{% if parcel.box_name %} — {{ parcel.box_name }}{% endif %}</h3>
+  {% if parcel.box_code %}<p>Коробка: {{ parcel.box_code }}</p>{% endif %}
+  <p>Вес готовой посылки: {{ parcel.weight_g }} г. Внешние размеры: {{ parcel.dimensions_mm.length }} × {{ parcel.dimensions_mm.width }} × {{ parcel.dimensions_mm.height }} мм.</p>
+  <ul>{% for item in parcel.contents %}<li>{{ item.name }} ({{ item.sku }}) — {{ item.quantity }} шт.</li>{% endfor %}</ul>
+  {% if parcel.instructions %}<p>{{ parcel.instructions|linebreaksbr }}</p>{% endif %}
+</div>
+{% endfor %}
+<p>Соберите заказ по сохранённой схеме и проверьте готовые посылки. Если состав или упаковка отличаются, проверьте стоимость до оформления накладной.</p>

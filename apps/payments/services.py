@@ -165,6 +165,8 @@ def start_payment(order_id, client=None):
                 settings.CDEK_TEST_MODE
                 or not isinstance(snapshot, dict)
                 or snapshot.get("test_mode") is not False
+                or not isinstance(snapshot.get("packing"), dict)
+                or snapshot["packing"].get("measurements_confirmed") is not True
             ):
                 raise PaymentUnavailable(
                     "Реальная оплата недоступна для тестового или неподтверждённого расчёта доставки СДЭК."

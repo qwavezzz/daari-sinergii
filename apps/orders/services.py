@@ -1,5 +1,6 @@
 from datetime import timedelta
 import hashlib
+import json
 from decimal import Decimal
 from django.conf import settings
 from django.core import signing
@@ -31,7 +32,9 @@ def checkout_is_enabled():
     )
 
 
-def quote_data(cart):
+def quote_data(cart, *, items=None, packing=None):
+    from .packing import packing_configuration
+
     store = StoreSettings.objects.filter(pk=1).first()
     return {
         "cart": cart.pk,
@@ -47,14 +50,32 @@ def quote_data(cart):
                 item.product.package_length_cm,
                 item.product.package_width_cm,
                 item.product.package_height_cm,
+                item.product.shipping_mode,
+                item.product.unit_weight_g,
+                item.product.unit_length_mm,
+                item.product.unit_width_mm,
+                item.product.unit_height_mm,
+                item.product.package_measurement_signature,
+                item.product.package_measured_at.isoformat() if item.product.package_measured_at else None,
+                item.product.sku,
+                item.product.name,
             ]
-            for item in cart.items.select_related("product").order_by("product_id")
+            for item in (
+                items if items is not None else cart.items.select_related("product").order_by("product_id")
+            )
         ],
         "delivery": [
             [m.pk, str(m.price), m.name, m.address_required, m.vat_code, m.type, m.cdek_tariff_code]
             for m in DeliveryMethod.objects.filter(active=True).order_by("pk")
         ],
         "terms": hashlib.sha256(purchase_terms(store).encode()).hexdigest(),
+        "packing": hashlib.sha256(
+            json.dumps(
+                packing if packing is not None else packing_configuration(cart),
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest(),
     }
 
 

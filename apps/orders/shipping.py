@@ -2,16 +2,18 @@
 
 import hashlib
 from decimal import Decimal
+from time import monotonic
 
 from django.conf import settings
 from django.core import signing
 from django.utils import timezone
 
-from .cdek import CdekClient, DeliveryUnavailable, configured, safe_code
+from .cdek import CdekClient, DeliveryUnavailable, TariffUnavailable, configured, safe_code
+from .packing import MAX_PACKING_OPTIONS, PreparedPacking, package_key, packing_plan
 
-PACKAGE_FIELDS = ("package_weight_g", "package_length_cm", "package_width_cm", "package_height_cm")
-# Invalidate quotes issued before the switch from delivery_sum to full total_sum.
-QUOTE_SALT = "cdek-delivery-quote-v2-total"
+# Old quotes do not attest to the measured packing plan.
+QUOTE_SALT = "cdek-delivery-quote-v4-compared-packing"
+COMPARISON_SECONDS = 20
 
 
 def shipment_identity():
@@ -23,29 +25,13 @@ def shipment_identity():
 
 
 def packages_for(cart):
-    packages = []
-    for item in cart.items.select_related("product").order_by("product_id"):
-        values = [getattr(item.product, field) for field in PACKAGE_FIELDS]
-        if not all(isinstance(value, int) and value > 0 for value in values):
-            raise DeliveryUnavailable(
-                f"Для «{item.product.name}» ещё не настроена упаковка. Расчёт доставки пока недоступен."
-            )
-        # Every unit ships in its individually measured parcel. No guessed consolidation.
-        if len(packages) + item.quantity > 100:
-            raise DeliveryUnavailable(
-                "Для такого количества товаров свяжитесь с магазином для расчёта доставки."
-            )
-        packages.extend(
-            [dict(zip(("weight", "length", "width", "height"), values)) for _ in range(item.quantity)]
-        )
-    if not packages:
-        raise DeliveryUnavailable("Добавьте товары в корзину перед расчётом доставки.")
-    return packages
+    return packing_plan(cart)["packages"]
 
 
 def quote_delivery(cart, method, code, session_key):
     from .services import checkout_snapshot, quote_data, QuoteChanged
 
+    deadline = monotonic() + COMPARISON_SECONDS
     if not configured():
         raise DeliveryUnavailable("Расчёт СДЭК пока не подключён. Товары сохранятся в корзине.")
     if cart.session_key != session_key or method.type != "cdek_pvz" or not method.active:
@@ -58,10 +44,60 @@ def quote_delivery(cart, method, code, session_key):
     bound_method = next((row for row in bound["delivery"] if row[0] == method.pk), None)
     if not bound_method or bound_method[5:] != [method.type, method.cdek_tariff_code]:
         raise QuoteChanged("Способ доставки изменился. Обновите страницу и повторите расчёт.")
-    packages = packages_for(cart)
+    prepared = PreparedPacking(cart)
+    # Bind the exact loaded data used by the planner, not a second fresh read.
+    # Otherwise A -> B -> A edits around the carrier call could price B while
+    # both surrounding fingerprints describe A.
+    if bound != quote_data(cart, items=prepared.items, packing=prepared.configuration):
+        raise QuoteChanged("Условия упаковки изменились во время расчёта. Повторите расчёт доставки.")
+    # Fail before any network call when the composition has no measured cover.
+    prepared.options(limit=1)
+    subtotal = sum(Decimal(row[2]) * row[1] for row in bound["items"])
     client = CdekClient()
+    client.deadline = deadline
     pickup = client.pickup(safe_code(code))
-    result = client.calculate(method.cdek_tariff_code, pickup, packages)
+    # Reuse the validated input when PVZ restrictions alter admissible plans.
+    options = prepared.options(pickup=pickup, limit=MAX_PACKING_OPTIONS)
+    best = None
+    seen = set()
+    attempted = successful = rejected = 0
+    for candidate in options:
+        key = tuple(sorted(package_key(package) for package in candidate["packages"]))
+        if key in seen:
+            continue
+        if monotonic() >= deadline:
+            break
+        seen.add(key)
+        attempted += 1
+        try:
+            quoted = client.calculate(
+                method.cdek_tariff_code, pickup, candidate["packages"], declared_value=subtotal
+            )
+        except TariffUnavailable:
+            rejected += 1
+            continue
+        # Network/auth/malformed-response failures are not evidence of an
+        # infeasible packing. Propagate them rather than silently dropping it.
+        successful += 1
+        score = (
+            Decimal(quoted["price"]),
+            len(candidate["packages"]),
+            sum(p["length"] * p["width"] * p["height"] for p in candidate["packages"]),
+            sum(p["weight"] for p in candidate["packages"]),
+        )
+        if best is None or score < best[0]:
+            best = (score, candidate, quoted)
+    if best is None:
+        if attempted < len(options):
+            raise DeliveryUnavailable(
+                "Не удалось завершить сравнение упаковок. Повторите расчёт или свяжитесь с магазином."
+            )
+        raise TariffUnavailable(
+            "СДЭК не подтвердил тариф для проверенных вариантов упаковки. "
+            "Выберите другой пункт или свяжитесь с магазином для подбора доставки."
+        )
+    _, plan, result = best
+    packages = plan["packages"]
     cart.refresh_from_db()
     if bound != quote_data(cart):
         raise QuoteChanged("Корзина изменилась во время расчёта. Повторите расчёт доставки.")
@@ -72,17 +108,27 @@ def quote_delivery(cart, method, code, session_key):
         "tariff_code": method.cdek_tariff_code,
         "pickup": pickup,
         "packages": packages,
+        "packing": plan,
+        "packing_comparison": {
+            "options": len(options),
+            "attempted": attempted,
+            "successful": successful,
+            "rejected": rejected,
+            "finished": attempted == len(options),
+            "scope": "bounded_measured_options",
+        },
         "origin_city_code": settings.CDEK_FROM_CITY_CODE,
         "test_mode": settings.CDEK_TEST_MODE,
         "waybill": "manual",
         "currency": "RUB",
+        "declared_value": str(subtotal),
+        "services": [{"code": "INSURANCE", "parameter": str(subtotal)}],
         "quoted_at": now.isoformat(),
         **result,
     }
     token = signing.dumps(
         {"cart": bound, "shipping": snapshot, "identity": shipment_identity()}, salt=QUOTE_SALT, compress=True
     )
-    subtotal = sum(Decimal(row[2]) * row[1] for row in bound["items"])
     return {
         "delivery_quote": token,
         "quote_token": cart_token,

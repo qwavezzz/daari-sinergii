@@ -1,9 +1,12 @@
+import hashlib
+import json
 import uuid
 from pathlib import Path
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 from apps.core.models import PublicationStatus, TimeStampedModel
 from .storage import product_image_storage
 
@@ -35,6 +38,10 @@ class Category(TimeStampedModel):
 
 
 class Product(TimeStampedModel):
+    class ShippingMode(models.TextChoices):
+        INDIVIDUAL = "individual", "Отдельная посылка для каждой единицы"
+        COMBINED = "combined", "Общая коробка по проверенной схеме"
+
     name = models.CharField("Название", max_length=240)
     slug = models.SlugField("Адрес", unique=True, max_length=240)
     sku = models.CharField("Артикул", unique=True, max_length=80)
@@ -58,6 +65,36 @@ class Product(TimeStampedModel):
     stock = models.PositiveIntegerField("Количество на складе", default=0)
     reserved_stock = models.PositiveIntegerField("В резерве", default=0, editable=False)
     vat_code = models.PositiveSmallIntegerField("Код ставки НДС", null=True, blank=True)
+    shipping_mode = models.CharField(
+        "Как упаковывать",
+        max_length=12,
+        choices=ShippingMode,
+        default=ShippingMode.INDIVIDUAL,
+    )
+    unit_weight_g = models.PositiveIntegerField(
+        "Вес товара с индивидуальной защитой, г",
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    unit_length_mm = models.PositiveIntegerField(
+        "Длина товара с защитой, мм",
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    unit_width_mm = models.PositiveIntegerField(
+        "Ширина товара с защитой, мм",
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    unit_height_mm = models.PositiveIntegerField(
+        "Высота товара с защитой, мм",
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
     package_weight_g = models.PositiveIntegerField(
         "Вес одного упакованного товара, г", null=True, blank=True, validators=[MinValueValidator(1)]
     )
@@ -69,6 +106,10 @@ class Product(TimeStampedModel):
     )
     package_height_cm = models.PositiveIntegerField(
         "Высота упаковки, см", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    package_measurement_signature = models.CharField(max_length=64, blank=True, editable=False)
+    package_measured_at = models.DateTimeField(
+        "Замеры отдельной посылки подтверждены", null=True, blank=True, editable=False
     )
     sort_order = models.PositiveIntegerField("Порядок", default=0)
 
@@ -92,6 +133,72 @@ class Product(TimeStampedModel):
     @property
     def available_quantity(self):
         return self.stock - self.reserved_stock
+
+    def package_measurement_payload(self):
+        return {
+            field: getattr(self, field)
+            for field in ("package_weight_g", "package_length_cm", "package_width_cm", "package_height_cm")
+        }
+
+    def validate_package_measurements(self):
+        errors = {
+            field: "Измерьте готовую закрытую посылку и укажите целое положительное значение."
+            for field, value in self.package_measurement_payload().items()
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0
+        }
+        if self.shipping_mode != self.ShippingMode.INDIVIDUAL:
+            errors["shipping_mode"] = "Для общей коробки подтвердите замеры в схеме упаковки."
+        if errors:
+            raise ValidationError(errors)
+
+    def _package_signature(self):
+        return hashlib.sha256(
+            json.dumps(self.package_measurement_payload(), sort_keys=True).encode()
+        ).hexdigest()
+
+    @property
+    def package_measurements_valid(self):
+        if not self.package_measurement_signature or not self.package_measured_at:
+            return False
+        try:
+            self.validate_package_measurements()
+        except ValidationError:
+            return False
+        if self.package_measurement_signature != self._package_signature() or not self.pk:
+            return False
+        physical = self.package_measurement_payload()
+        persisted = (
+            type(self)
+            .objects.filter(pk=self.pk)
+            .values(
+                *physical,
+                "shipping_mode",
+                "package_measurement_signature",
+                "package_measured_at",
+            )
+            .first()
+        )
+        return bool(
+            persisted
+            and persisted["package_measurement_signature"] == self.package_measurement_signature
+            and persisted["package_measured_at"]
+            and persisted["shipping_mode"] == self.ShippingMode.INDIVIDUAL
+            and all(persisted[field] == value for field, value in physical.items())
+        )
+
+    def confirm_package_measurements(self):
+        """Explicit operator attestation; ordinary saves never verify measurements."""
+        self.validate_package_measurements()
+        self.package_measurement_signature = self._package_signature()
+        self.package_measured_at = timezone.now()
+        self.save(
+            update_fields=[
+                *self.package_measurement_payload(),
+                "package_measurement_signature",
+                "package_measured_at",
+                "updated_at",
+            ]
+        )
 
     @property
     def is_available(self):

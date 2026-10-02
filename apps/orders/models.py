@@ -254,3 +254,7 @@ class Notification(models.Model):
                 name="one_order_notification",
             )
         ]
+
+
+# Keep the related configuration models discoverable by Django migrations/admin.
+from .packaging_models import PackingBox, PackingRecipe, PackingRecipeItem  # noqa: E402,F401

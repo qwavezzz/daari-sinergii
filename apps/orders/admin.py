@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
 from django.urls import path, reverse
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from .models import (
@@ -180,8 +181,9 @@ class OrderAdmin(admin.ModelAdmin):
                     "address",
                     "cdek_pickup",
                     "cdek_tariff",
+                    "cdek_declared_value",
                     "cdek_waybill",
-                    "delivery_snapshot",
+                    "packing_instructions",
                     "comment",
                 ]
             },
@@ -190,7 +192,13 @@ class OrderAdmin(admin.ModelAdmin):
         (
             "Дополнительные сведения",
             {
-                "fields": ["public_id", "updated_at", "terms_accepted_at", "terms_snapshot"],
+                "fields": [
+                    "public_id",
+                    "updated_at",
+                    "terms_accepted_at",
+                    "terms_snapshot",
+                    "delivery_snapshot",
+                ],
                 "classes": ["collapse"],
             },
         ),
@@ -203,7 +211,9 @@ class OrderAdmin(admin.ModelAdmin):
         "payment_mode",
         "cdek_pickup",
         "cdek_tariff",
+        "cdek_declared_value",
         "cdek_waybill",
+        "packing_instructions",
     ]
 
     def get_queryset(self, request):
@@ -223,11 +233,23 @@ class OrderAdmin(admin.ModelAdmin):
     def cdek_tariff(self, obj):
         return obj.delivery_snapshot.get("tariff_code", "—")
 
+    @admin.display(description="Объявленная стоимость для накладной СДЭК")
+    def cdek_declared_value(self, obj):
+        value = obj.delivery_snapshot.get("declared_value")
+        return f"{value} ₽ — стоимость товаров; сбор включён в расчёт доставки" if value else "—"
+
     @admin.display(description="Накладная СДЭК")
     def cdek_waybill(self, obj):
         if getattr(obj, "trial_payment", None):
             return "Пробный заказ — отправка не требуется"
         return "Оформить вручную после подтверждения оплаты" if obj.delivery_type == "cdek_pvz" else "—"
+
+    @admin.display(description="Как упаковать заказ")
+    def packing_instructions(self, obj):
+        plan = obj.delivery_snapshot.get("packing", {})
+        if not plan.get("parcels"):
+            return "Схема упаковки не сохранена для этого заказа."
+        return render_to_string("admin/orders/order/packing.html", {"packing": plan})
 
     @admin.display(description="Заказ", ordering="pk")
     def order_number(self, obj):
@@ -400,3 +422,6 @@ class NotificationSettingsAdmin(admin.ModelAdmin):
             self.message_user(
                 request, "Неотправленные письма менеджеру будут направлены на актуальный адрес."
             )
+
+
+from .packaging_admin import PackingBoxAdmin, PackingRecipeAdmin  # noqa: E402,F401
