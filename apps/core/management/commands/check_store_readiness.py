@@ -59,8 +59,10 @@ def readiness_issues():
             issues.append(f"Не задана переменная {name} (значения в отчёт не выводятся).")
     if not settings.CDEK_FROM_CITY_CODE:
         issues.append("Не задан CDEK_FROM_CITY_CODE: код Тольятти из справочника СДЭК.")
-    if not settings.CDEK_YANDEX_API_KEY:
-        issues.append("Не задан CDEK_YANDEX_API_KEY для карты ПВЗ.")
+    from apps.orders.map_config import map_config
+
+    if not map_config():
+        issues.append("Некорректный CDEK_MAP_TILE_URL: карта недоступна, выбор ПВЗ остаётся в списке.")
     if settings.ALFABANK_TEST_MODE or settings.CDEK_TEST_MODE:
         issues.append("Включён тестовый режим интеграций; настоящие продажи ещё не проверены.")
     if not settings.ALFABANK_LIVE_APPROVED:

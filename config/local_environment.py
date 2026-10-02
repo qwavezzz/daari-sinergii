@@ -27,7 +27,9 @@ LOCAL_KEYS = {
     "CDEK_TEST_MODE",
     "CDEK_PUBLIC_SANDBOX",
     "CDEK_FROM_CITY_CODE",
-    "CDEK_YANDEX_API_KEY",
+    "CDEK_YANDEX_API_KEY",  # Accept existing local files; the retired widget key is unused.
+    "CDEK_MAP_TILE_URL",
+    "CDEK_MAP_ATTRIBUTION",
     "EMAIL_BACKEND",
     "EMAIL_HOST",
     "EMAIL_PORT",

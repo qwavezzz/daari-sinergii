@@ -10,24 +10,23 @@
 <fieldset><legend>Контакты получателя</legend>{% include 'shop/partials/form_field.html' with field=form.name %}{% include 'shop/partials/form_field.html' with field=form.phone %}{% include 'shop/partials/form_field.html' with field=form.email %}</fieldset>
 <fieldset><legend>Способ получения</legend>{% include 'shop/partials/form_field.html' with field=form.delivery_method %}<button type="submit" name="requote" value="1" formnovalidate class="shop-button secondary delivery-update">Обновить способ получения</button>
 {% if delivery_requires_address %}{% include 'shop/partials/form_field.html' with field=form.address %}{% endif %}
-{% if cdek_selected %}<div class="cdek-picker" data-cdek-picker data-ready="{% if cdek_ready %}1{% else %}0{% endif %}" data-map-key="{{ cdek_map_key }}" data-service-url="{% url 'orders:cdek_widget' %}" data-cities-url="{% url 'orders:cdek_cities' %}" data-offices-url="{% url 'orders:cdek_offices' %}" data-quoted-at="{{ shipping.quoted_at|default:'' }}" data-quote-ttl="{{ cdek_quote_ttl }}">
+{% if cdek_selected %}<div class="cdek-picker" data-cdek-picker data-ready="{% if cdek_ready %}1{% else %}0{% endif %}" data-tile-url="{{ cdek_map.tile_url }}" data-attribution="{{ cdek_map.attribution }}" data-points-url="{% url 'orders:cdek_map_points' %}" data-default-city="{{ cdek_default_city }}" data-quoted-at="{{ shipping.quoted_at|default:'' }}" data-quote-ttl="{{ cdek_quote_ttl }}">
+{{ form.pvz_code }}
 {% if cdek_unavailable %}<p class="shop-warning">{{ cdek_unavailable }}</p>{% else %}
-{% if cdek_test_mode %}<p class="shop-warning">Стоимость и срок рассчитает тестовый API СДЭК. Отправление не создаётся.</p>{% endif %}
-{% if cdek_map_key %}<button type="button" class="shop-button cdek-map-button" data-open-cdek aria-controls="cdek-map" aria-expanded="false" hidden>Выбрать пункт на карте</button><p class="cdek-map-message shop-muted" role="status" aria-live="polite" data-cdek-map-message hidden></p><div id="cdek-map" class="cdek-map" aria-label="Выбор пункта выдачи СДЭК на карте" hidden></div>{% else %}<p class="shop-muted">Карта сейчас недоступна. Выберите удобный пункт из списка.</p>{% endif %}
-<details class="cdek-list-fallback" data-cdek-list {% if not cdek_map_key %}open{% endif %}><summary>Выбрать пункт из списка</summary>
+{% if cdek_test_mode %}<p class="shop-warning">Пункты, стоимость и срок — из тестовой среды СДЭК. Отправление не создаётся.</p>{% endif %}
 <div data-cdek-search hidden>
-<div class="form-field"><label for="cdek-city-query">Город получения</label><div class="cdek-search-row"><input id="cdek-city-query" type="search" maxlength="80" autocomplete="address-level2" aria-describedby="cdek-city-help" data-cdek-city-query><button type="button" class="shop-button secondary" data-cdek-city-search>Найти город</button></div><p id="cdek-city-help" class="field-help">Введите название, затем выберите город и удобный пункт выдачи.</p></div>
+<div class="form-field"><label for="cdek-city-query">Город или адрес</label><div class="cdek-search-row"><input id="cdek-city-query" type="search" maxlength="100" placeholder="Например, Тольятти, Ленина" autocomplete="address-level2" data-cdek-city-query><button type="button" class="shop-button secondary" data-cdek-city-search>Найти</button></div></div>
+<div class="cdek-location"><button type="button" class="shop-button secondary" data-cdek-locate><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></svg>Рядом со мной</button><p class="field-help">Местоположение — только с вашего разрешения.</p></div>
 <p class="cdek-search-status shop-muted" role="status" aria-live="polite" data-cdek-search-status></p>
-<div class="form-field" data-cdek-cities-wrap hidden><label for="cdek-city-result">Выберите город</label><select id="cdek-city-result" data-cdek-cities></select></div>
-<fieldset class="cdek-office-results" data-cdek-offices-wrap hidden><legend>Пункты выдачи</legend><div data-cdek-offices></div><button type="button" class="shop-button secondary" data-cdek-more hidden>Показать ещё пункты</button></fieldset>
-<button type="button" class="shop-button secondary" data-cdek-change-office hidden>Изменить пункт в списке</button>
-</div>
-<noscript><p class="shop-muted">Для карты и поиска включите JavaScript или введите код пункта ниже.</p></noscript>
+<button type="button" class="shop-button secondary" data-cdek-points-retry hidden>Повторить загрузку пунктов</button>
+{% if cdek_map %}<div id="cdek-map" class="cdek-map" role="region" aria-label="Пункты выдачи СДЭК на OpenStreetMap"></div><p class="cdek-map-message shop-muted" role="status" aria-live="polite" data-cdek-map-message hidden></p><button type="button" class="shop-button secondary cdek-map-retry" data-cdek-map-retry hidden>Повторить загрузку карты</button>{% else %}<p class="shop-muted">Карта сейчас недоступна. Выберите удобный пункт из списка.</p>{% endif %}
+<p class="field-help">Число в круге — количество пунктов. Приблизьте карту или нажмите на круг, чтобы выбрать адрес.</p>
+<details class="cdek-list-fallback" data-cdek-list><summary>Пункты в этой области<span aria-hidden="true"></span></summary>
+<fieldset class="cdek-office-results"><legend class="sr-only">Пункты выдачи</legend><div data-cdek-offices></div><button type="button" class="shop-button secondary" data-cdek-more hidden>Показать ещё пункты</button></fieldset>
 </details>
-<details class="cdek-manual" {% if form.pvz_code.errors %}open{% endif %}><summary>У меня есть код пункта СДЭК</summary>
-{% include 'shop/partials/form_field.html' with field=form.pvz_code %}
-<p class="shop-muted">Код также указан на <a class="shop-link" href="https://www.cdek.ru/ru/offices/" target="_blank" rel="noopener noreferrer" hx-boost="false">сайте СДЭК</a>. Введите его, чтобы рассчитать доставку.</p>
-<button type="submit" name="shipping_requote" value="1" formnovalidate class="shop-button secondary" data-cdek-calculate>Рассчитать доставку</button></details>
+</div>
+<noscript><p class="shop-muted">Для выбора пункта выдачи включите JavaScript в браузере.</p></noscript>
+<button type="button" class="shop-button secondary" data-cdek-calculate hidden>Повторить расчёт доставки</button>
 {% endif %}
 <p class="cdek-status" role="status" aria-live="polite" data-cdek-status>{% if shipping %}ПВЗ {{ shipping.pickup.code }}: {{ shipping.pickup.city }}, {{ shipping.pickup.address }}. Ориентировочный срок: {{ shipping.period_min }}–{{ shipping.period_max }} дн.{% elif cdek_ready %}Выберите пункт выдачи, чтобы узнать стоимость и срок.{% endif %}</p>
 </div>{% endif %}</fieldset>

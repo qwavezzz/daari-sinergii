@@ -30,7 +30,6 @@ settings.CDEK_TEST_MODE = True
 settings.CDEK_CLIENT_ID = "browser-fixture"
 settings.CDEK_CLIENT_SECRET = "browser-fixture-not-a-credential"
 settings.CDEK_FROM_CITY_CODE = 99999
-settings.CDEK_YANDEX_API_KEY = "browser-fixture"
 settings.TEMPLATES[0]["APP_DIRS"] = False
 settings.TEMPLATES[0]["OPTIONS"]["loaders"] = [
     "django.template.loaders.filesystem.Loader",
@@ -172,6 +171,9 @@ class BrowserCdekClient:
 
     token_key = "browser-fixture-cdek"
 
+    def city_at(self, latitude, longitude):
+        return {"city": {"code": 44, "city": "Тестовый город", "region": "Тестовая область"}}
+
     def cities(self, query):
         return {
             "cities": [{"code": 44, "city": "Тестовый город", "region": "Тестовая область"}],
@@ -186,10 +188,26 @@ class BrowserCdekClient:
                     "name": "Тестовый пункт выдачи",
                     "address": "Тестовый адрес, 10",
                     "work_time": "Пн–Пт 9–18",
-                }
+                    "latitude": 53.5078,
+                    "longitude": 49.4204,
+                },
+                {
+                    "code": "TEST2",
+                    "name": "Второй тестовый пункт",
+                    "address": "Другой тестовый адрес, 20",
+                    "work_time": "Ежедневно 10–20",
+                    "latitude": 53.5138,
+                    "longitude": 49.4354,
+                },
             ],
             "next_page": None,
         }
+
+    def map_points(self, page):
+        data = self.office_choices(44, 0)
+        for point in data["offices"]:
+            point.update(city_code=99999, city="Тестовый город", region="Тестовая область")
+        return data
 
     def pickup(self, code):
         if code not in {"TEST1", "TEST2"}:

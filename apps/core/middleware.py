@@ -48,30 +48,33 @@ class ResponsePolicyMiddleware:
         response["X-Request-ID"] = getattr(request, "request_id", "")
         image_origin = settings.MAIN_ORIGIN if getattr(request, "is_shop", False) else ""
         map_sources = ""
-        widget_source = ""
-        if settings.CDEK_ENABLED and getattr(request, "is_shop", False) and request.path == "/checkout/":
+        map_checkout = (
+            settings.CDEK_ENABLED and getattr(request, "is_shop", False) and request.path == "/checkout/"
+        )
+        if map_checkout:
+            from apps.orders.map_config import map_config
+
             # Checkout enters through a full navigation: HTMX cannot relax a document's CSP.
-            # CDEK API and credentials remain on our server; only map assets are external.
-            map_sources = (
-                " https://api-maps.yandex.ru https://*.maps.yandex.ru"
-                " https://*.maps.yandex.net https://yastatic.net"
-            )
-            widget_source = (
-                " https://cdn.jsdelivr.net/npm/@cdek-it/widget@3.11.1"
-                " https://cdn.jsdelivr.net/npm/@cdek-it/widget@3.11.1/"
-            )
+            # Leaflet is self-hosted; the only external map requests are visible tiles.
+            config = map_config()
+            if config:
+                map_sources = " " + config["origin"]
+            response["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.setdefault(
             "Content-Security-Policy",
             (
-                f"default-src 'self'; script-src 'self'{widget_source}{map_sources}; "
-                f"style-src 'self' 'unsafe-inline'{map_sources}; "
+                "default-src 'self'; script-src 'self'; "
+                "style-src 'self' 'unsafe-inline'; "
                 f"img-src 'self' data: {image_origin}{map_sources}; "
-                f"media-src 'self'; font-src 'self'{map_sources}; "
-                f"connect-src 'self'{map_sources}; frame-src 'none'; object-src 'none'; "
+                "media-src 'self'; font-src 'self'; "
+                "connect-src 'self'; frame-src 'none'; object-src 'none'; "
                 "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
             ),
         )
-        response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=" + ("(self)" if map_checkout else "()"),
+        )
         if should_noindex(request) or response.status_code >= 400:
             response["X-Robots-Tag"] = "noindex, nofollow"
         if request.path.startswith(PRIVATE_PATHS):

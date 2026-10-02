@@ -21,6 +21,7 @@ from .services import QuoteChanged, checkout_is_enabled, checkout_snapshot, crea
 
 def checkout_context(cart, context, form, method):
     from .cdek import configured, DeliveryUnavailable
+    from .map_config import map_config
     from .shipping import packages_for, verified_delivery
 
     delivery_price = context["delivery_quotes"].get(method.pk) if method else None
@@ -30,9 +31,10 @@ def checkout_context(cart, context, form, method):
     context["cdek_selected"] = bool(method and method.type == "cdek_pvz")
     form.fields["address"].required = context["delivery_requires_address"]
     context["cdek_ready"] = configured()
-    context["cdek_map_key"] = getattr(settings, "CDEK_YANDEX_API_KEY", "") if configured() else ""
+    context["cdek_map"] = map_config() if configured() else {}
     context["cdek_test_mode"] = getattr(settings, "CDEK_TEST_MODE", True)
     context["cdek_quote_ttl"] = getattr(settings, "CDEK_QUOTE_TTL_SECONDS", 900)
+    context["cdek_default_city"] = settings.CDEK_FROM_CITY_CODE
     if context["cdek_selected"]:
         try:
             if not configured():
@@ -211,18 +213,39 @@ def cdek_offices(request):
     return cdek_directory(request, "office_choices", int(city), int(page))
 
 
+@require_POST
+def cdek_locate(request):
+    from .cdek import coordinates, DeliveryUnavailable
+
+    try:
+        latitude, longitude = coordinates(request.POST.get("latitude"), request.POST.get("longitude"))
+    except DeliveryUnavailable as exc:
+        return JsonResponse({"message": " ".join(exc.messages)}, status=400)
+    # City-level precision is sufficient; coordinates stay out of URLs/access logs
+    # and never become customer or order data.
+    return cdek_directory(request, "city_at", round(latitude, 2), round(longitude, 2))
+
+
+@require_GET
+def cdek_map_points(request):
+    page = request.GET.get("page", "0")
+    if not re.fullmatch(r"[0-9]{1,3}", page) or int(page) > 199:
+        return JsonResponse({"message": "Проверьте страницу справочника."}, status=400)
+    return cdek_directory(request, "map_points", int(page))
+
+
 def cdek_directory(request, operation, *args):
     from .cdek import CdekClient
 
     cart = get_cart(request)
     if not cart or not cart.items.exists() or not checkout_is_enabled():
         return JsonResponse({"message": "Откройте оформление заказа из корзины."}, status=403)
-    if not allow_request(request, "cdek-directory", 40, 60):
+    if not allow_request(request, "cdek-directory", 240 if operation == "map_points" else 40, 60):
         return JsonResponse({"message": "Повторите поиск через минуту."}, status=429)
     try:
         client = CdekClient()  # Check configuration before returning cached provider data.
         key = (
-            "cdek-directory:"
+            "cdek-directory:v3:"
             + salted_hmac("cdek-directory", str([client.token_key, operation, args])).hexdigest()
         )
         result = cache.get(key)

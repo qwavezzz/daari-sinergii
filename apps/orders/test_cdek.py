@@ -215,17 +215,20 @@ class CdekCheckoutTests(TestCase):
         self.assertContains(response, "Тестовая, 1")
         self.assertFalse(Order.objects.exists())
 
-    def test_map_is_primary_when_configured_and_list_is_open_without_key(self):
+    def test_osm_map_needs_no_yandex_key_and_list_remains_available(self):
         self.browser()
-        with override_settings(CDEK_YANDEX_API_KEY="public-browser-test-key"):
-            response = self.client.get("/checkout/", HTTP_HOST="shop.localhost")
+        response = self.client.get("/checkout/", HTTP_HOST="shop.localhost")
         html = response.content.decode()
-        self.assertLess(html.index("data-open-cdek"), html.index("data-cdek-list"))
-        self.assertNotContains(response, "data-cdek-list open")
-        with override_settings(CDEK_YANDEX_API_KEY=""):
+        self.assertLess(html.index('id="cdek-map"'), html.index("data-cdek-list"))
+        self.assertNotContains(response, "data-open-cdek")
+        self.assertNotContains(response, "У меня есть код пункта")
+        self.assertContains(response, 'type="hidden" name="pvz_code"')
+        self.assertContains(response, "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
+        self.assertNotContains(response, "data-map-key")
+        with override_settings(CDEK_MAP_TILE_URL="http://invalid.test/{z}/{x}/{y}"):
             response = self.client.get("/checkout/", HTTP_HOST="shop.localhost")
         self.assertNotContains(response, "data-open-cdek")
-        self.assertContains(response, "data-cdek-list open")
+        self.assertContains(response, "data-cdek-list")
         self.assertContains(response, "Карта сейчас недоступна")
 
     def test_expired_quote_checkout_retains_input_and_clears_payable_total(self):

@@ -26,7 +26,128 @@
 }
 .cdek-map {
   width: 100%;
-  height: min(600px, 75dvh);
+  height: clamp(400px, 62dvh, 580px);
+  isolation: isolate;
+  border: 1px solid var(--shop-color-shop-line);
+  border-radius: 4px;
+  background: var(--shop-color-shop-surface);
+  font-family: inherit;
+}
+.cdek-location {
+  margin-block: 8px 16px;
+}
+.cdek-location .shop-button {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+.cdek-location svg {
+  flex: none;
+}
+.cdek-map-retry {
+  margin-top: 12px;
+}
+.cdek-map .leaflet-control-attribution {
+  max-width: min(280px, 75vw);
+  color: #06182e;
+  background: #ffffff;
+  padding: 4px 8px;
+}
+.cdek-map .leaflet-control-attribution a {
+  color: #0b2b5a;
+  text-decoration: underline;
+}
+.cdek-map.leaflet-container .leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  color: #06182e;
+}
+.cdek-map .leaflet-popup-content {
+  margin: 20px;
+  line-height: 1.5;
+}
+.cdek-map .leaflet-popup-content p {
+  margin-block: 8px 16px;
+}
+.cdek-map .leaflet-popup-content .shop-button {
+  min-height: 44px;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+.cdek-map.leaflet-container .leaflet-popup-close-button {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+}
+.cdek-point-popup strong {
+  display: block;
+  padding-right: 20px;
+}
+.cdek-point-popup {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.cdek-point-popup > div + div {
+  margin-top: 20px;
+}
+.cdek-office-results > legend {
+  font-size: 16px;
+}
+[data-cdek-offices] {
+  max-height: 360px;
+  overflow-y: auto;
+}
+.cdek-marker {
+  display: grid;
+  place-items: start center;
+  background: transparent;
+}
+.cdek-pin {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+  font:
+    700 20px/1 'Manrope Variable',
+    sans-serif;
+  background: #06182e;
+  box-shadow: 0 2px 5px rgb(6 24 46 / 25%);
+}
+.cdek-pin::after {
+  content: none;
+}
+.cdek-pin-cluster {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  transform: none;
+  color: #ffffff;
+  font:
+    700 20px/1 'Manrope Variable',
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.cdek-pin-cluster::after {
+  content: none;
+}
+.cdek-pin.is-selected {
+  background: #196647;
+}
+.cdek-map :focus-visible {
+  outline: 3px solid #176ca4;
+  outline-offset: 3px;
+}
+@media (max-width: 480px) {
+  .cdek-map {
+    height: clamp(400px, 60dvh, 520px);
+  }
+  .cdek-location .shop-button {
+    width: 100%;
+  }
 }
 .cdek-status {
   margin-block: 16px;

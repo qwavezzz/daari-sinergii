@@ -51,7 +51,8 @@ class CheckoutMapPolicyTests(TestCase):
             request = RequestFactory().get(path)
             request.is_shop = shop
             policy = middleware(request)["Content-Security-Policy"]
-            self.assertEqual("cdn.jsdelivr.net" in policy, allowed)
+            self.assertEqual("tile.openstreetmap.org" in policy, allowed)
+            self.assertNotIn("cdn.jsdelivr.net", policy)
             self.assertNotIn("unsafe-eval", policy)
             self.assertIn("form-action 'self'", policy)
 

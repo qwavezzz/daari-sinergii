@@ -37,6 +37,7 @@ class CheckoutForm(forms.Form):
         max_length=32,
         required=False,
         help_text="Выберите пункт на карте или введите его код с сайта СДЭК.",
+        widget=forms.HiddenInput,
         error_messages={"invalid": "Проверьте код пункта СДЭК."},
     )
 

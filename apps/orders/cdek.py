@@ -2,11 +2,11 @@
 
 import hashlib
 import json
+import math
 import re
+from http.client import HTTPSConnection, HTTPException
 from decimal import Decimal, InvalidOperation
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
 from django.core.cache import cache
@@ -32,9 +32,19 @@ def safe_code(value):
     return value.upper()
 
 
-class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
+def coordinates(latitude, longitude):
+    """Return finite WGS84 coordinates; missing values must never become (0, 0)."""
+    try:
+        if isinstance(latitude, bool) or isinstance(longitude, bool):
+            raise ValueError
+        latitude, longitude = float(latitude), float(longitude)
+        if not (math.isfinite(latitude) and math.isfinite(longitude)):
+            raise ValueError
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise ValueError
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise DeliveryUnavailable("Не удалось определить местоположение. Введите город вручную.") from exc
+    return latitude, longitude
 
 
 class CdekClient:
@@ -49,7 +59,11 @@ class CdekClient:
         url = self.base + "/" + path
         if params:
             url += "?" + urlencode(params)
-        headers = {"Accept": "application/json", "X-App-Name": "dari-sinergii"}
+        headers = {
+            "Accept": "application/json",
+            "X-App-Name": "dari-sinergii",
+            "User-Agent": "dari-sinergii/1.0",
+        }
         body = None
         if token:
             headers["Authorization"] = "Bearer " + token
@@ -59,11 +73,21 @@ class CdekClient:
         elif payload is not None:
             body = json.dumps(payload).encode()
             headers["Content-Type"] = "application/json"
+        endpoint = urlsplit(url)
+        connection = HTTPSConnection(endpoint.hostname, timeout=getattr(settings, "CDEK_TIMEOUT_SECONDS", 10))
         try:
-            with build_opener(NoRedirect).open(
-                Request(url, data=body, headers=headers),
-                timeout=getattr(settings, "CDEK_TIMEOUT_SECONDS", 10),
-            ) as response:
+            # urllib forces Connection: close, which stalls this provider's gateway.
+            # HTTP/1.1 defaults to keep-alive; close locally after reading the bounded response.
+            # HTTPSConnection does not follow redirects or forward credentials to other hosts.
+            connection.request(
+                "POST" if body is not None else "GET",
+                endpoint.path + ("?" + endpoint.query if endpoint.query else ""),
+                body=body,
+                headers=headers,
+            )
+            with connection.getresponse() as response:
+                if not 200 <= response.status < 300:
+                    raise ValueError("provider status")
                 raw = response.read(8_000_001)
                 if len(raw) > 8_000_000:
                     raise ValueError("response too large")
@@ -75,10 +99,12 @@ class CdekClient:
             if not isinstance(result, (dict, list)) or isinstance(result, dict) and result.get("errors"):
                 raise ValueError("invalid response")
             return result
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
+        except (HTTPException, TimeoutError, OSError, ValueError) as exc:
             raise DeliveryUnavailable(
                 "СДЭК не ответил на запрос. Повторите расчёт через минуту — товары сохранены."
             ) from exc
+        finally:
+            connection.close()
 
     def _token(self):
         token = cache.get(self.token_key)
@@ -142,17 +168,24 @@ class CdekClient:
         return {"cities": cities, "has_more": len(result) > 20}
 
     def office_choices(self, city_code, page):
+        return self._office_page({"city_code": city_code}, page, 50)
+
+    def map_points(self, page):
+        # Load the carrier directory in bounded pages independently of city/geocoding APIs.
+        return self._office_page({}, page, 500)
+
+    def _office_page(self, filters, page, size):
         headers = {}
-        result = self.offices({"city_code": city_code, "page": page, "size": 50}, response_headers=headers)
+        result = self.offices({**filters, "page": page, "size": size}, response_headers=headers)
         offices = []
-        for row in result[:50]:
+        for row in result[:size]:
             location = row.get("location")
             if (
                 row.get("type") != "PVZ"
                 or row.get("is_handout") is not True
                 or not isinstance(location, dict)
                 or location.get("country_code") != "RU"
-                or location.get("city_code") != city_code
+                or (filters.get("city_code") and location.get("city_code") != filters["city_code"])
                 or not isinstance(location.get("address"), str)
                 or not location["address"].strip()
             ):
@@ -164,6 +197,11 @@ class CdekClient:
             offices.append(
                 {
                     "code": code,
+                    "city_code": location.get("city_code")
+                    if type(location.get("city_code")) is int
+                    else None,
+                    "city": str(location.get("city") or "")[:200],
+                    "region": str(location.get("region") or "")[:200],
                     "address": location["address"][:500],
                     "name": row.get("name", "")[:200] if isinstance(row.get("name"), str) else "",
                     "work_time": row.get("work_time", "")[:300]
@@ -171,10 +209,51 @@ class CdekClient:
                     else "",
                 }
             )
+            try:
+                lat, lon = coordinates(location.get("latitude"), location.get("longitude"))
+                offices[-1].update(latitude=lat, longitude=lon)
+            except DeliveryUnavailable:
+                # An office without coordinates remains selectable in the accessible list.
+                offices[-1].update(latitude=None, longitude=None)
         count = headers.get("X-Total-Elements", "")
         # Some environments omit the pagination header. A full page permits one more request.
-        has_more = (page + 1) * 50 < int(count) if count else len(result) >= 50
+        has_more = (page + 1) * size < int(count) if count else len(result) >= size
         return {"offices": offices, "next_page": page + 1 if has_more and page < 199 else None}
+
+    def city_at(self, latitude, longitude):
+        latitude, longitude = coordinates(latitude, longitude)
+        result = self._request(
+            "location/coordinates",
+            params={"latitude": latitude, "longitude": longitude},
+            token=self._token(),
+        )
+        if (
+            not isinstance(result, dict)
+            or type(result.get("code")) is not int
+            or not 0 < result["code"] < 10_000_000
+            or not isinstance(result.get("city"), str)
+            or not result["city"].strip()
+        ):
+            raise DeliveryUnavailable("СДЭК не определил город. Введите его название вручную.")
+        # Coordinates lookup may return a foreign city without a country. Verify
+        # the code against the Russian directory before offering its pickup points.
+        rows = self._request(
+            "location/cities",
+            params={"code": result["code"], "country_codes": "RU", "size": 1, "lang": "rus"},
+            token=self._token(),
+        )
+        if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
+            raise DeliveryUnavailable("СДЭК не определил город в России. Введите город вручную.")
+        city = rows[0]
+        if city.get("code") != result["code"] or city.get("country_code") != "RU":
+            raise DeliveryUnavailable("Выберите город в России — доставка пока доступна только по России.")
+        return {
+            "city": {
+                "code": result["code"],
+                "city": result["city"][:200],
+                "region": str(city.get("region") or "")[:200],
+            }
+        }
 
     def pickup(self, code):
         code = safe_code(code)
