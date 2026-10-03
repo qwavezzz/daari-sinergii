@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test'
+
+test('phone editing preserves digits at the limit and rejects an oversized international paste', async ({
+  page,
+}) => {
+  await page.goto('/products/test-product-1/')
+  await page.getByRole('button', { name: 'Добавить в корзину', exact: true }).click()
+  await expect(page.locator('#cart-toggle [data-cart-count]')).toHaveText('1')
+  await page.goto('/checkout/')
+  const country = page.getByLabel('Код страны', { exact: true })
+  const phone = page.getByLabel('Телефон', { exact: true })
+  await country.selectOption('KZ')
+  await phone.fill('7012345678')
+  await phone.press('End')
+  await phone.press('9')
+  await expect(phone).toHaveValue('(701) 234-56-78')
+  await phone.press('Home')
+  await phone.press('9')
+  await expect(phone).toHaveValue('(701) 234-56-78')
+  await phone.evaluate((node) => {
+    node.focus()
+    node.select()
+    const data = new DataTransfer()
+    data.setData('text/plain', '+375 29 1234567890')
+    node.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+  })
+  await expect(country).toHaveValue('KZ')
+  await expect(phone).toHaveValue('(701) 234-56-78')
+  await expect(page.locator('#phone-help')).toContainText('слишком много цифр')
+  expect(await phone.evaluate((node) => node.checkValidity())).toBe(false)
+  await phone.fill('7012345678')
+  expect(await phone.evaluate((node) => node.checkValidity())).toBe(true)
+  await phone.evaluate((node) => node.setSelectionRange(6, 6))
+  await phone.press('Backspace')
+  expect((await phone.inputValue()).replace(/\D/g, '')).toBe('702345678')
+})

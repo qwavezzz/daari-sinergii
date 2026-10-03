@@ -206,13 +206,13 @@ class CdekCheckoutTests(TestCase):
         values.update(
             {
                 "shipping_requote": "1",
-                "name": "Сохранённое имя",
+                "first_name": "Сохранённое имя",
                 "checkout_key": initial.context["form"]["checkout_key"].value(),
             }
         )
         response = self.client.post("/checkout/", values, HTTP_HOST="shop.localhost")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["form"]["name"].value(), "Сохранённое имя")
+        self.assertEqual(response.context["form"]["first_name"].value(), "Сохранённое имя")
         self.assertEqual(response.context["order_total"], Decimal("521.40"))
         self.assertContains(response, "Тестовая, 1")
         self.assertFalse(Order.objects.exists())
@@ -242,7 +242,7 @@ class CdekCheckoutTests(TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertContains(response, "Расчёт доставки устарел", status_code=422)
         self.assertIsNone(response.context["order_total"])
-        self.assertEqual(response.context["form"]["name"].value(), data["name"])
+        self.assertEqual(response.context["form"]["first_name"].value(), data["first_name"])
         self.assertFalse(Order.objects.exists())
 
     def test_widget_proxy_only_reads_offices_with_fixed_filter_and_no_secret(self):

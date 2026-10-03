@@ -149,10 +149,10 @@ class PreviewHTML(HTMLParser):
             delivery_cents = str(int(delivery.price * 100)) if delivery and delivery.type == "static" else ""
             output.append(("data-demo-delivery-cents", delivery_cents))
         if tag == "form" and self.demo_form:
-            match = re.search(r"/cart/add/(\d+)/", original["action"])
+            match = re.search(r"/cart/(?:add|set)/(\d+)/", original["action"])
             if not match:
                 raise ValueError("Unknown add-to-cart form")
-            output.extend([("data-demo-add", match[1]), ("action", "#")])
+            output.extend([("data-demo-quantity", match[1]), ("action", "#")])
         if tag == "button" and self.demo_form:
             output.append(("disabled", None))
         attributes = "".join(

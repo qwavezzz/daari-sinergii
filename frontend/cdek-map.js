@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css'
 export function createPickupMap(root, { tileUrl, attribution, onChoose, onTileState, onViewChange }) {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const map = L.map(root, {
-    scrollWheelZoom: false,
+    scrollWheelZoom: true,
     attributionControl: false,
     zoomControl: false,
     minZoom: 2,

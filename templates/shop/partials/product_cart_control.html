@@ -1,0 +1,7 @@
+{% load shop_tags %}{% cart_quantity product as selected_quantity %}
+<div class="product-cart-action">
+  <form method="post" action="{% url 'cart:set' product.pk %}" hx-post="{% url 'cart:set' product.pk %}" hx-target="#cart-panel" hx-swap="innerHTML" hx-push-url="false" hx-sync="#cart-dialog:queue all" data-cart-add data-quantity-form data-product-id="{{ product.pk }}" data-quantity="{{ selected_quantity }}">
+    {% csrf_token %}{% include 'shop/partials/quantity_control.html' with quantity=selected_quantity maximum=product.available_quantity %}
+  </form>
+  <p class="shop-error quantity-error" data-form-error role="alert" hidden></p>
+</div>

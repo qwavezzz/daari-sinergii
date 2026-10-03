@@ -22,6 +22,35 @@ class CartTests(TestCase):
             mutate_cart(self.cart, "add", 9, product_id=self.product.pk)
         self.assertEqual(self.cart.items.get().quantity, 1)
 
+    def test_set_quantity_is_idempotent_and_zero_removes_unavailable_product(self):
+        for _ in range(2):
+            mutate_cart(self.cart, "set", 3, product_id=self.product.pk)
+        self.assertEqual(self.cart.items.get().quantity, 3)
+        self.product.status = "draft"
+        self.product.save()
+        with self.assertRaises(ValidationError):
+            mutate_cart(self.cart, "set", 2, product_id=self.product.pk)
+        mutate_cart(self.cart, "set", 0, product_id=self.product.pk)
+        self.assertFalse(self.cart.items.exists())
+
+    def test_set_endpoint_is_session_scoped_and_checks_stock_and_quantity(self):
+        client = Client(HTTP_HOST="shop.localhost", HTTP_HX_REQUEST="true")
+        url = f"/cart/set/{self.product.pk}/"
+        response = client.post(url, {"quantity": 2})
+        self.assertEqual(response.status_code, 200)
+        import json
+
+        self.assertEqual(
+            json.loads(response["HX-Trigger"])["cart-updated"]["quantities"], {str(self.product.pk): 2}
+        )
+        for quantity in (-1, "1.5", 1000, self.product.available_quantity + 1):
+            self.assertEqual(client.post(url, {"quantity": quantity}).status_code, 422)
+        self.assertEqual(self.cart.items.get().quantity, 1)
+        self.assertEqual(client.post(url, {"quantity": 0}).status_code, 200)
+        self.assertFalse(CartItem.objects.filter(cart__session_key=client.session.session_key).exists())
+        protected = Client(enforce_csrf_checks=True, HTTP_HOST="shop.localhost")
+        self.assertEqual(protected.post(url, {"quantity": 1}).status_code, 403)
+
     def test_mutations_are_post_csrf_protected(self):
         client = Client(enforce_csrf_checks=True, HTTP_HOST="shop.localhost")
         url = f"/cart/add/{self.product.pk}/"

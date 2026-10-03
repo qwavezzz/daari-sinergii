@@ -7,7 +7,14 @@
 <div class="checkout-layout">
 <form action="{% url 'orders:checkout' %}" method="post" hx-post="{% url 'orders:checkout' %}" hx-target="#main-content" hx-swap="innerHTML show:top" hx-sync="this:drop" class="checkout-form" x-data="checkoutForm" data-quote-url="{% url 'orders:cdek_quote' %}" data-payment-label="{% if payment_stub_enabled %}Перейти к пробной оплате{% else %}Перейти к оплате{% endif %}">
 {% csrf_token %}{{ form.checkout_key }}{{ form.quote_token }}{{ form.confirmed_delivery }}{{ form.delivery_quote }}
-<fieldset><legend>Контакты получателя</legend>{% include 'shop/partials/form_field.html' with field=form.name %}{% include 'shop/partials/form_field.html' with field=form.phone %}{% include 'shop/partials/form_field.html' with field=form.email %}</fieldset>
+<fieldset><legend>Контакты получателя</legend>
+<div class="recipient-name-fields">{% include 'shop/partials/form_field.html' with field=form.first_name %}{% include 'shop/partials/form_field.html' with field=form.last_name %}{% include 'shop/partials/form_field.html' with field=form.middle_name %}</div>
+<div class="form-field{% if form.phone.errors or form.phone_country.errors %} has-error{% endif %}" data-phone-field>
+<label for="{{ form.phone.id_for_label }}">Телефон</label>
+<div class="phone-control"><div class="phone-country"><label class="sr-only" for="{{ form.phone_country.id_for_label }}">Код страны</label>{{ form.phone_country }}<span data-phone-country-value aria-hidden="true"></span></div>{{ form.phone }}</div>
+<p class="field-help" id="phone-help">Номер без кода страны — до 10 цифр.</p>{{ form.phone_country.errors }}{{ form.phone.errors }}
+</div>
+{% include 'shop/partials/form_field.html' with field=form.email %}</fieldset>
 <fieldset><legend>Способ получения</legend>{% include 'shop/partials/form_field.html' with field=form.delivery_method %}<button type="submit" name="requote" value="1" formnovalidate class="shop-button secondary delivery-update">Обновить способ получения</button>
 {% if delivery_requires_address %}{% include 'shop/partials/form_field.html' with field=form.address %}{% endif %}
 {% if cdek_selected %}<div class="cdek-picker" data-cdek-picker data-ready="{% if cdek_ready %}1{% else %}0{% endif %}" data-tile-url="{{ cdek_map.tile_url }}" data-attribution="{{ cdek_map.attribution }}" data-points-url="{% url 'orders:cdek_map_points' %}" data-default-city="{{ cdek_default_city }}" data-quoted-at="{{ shipping.quoted_at|default:'' }}" data-quote-ttl="{{ cdek_quote_ttl }}">
@@ -20,7 +27,7 @@
 <p class="cdek-search-status shop-muted" role="status" aria-live="polite" data-cdek-search-status></p>
 <button type="button" class="shop-button secondary" data-cdek-points-retry hidden>Повторить загрузку пунктов</button>
 {% if cdek_map %}<div id="cdek-map" class="cdek-map" role="region" aria-label="Пункты выдачи СДЭК на OpenStreetMap"></div><p class="cdek-map-message shop-muted" role="status" aria-live="polite" data-cdek-map-message hidden></p><button type="button" class="shop-button secondary cdek-map-retry" data-cdek-map-retry hidden>Повторить загрузку карты</button>{% else %}<p class="shop-muted">Карта сейчас недоступна. Выберите удобный пункт из списка.</p>{% endif %}
-<p class="field-help">Число в круге — количество пунктов. Приблизьте карту или нажмите на круг, чтобы выбрать адрес.</p>
+<p class="field-help">Масштаб — колёсиком мыши или двумя пальцами. Число в круге — количество пунктов; нажмите, чтобы приблизить.</p>
 <details class="cdek-list-fallback" data-cdek-list><summary>Пункты в этой области<span aria-hidden="true"></span></summary>
 <fieldset class="cdek-office-results"><legend class="sr-only">Пункты выдачи</legend><div data-cdek-offices></div><button type="button" class="shop-button secondary" data-cdek-more hidden>Показать ещё пункты</button></fieldset>
 </details>

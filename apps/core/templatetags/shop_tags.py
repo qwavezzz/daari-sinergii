@@ -4,6 +4,13 @@ from django import template
 register = template.Library()
 
 
+@register.simple_tag(takes_context=True)
+def cart_quantity(context, product):
+    return next(
+        (row["quantity"] for row in context.get("cart_items", []) if row["product"].pk == product.pk), 0
+    )
+
+
 @register.filter
 def money(value):
     if value is None or value == "":

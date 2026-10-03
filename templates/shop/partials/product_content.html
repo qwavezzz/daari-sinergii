@@ -15,10 +15,7 @@
 <div class="product-description"><p>{{ product.short_description|truncatechars:300|linebreaksbr }}</p>{% if product.description or product.short_description|length > 300 %}<a href="#description" class="shop-link">Подробнее о товаре</a>{% endif %}</div>
 <div class="product-buy">
 {% if product.available_quantity and product.purchasable and product.price %}
-<form method="post" action="{% url 'cart:add' product.pk %}" hx-post="{% url 'cart:add' product.pk %}" hx-target="#cart-panel" hx-swap="innerHTML" hx-push-url="false" hx-sync="#cart-dialog:queue all" data-cart-add>
-{% csrf_token %}<label for="product-quantity">Количество</label><div class="purchase-controls"><input id="product-quantity" type="number" name="quantity" min="1" max="{{ product.available_quantity }}" value="1" inputmode="numeric" required><button class="shop-button" type="submit"><span class="button-idle">Добавить в корзину</span><span class="button-busy">Добавляем…</span></button></div>
-</form>{% else %}<p class="shop-muted">Товар пока недоступен для покупки.</p>{% endif %}
-<div class="shop-error" data-form-error role="alert" hidden></div>
+{% include 'shop/partials/product_cart_control.html' %}{% else %}<p class="shop-muted">Товар пока недоступен для покупки.</p>{% endif %}
 <a class="shop-link product-conditions" href="{% url 'catalog:conditions' %}">Доставка и оплата {% include 'shared/arrow.html' %}</a>
 {% if product_documents %}<a class="shop-link" href="#product-documents">Документы товара</a>{% endif %}
 </div>

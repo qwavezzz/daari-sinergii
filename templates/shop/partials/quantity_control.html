@@ -1,0 +1,11 @@
+<div class="quantity-control{% if not quantity %} is-empty{% endif %}" data-quantity-control>
+  <button type="button" class="quantity-add" data-quantity-add aria-label="Добавить в корзину" title="Добавить в корзину">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3h3l3 13h11l3-10H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg><span class="quantity-add-label">В корзину</span>
+  </button>
+  <div class="quantity-stepper">
+    <button type="button" data-quantity-step="-1" aria-label="Уменьшить количество" title="Уменьшить количество"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+    <label class="quantity-value"><span class="sr-only">Количество</span><input type="number" name="quantity" value="{{ quantity|default:1 }}" min="{{ minimum|default:0 }}" max="{{ maximum|default:999 }}" inputmode="numeric" required aria-label="Количество"><span class="quantity-caption" aria-hidden="true">В корзине</span></label>
+    <button type="button" data-quantity-step="1" aria-label="Увеличить количество" title="Увеличить количество"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+  </div>
+</div>
+<button type="submit" class="shop-button quantity-fallback">{% if quantity %}Обновить{% else %}Добавить в корзину{% endif %}</button>

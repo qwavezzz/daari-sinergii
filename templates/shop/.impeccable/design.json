@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-01T19:15:10.000Z",
+  "generatedAt": "2026-10-02T17:30:58.649Z",
   "title": "Design System: Дары Синергии — магазин",
   "extensions": {
     "colorMeta": {
@@ -80,7 +80,7 @@
       },
       "body": {
         "displayName": "Основной текст",
-        "purpose": "Описания и поля формы."
+        "purpose": "Описания и поля формы сохраняют Manrope. Локальный Phone Flags — поднабор Noto Color Emoji в frontend/fonts/phone-flags.woff2 (64 316 байт), только для emoji флагов выбора телефонного кода; лицензия frontend/fonts/phone-flags-LICENSE.txt. Текстовая гарнитура не меняется."
       },
       "label": {
         "displayName": "Вторичная подпись",
@@ -131,7 +131,7 @@
       {
         "name": "mobile-layout",
         "value": "767px",
-        "purpose": "Каталог в одну колонку, мобильное меню, сводка перед формой."
+        "purpose": "Каталог в одну колонку, мобильное меню, высота закреплённой шапки 64 px вместо 80 px. Оформление меняется с minmax(0, 1fr) 300px и gap 32px на одну колонку со сводкой перед формой; три поля имени также складываются в одну колонку."
       },
       {
         "name": "fullscreen-cart",
@@ -140,8 +140,13 @@
       },
       {
         "name": "pickup-map-mobile",
+        "value": "767px",
+        "purpose": "Высота карты ПВЗ меняется с clamp(420px, 65dvh, 640px) на clamp(320px, 52dvh, 440px)."
+      },
+      {
+        "name": "pickup-location-full-width",
         "value": "480px",
-        "purpose": "Высота карты ПВЗ меняется с clamp(400px, 62dvh, 580px) на clamp(400px, 60dvh, 520px); кнопка геолокации занимает всю строку."
+        "purpose": "Кнопка геолокации занимает всю строку."
       },
       {
         "name": "narrow-mobile",
@@ -192,8 +197,8 @@
       "name": "Поле с подписью",
       "kind": "input",
       "refersTo": "input",
-      "description": "Постоянная подпись, контрастная рамка и общий контур фокуса.",
-      "html": "<div class=\"ds-shop-field\"><label for=\"ds-shop-name\">Имя</label><input id=\"ds-shop-name\" name=\"name\" autocomplete=\"name\"></div>",
+      "description": "Постоянная подпись, контрастная рамка и общий контур фокуса. В оформлении имя и фамилия обязательны, отчество необязательно. Телефон объединяет нативный select страны (112 px) и форматируемый национальный номер; ширина группы до 480 px. Поддерживаются RU/KZ (10 цифр), BY/AZ/GE/KG/TJ/UZ/UA (9), AM/MD/TM (8). Подсказка и проверка зависят от страны; сервер сохраняет нормализованный международный номер. Флаги использует локальный Phone Flags, текст — Manrope. Пример показывает обязательное поле имени.",
+      "html": "<div class=\"ds-shop-field\"><label for=\"ds-shop-name\">Имя</label><input id=\"ds-shop-name\" name=\"first_name\" autocomplete=\"given-name\" maxlength=\"50\" required></div>",
       "css": ".ds-shop-field { color: var(--shop-color-shop-ink, #06182e); font: 400 16px/1.6 'Manrope Variable', Arial, sans-serif; } .ds-shop-field label { display: block; margin-bottom: 8px; } .ds-shop-field input { display: block; width: 100%; min-height: 48px; border: 1px solid var(--shop-color-shop-control-border, #738498); border-radius: 4px; padding: 12px; background: var(--shop-color-shop-bg, #ffffff); color: var(--shop-color-shop-ink, #06182e); font: 400 16px/1.6 'Manrope Variable', Arial, sans-serif; caret-color: var(--shop-color-shop-focus, #176ca4); } .ds-shop-field input[aria-invalid=\"true\"] { border-color: var(--shop-color-shop-error, #9d3737); } .ds-shop-field input:disabled { opacity: .55; cursor: not-allowed; } .ds-shop-field input:focus-visible { outline: 2px solid var(--shop-color-shop-focus, #176ca4); outline-offset: 3px; }"
     },
     {
@@ -208,7 +213,7 @@
       "name": "Навигация магазина",
       "kind": "nav",
       "refersTo": "navigation-link",
-      "description": "Текстовые ссылки шапки; мобильный runtime раскрывает их под шапкой.",
+      "description": "Текстовые ссылки закреплённой шапки (position: sticky, top: 0, z-index: 40); минимальная высота 80 px, до 767 px — 64 px. Мобильный runtime раскрывает ссылки под шапкой. Образец показывает только ссылки.",
       "html": "<nav class=\"ds-shop-nav\" aria-label=\"Навигация магазина\"><a href=\"#\">Каталог</a><a href=\"#\">Документы</a><a href=\"#\">О компании</a></nav>",
       "css": ".ds-shop-nav { display: flex; align-items: center; gap: 32px; color: var(--shop-color-shop-ink, #06182e); font: 400 14px/1.6 'Manrope Variable', Arial, sans-serif; } .ds-shop-nav a { color: inherit; text-decoration: none; text-underline-offset: 5px; } .ds-shop-nav a:hover { text-decoration: underline; } .ds-shop-nav a:focus-visible { outline: 2px solid var(--shop-color-shop-focus, #176ca4); outline-offset: 3px; } @media (max-width: 767px) { .ds-shop-nav { flex-direction: column; align-items: stretch; gap: 0; padding: 16px 24px; background: var(--shop-color-shop-bg, #ffffff); border-bottom: 1px solid var(--shop-color-shop-line, #dce3e8); } .ds-shop-nav a { padding: 14px; } }"
     },
@@ -216,9 +221,9 @@
       "name": "Товарная плоскость",
       "kind": "card",
       "refersTo": "product-tile",
-      "description": "Образец геометрии без коммерческих данных; подписи в квадратных скобках обозначают поля CMS.",
-      "html": "<article class=\"ds-shop-tile\"><h2><a href=\"#\">[Название из каталога]</a></h2><p class=\"ds-shop-category\">[Категория из каталога]</p><div class=\"ds-shop-image\">Фото скоро</div><div class=\"ds-shop-tile-bottom\"><p class=\"ds-shop-price\">[Цена из CMS]</p><a class=\"ds-shop-tile-link\" href=\"#\">Подробнее <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></a></div></article>",
-      "css": ".ds-shop-tile { background: var(--shop-color-shop-surface, #f5f7f8); color: var(--shop-color-shop-ink, #06182e); padding: 32px; min-width: 0; font: 400 16px/1.6 'Manrope Variable', Arial, sans-serif; } .ds-shop-tile h2 { margin: 0; font-size: clamp(26px, 2.2vw, 32px); font-weight: 500; line-height: 1.25; min-height: 2.5em; overflow-wrap: anywhere; } .ds-shop-tile h2 a { color: inherit; text-decoration: none; } .ds-shop-category { color: var(--shop-color-shop-muted, #536273); font-size: 14px; margin: 8px 0 0; } .ds-shop-image { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: var(--shop-color-shop-muted, #536273); } .ds-shop-tile-bottom { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; } .ds-shop-price { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; } .ds-shop-tile-link { display: inline-flex; gap: 12px; align-items: center; color: inherit; font-size: 14px; text-underline-offset: 5px; } .ds-shop-tile-link svg { width: 20px; height: 20px; transition: transform 140ms; } .ds-shop-tile-link:hover svg { transform: translateX(2px); } .ds-shop-tile a:focus-visible { outline: 2px solid var(--shop-color-shop-focus, #176ca4); outline-offset: 3px; } @media (max-width: 767px) { .ds-shop-tile { padding: 24px; } .ds-shop-tile h2, .ds-shop-price { font-size: 26px; } } @media (prefers-reduced-motion: reduce) { .ds-shop-tile-link svg { transition-duration: .01ms; } }"
+      "description": "Цена, наличие и «Подробнее» находятся слева, покупка — справа. Образец показывает нулевое состояние с SVG-корзиной; поля в скобках обозначают данные CMS. После добавления общий navy-контрол каталога, товара и корзины показывает минус, редактируемое число с подписью «В корзине» и плюс. Высота 56 px, кнопки от 44 px, центр 72 px (62 px до 639 px). Добавление обновляет состав и счётчики без открытия диалога; ручной ввод отправляется через 500 ms или при завершении редактирования. Ошибки показаны рядом; оформление заблокировано до подтверждения изменений. Без JavaScript доступны число и явная отправка формы.",
+      "html": "<article class=\"ds-shop-tile\"><h2><a href=\"#\">[Название из каталога]</a></h2><div class=\"ds-shop-image\">Фото скоро</div><div class=\"ds-shop-tile-bottom\"><div class=\"ds-shop-tile-price\"><p class=\"ds-shop-price\">[Цена из CMS]</p><p class=\"ds-shop-availability\">[Наличие из CMS]</p><a class=\"ds-shop-tile-link\" href=\"#\">Подробнее <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></a></div><button class=\"ds-shop-quantity-add\" type=\"button\" aria-label=\"Добавить в корзину\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"M2 3h3l3 13h11l3-10H6\"/><circle cx=\"9\" cy=\"20\" r=\"1\"/><circle cx=\"18\" cy=\"20\" r=\"1\"/></svg></button></div></article>",
+      "css": ".ds-shop-tile { background: var(--shop-color-shop-surface, #f5f7f8); color: var(--shop-color-shop-ink, #06182e); padding: 32px; min-width: 0; font: 400 16px/1.6 'Manrope Variable', Arial, sans-serif; } .ds-shop-tile h2 { margin: 0; font-size: clamp(26px, 2.2vw, 32px); font-weight: 500; line-height: 1.25; min-height: 2.5em; overflow-wrap: anywhere; } .ds-shop-tile h2 a { color: inherit; text-decoration: none; } .ds-shop-availability { color: var(--shop-color-shop-muted, #536273); font-size: 14px; margin: 8px 0 0; } .ds-shop-image { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: var(--shop-color-shop-muted, #536273); } .ds-shop-tile-bottom { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; } .ds-shop-price { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; } .ds-shop-tile-link { display: inline-flex; gap: 12px; align-items: center; color: inherit; font-size: 14px; text-underline-offset: 5px; margin-top: 12px; } .ds-shop-tile-link svg { width: 20px; height: 20px; transition: transform 140ms; } .ds-shop-tile-link:hover svg { transform: translateX(2px); } .ds-shop-quantity-add { display: inline-flex; flex: none; min-width: 56px; min-height: 56px; justify-content: center; align-items: center; padding: 10px; border: 0; border-radius: 4px; background: var(--shop-color-shop-action, #06182e); color: var(--shop-color-shop-bg, #ffffff); cursor: pointer; } .ds-shop-quantity-add svg { width: 24px; height: 24px; } .ds-shop-quantity-add:hover { background: var(--shop-color-shop-action-hover, #0b2b5a); } .ds-shop-quantity-add:disabled { opacity: .45; cursor: default; } .ds-shop-tile a:focus-visible, .ds-shop-quantity-add:focus-visible { outline: 2px solid var(--shop-color-shop-focus, #176ca4); outline-offset: 3px; } @media (max-width: 767px) { .ds-shop-tile { padding: 24px; } .ds-shop-tile h2, .ds-shop-price { font-size: 26px; } } @media (max-width: 639px) { .ds-shop-tile-bottom { align-items: flex-start; } } @media (prefers-reduced-motion: reduce) { .ds-shop-tile-link svg { transition-duration: .01ms; } }"
     },
     {
       "name": "Пункт выдачи СДЭК",
@@ -244,6 +249,7 @@
       "Белый фон, navy-действия и светло-серые поля предметных изображений.",
       "Manrope для текста и управления; IBM Plex Mono для артикула на странице товара.",
       "Плоские поверхности, тонкие разделители и радиус 4 px у кнопок и полей.",
+      "Общий navy-счётчик количества в каталоге, товаре и корзине; добавление сохраняет текущий экран.",
       "Нативный модальный диалог корзины и короткие переходы по действию пользователя."
     ],
     "rules": [],

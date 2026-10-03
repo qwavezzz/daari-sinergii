@@ -1,14 +1,49 @@
 import re
 from django import forms
 from .models import DeliveryMethod
+from .phone import COUNTRIES
+
+
+class PhoneCountrySelect(forms.Select):
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        if value in COUNTRIES:
+            code, length, _, _ = COUNTRIES[value]
+            option["attrs"].update({"data-code": code, "data-length": length})
+        return option
 
 
 class CheckoutForm(forms.Form):
-    name = forms.CharField(
-        label="Имя получателя", max_length=160, widget=forms.TextInput(attrs={"autocomplete": "name"})
+    first_name = forms.CharField(
+        label="Имя", max_length=50, widget=forms.TextInput(attrs={"autocomplete": "given-name"})
+    )
+    last_name = forms.CharField(
+        label="Фамилия", max_length=50, widget=forms.TextInput(attrs={"autocomplete": "family-name"})
+    )
+    middle_name = forms.CharField(
+        label="Отчество",
+        required=False,
+        max_length=50,
+        widget=forms.TextInput(attrs={"autocomplete": "additional-name"}),
+    )
+    phone_country = forms.ChoiceField(
+        label="Код страны",
+        initial="RU",
+        choices=[(region, f"{flag} +{code} — {name}") for region, (code, _, flag, name) in COUNTRIES.items()],
+        widget=PhoneCountrySelect(attrs={"autocomplete": "tel-country-code"}),
     )
     phone = forms.CharField(
-        label="Телефон", max_length=32, widget=forms.TextInput(attrs={"autocomplete": "tel", "type": "tel"})
+        label="Телефон",
+        max_length=32,
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "tel-national",
+                "type": "tel",
+                "inputmode": "tel",
+                "placeholder": "(917) 012-42-78",
+                "aria-describedby": "phone-help",
+            }
+        ),
     )
     email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={"autocomplete": "email"}))
     delivery_method = forms.ModelChoiceField(
@@ -43,12 +78,29 @@ class CheckoutForm(forms.Form):
 
     def clean_phone(self):
         value = self.cleaned_data["phone"].strip()
-        if not re.fullmatch(r"[+\d ()-]+", value) or not 10 <= len(re.sub(r"\D", "", value)) <= 15:
-            raise forms.ValidationError("Введите телефон с кодом страны.")
-        return value
+        country = self.cleaned_data.get("phone_country")
+        if country not in COUNTRIES:
+            return value
+        code, length, _, _ = COUNTRIES[country]
+        if not re.fullmatch(r"\+?[0-9 ()-]+", value):
+            raise forms.ValidationError("Введите номер цифрами, без букв и добавочного номера.")
+        digits = re.sub(r"[^0-9]", "", value)
+        if value.startswith("+"):
+            if not digits.startswith(code):
+                raise forms.ValidationError("Код номера не совпадает с выбранной страной.")
+            digits = digits[len(code) :]
+        elif country in {"RU", "KZ"} and len(digits) == 11 and digits[0] in "78":
+            digits = digits[1:]
+        if len(digits) != length:
+            raise forms.ValidationError(f"Введите {length} цифр номера после кода +{code}.")
+        return f"+{code}{digits}"
 
     def clean(self):
         values = super().clean()
+        if values.get("first_name") and values.get("last_name"):
+            values["name"] = " ".join(
+                values[key] for key in ("last_name", "first_name", "middle_name") if values.get(key)
+            )
         method = values.get("delivery_method")
         if method and method.type == "static" and method.address_required and not values.get("address"):
             self.add_error("address", "Для выбранного способа получения укажите адрес.")

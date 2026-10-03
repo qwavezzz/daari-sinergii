@@ -56,15 +56,17 @@ def cart_context(cart):
 @transaction.atomic
 def mutate_cart(cart, operation, quantity=1, product_id=None, item_id=None):
     cart = Cart.objects.select_for_update().get(pk=cart.pk)
-    if operation == "add":
-        product = get_object_or_404(Product, pk=product_id, status="published")
+    if operation in {"add", "set"}:
+        products = Product.objects.filter(status="published") if operation == "add" else Product.objects.all()
+        product = get_object_or_404(products, pk=product_id)
         item = cart.items.filter(product=product).first()
-        new_quantity = quantity + (item.quantity if item else 0)
+        new_quantity = quantity + (item.quantity if item and operation == "add" else 0)
     else:
         item = get_object_or_404(CartItem.objects.select_related("product"), pk=item_id, cart=cart)
         product, new_quantity = item.product, quantity
-    if operation == "remove":
-        item.delete()
+    if operation == "remove" or (operation == "set" and quantity == 0):
+        if item:
+            item.delete()
     else:
         if not product.is_available or not 1 <= new_quantity <= min(product.available_quantity, 999):
             raise ValidationError("Товар недоступен в выбранном количестве. Обновите корзину.")

@@ -179,11 +179,11 @@ class OrderTests(TestCase):
 
     def test_requote_never_creates_order_and_preserves_entered_values(self):
         client, values = self.checkout_client()
-        values.update({"requote": "1", "name": "Сохранённое имя", "confirmed_delivery": self.method.pk})
+        values.update({"requote": "1", "first_name": "Сохранённое имя", "confirmed_delivery": self.method.pk})
         response = client.post("/checkout/", values, HTTP_HX_REQUEST="true")
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Order.objects.exists())
-        self.assertEqual(response.context["form"]["name"].value(), "Сохранённое имя")
+        self.assertEqual(response.context["form"]["first_name"].value(), "Сохранённое имя")
         self.assertEqual(response.context["order_total"], 150)
 
     def test_price_change_response_shows_same_amount_as_new_signature(self):

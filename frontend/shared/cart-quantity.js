@@ -1,7 +1,27 @@
 // Shared feedback and automatic quantity updates for Django and the Pages demo.
-const selector = '.cart-item-quantity'
+const selector = '[data-quantity-form]'
 const timers = new WeakMap()
 let requests = 0
+
+export function syncProductQuantities(quantities) {
+  document.querySelectorAll('[data-cart-add]').forEach((form) => {
+    const quantity = Number(quantities[form.dataset.productId] || 0)
+    const input = form.querySelector('[name=quantity]')
+    const focused = form.contains(document.activeElement)
+    form.dataset.quantity = String(quantity)
+    delete form.dataset.quantityState
+    delete form.dataset.quantityUncertain
+    input.value = input.defaultValue = String(quantity || 1)
+    input.setCustomValidity('')
+    form.querySelector('[data-quantity-control]').classList.toggle('is-empty', !quantity)
+    const plus = form.querySelector('[data-quantity-step="1"]')
+    plus.disabled = quantity >= Number(input.max)
+    delete plus.dataset.quantityLocked
+    if (focused && document.activeElement.closest('[data-quantity-add]') && quantity)
+      plus.focus({ preventScroll: true })
+    if (focused && !quantity) form.querySelector('[data-quantity-add]').focus({ preventScroll: true })
+  })
+}
 
 export function hasQuantityChanges() {
   return Boolean(document.querySelector(`${selector}[data-quantity-state]`))
@@ -10,6 +30,21 @@ export function hasQuantityChanges() {
 export function syncQuantityFeedback(pending = requests) {
   requests = pending
   const blocked = requests > 0 || hasQuantityChanges()
+  document.querySelectorAll(selector).forEach((form) => {
+    form.setAttribute('aria-busy', String(requests > 0))
+    form.querySelectorAll('input[name=quantity]').forEach((input) => {
+      input.readOnly = requests > 0
+    })
+    form.querySelectorAll('button').forEach((button) => {
+      if (requests && !button.disabled) {
+        button.dataset.quantityLocked = ''
+        button.disabled = true
+      } else if (!requests && button.hasAttribute('data-quantity-locked')) {
+        button.disabled = false
+        delete button.dataset.quantityLocked
+      }
+    })
+  })
   document.querySelectorAll('.checkout-link').forEach((link) => {
     if (blocked) link.setAttribute('aria-disabled', 'true')
     else link.removeAttribute('aria-disabled')
@@ -65,6 +100,27 @@ export function quantityRequestFailed(form) {
 }
 
 export function installQuantityUpdates() {
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-quantity-step], [data-quantity-add]')
+    const form = button?.closest(selector)
+    if (!form || requests) return
+    const input = form.querySelector('[name=quantity]')
+    input.setCustomValidity('')
+    const adding = button.hasAttribute('data-quantity-add')
+    const next = adding ? 1 : Number(input.value) + Number(button.dataset.quantityStep)
+    if (next === 0 && form.classList.contains('cart-item-quantity')) {
+      if (form.dataset.demoQuantity) {
+        form.closest('.cart-item').querySelector('[data-demo-remove]').click()
+      } else form.closest('.cart-item').querySelector('.cart-remove').requestSubmit()
+      return
+    }
+    if (next < 0 || next > Number(input.max)) return
+    input.value = String(next)
+    form.dataset.quantityState = 'changed'
+    // A zero-state control keeps a fallback quantity of one for HTML-only forms.
+    if (adding) form.dataset.quantityUncertain = 'true'
+    form.requestSubmit()
+  })
   document.addEventListener('input', (event) => {
     const input = event.target
     const form = input.closest(selector)
@@ -112,7 +168,9 @@ export function installQuantityUpdates() {
       const input = form.querySelector('[name=quantity]')
       if (
         requests ||
-        (Number(input.value) === Number(input.defaultValue) && !form.dataset.quantityUncertain)
+        (Number(input.value) === Number(input.defaultValue) &&
+          !form.dataset.quantityUncertain &&
+          form.dataset.quantity !== '0')
       ) {
         event.preventDefault()
         event.stopImmediatePropagation()

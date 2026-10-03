@@ -6,16 +6,19 @@ import { htmx, installNavigation, syncMetadata } from './shared/navigation.js'
 import { registerContentUI } from './shared/content-ui.js'
 import './customer.css'
 import { installCheckout } from './cdek-checkout.js'
+import { installPhoneInput } from './shared/phone-input.js'
 import {
   hasQuantityChanges,
   installQuantityUpdates,
   quantityRequestFailed,
   syncQuantityFeedback,
+  syncProductQuantities,
 } from './shared/cart-quantity.js'
 
 let latestVersion = 0
 let pendingCartRequests = 0
 let cartFocusId = ''
+let cartFocusStep = ''
 const demoCart = import.meta.env.VITE_STATIC_DEMO === 'true' ? import('./demo/cart.js') : null
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('dari-cart') : null
 function cartCounts(count) {
@@ -171,7 +174,12 @@ Alpine.data('productGallery', () => ({
 Alpine.data('checkoutForm', () => ({
   disposeCheckout: null,
   init() {
-    this.disposeCheckout = installCheckout(this.$el, htmx)
+    const disposeCheckout = installCheckout(this.$el, htmx)
+    const disposePhone = installPhoneInput(this.$el)
+    this.disposeCheckout = () => {
+      disposePhone()
+      disposeCheckout?.()
+    }
   },
   destroy() {
     this.disposeCheckout?.()
@@ -186,11 +194,15 @@ demoCart?.then((cart) => cart.installDemoCart())
 
 document.addEventListener('htmx:beforeRequest', (event) => {
   if (event.detail.requestConfig?.path?.startsWith('/cart/')) {
-    cartFocusId =
-      document.activeElement?.id ||
-      event.detail.elt.closest('.cart-item')?.querySelector('[name=quantity]')?.id ||
-      ''
+    cartFocusId = event.detail.elt.closest('.cart-item')?.dataset.productId || ''
+    cartFocusStep = document.activeElement?.dataset.quantityStep || ''
+    const source = event.detail.elt.closest('[data-cart-add]')
+    if (source && source.contains(document.activeElement)) {
+      source.dataset.restoreQuantityFocus = document.activeElement.dataset.quantityStep || 'add'
+    }
     pendingCartRequests++
+    const inline = event.detail.elt.closest('form')?.parentElement?.querySelector('[data-form-error]')
+    if (inline) inline.hidden = true
     syncQuantityFeedback(pendingCartRequests)
   }
 })
@@ -208,6 +220,24 @@ document.addEventListener('htmx:afterRequest', (event) => {
     if (event.detail.failed || event.detail.xhr.status === 0 || event.detail.xhr.status >= 400)
       quantityRequestFailed(source)
     syncQuantityFeedback(pendingCartRequests)
+    if (source?.dataset.restoreQuantityFocus && source.isConnected) {
+      const control =
+        source.dataset.quantity === '0'
+          ? '[data-quantity-add]'
+          : `[data-quantity-step="${source.dataset.restoreQuantityFocus === '-1' ? '-1' : '1'}"]`
+      source.querySelector(control)?.focus({ preventScroll: true })
+      delete source.dataset.restoreQuantityFocus
+    }
+    if (cartFocusId) {
+      const scope = document.getElementById('cart-dialog').open ? '#cart-panel' : '.cart-page'
+      const next =
+        document.querySelector(
+          `${scope} .cart-item[data-product-id="${cartFocusId}"] ${cartFocusStep ? `[data-quantity-step="${cartFocusStep}"]` : '[name=quantity]'}`,
+        ) ||
+        document.querySelector(`${scope} [name=quantity], ${scope} .checkout-link`) ||
+        (document.getElementById('cart-dialog').open ? document.querySelector('#cart-dialog button') : null)
+      next?.focus({ preventScroll: true })
+    }
     if (source?.matches('[data-cart-add]') && event.detail.xhr.status === 422) {
       const response = new DOMParser().parseFromString(event.detail.xhr.responseText, 'text/html')
       const error = source.parentElement.querySelector('[data-form-error]')
@@ -221,40 +251,21 @@ document.addEventListener('htmx:afterRequest', (event) => {
   }
 })
 document.addEventListener('cart-updated', (event) => {
-  const { count, version } = event.detail
+  const { count, version, quantities } = event.detail
   if (Number(version) < latestVersion) return
   latestVersion = Number(version)
   cartCounts(count)
+  if (quantities) syncProductQuantities(quantities)
   channel?.postMessage({ version })
 })
 document.addEventListener('htmx:afterSwap', (event) => {
   const content = document.querySelector('#cart-panel .cart-content')
-  if (content) {
+  if (content && Number(content.dataset.cartVersion) >= latestVersion) {
     latestVersion = Math.max(latestVersion, Number(content.dataset.cartVersion))
     cartCounts(content.dataset.cartCount)
   }
-  if (event.detail.requestConfig?.elt?.matches('[data-cart-add]') && event.detail.xhr.status < 400) {
-    window.shopShell.showCart(event.detail.requestConfig.elt.querySelector('button'))
-    const summary = content?.querySelector('.cart-summary')
-    if (summary) {
-      const notice = document.createElement('p')
-      notice.className = 'cart-notice'
-      notice.setAttribute('role', 'status')
-      notice.textContent = 'Товар добавлен в корзину'
-      summary.append(notice)
-    }
-  }
-  if (
-    event.detail.requestConfig?.path?.startsWith('/cart/') &&
-    document.getElementById('cart-dialog').open &&
-    cartFocusId
-  ) {
-    const next =
-      document.getElementById(cartFocusId) ||
-      document.querySelector('#cart-panel [name=quantity]') ||
-      document.querySelector('#cart-dialog button')
-    next?.focus({ preventScroll: true })
-  }
+  if (event.detail.requestConfig?.elt?.matches('[data-cart-add]') && event.detail.xhr.status < 400)
+    document.getElementById('shop-status').textContent = 'Корзина обновлена'
   window.shopShell?.sizeCart()
   syncQuantityFeedback(pendingCartRequests)
 })

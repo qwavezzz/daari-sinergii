@@ -12,15 +12,17 @@ for (const javaScriptEnabled of [true, false]) {
     await page.goto('http://shop.localhost:8001/products/test-product-2/')
     await Promise.all([
       page.waitForResponse(
-        (response) => response.url().includes('/cart/add/') && response.request().method() === 'POST',
+        (response) => response.url().includes('/cart/set/') && response.request().method() === 'POST',
       ),
       page.getByRole('button', { name: 'Добавить в корзину' }).click(),
     ])
     if (javaScriptEnabled) {
-      await expect(page.getByRole('dialog', { name: 'Корзина' }).locator('.cart-item')).toHaveCount(1)
+      await expect(page.locator('#cart-dialog')).not.toBeVisible()
+      await expect(page.locator('#cart-toggle [data-cart-count]')).toHaveText('1')
     }
     await page.goto('http://shop.localhost:8001/checkout/')
-    await page.getByLabel('Имя получателя').fill('Проверка пути покупки')
+    await page.getByLabel('Имя', { exact: true }).fill('Проверка пути покупки')
+    await page.getByLabel('Фамилия', { exact: true }).fill('Покупатель')
     await page.getByLabel('Телефон', { exact: true }).fill('+79000000000')
     await page.getByLabel('Email', { exact: true }).fill('trial@example.invalid')
     await page.locator('[name=accept_terms]').check()

@@ -1,5 +1,9 @@
 // Only included in the Pages preview build. Real orders always use Django.
-import { quantityRequestFailed, syncQuantityFeedback } from '../shared/cart-quantity.js'
+import {
+  quantityRequestFailed,
+  syncProductQuantities,
+  syncQuantityFeedback,
+} from '../shared/cart-quantity.js'
 const catalog = JSON.parse(document.getElementById('demo-products').textContent)
 const products = new Map(catalog.map((product) => [String(product.id), product]))
 const base = document.documentElement.dataset.demoBase
@@ -43,6 +47,14 @@ function announce(message) {
   if (status) status.textContent = message
 }
 
+function quantityControl(inputId, quantity, stock) {
+  const minus =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14"/></svg>'
+  const plus =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>'
+  return `<div class="quantity-control"><div class="quantity-stepper"><button type="button" data-quantity-step="-1" aria-label="Уменьшить количество">${minus}</button><label class="quantity-value"><span class="sr-only">Количество</span><input type="number" id="${inputId}" name="quantity" min="1" max="${stock}" value="${quantity}" required inputmode="numeric" aria-label="Количество"><span class="quantity-caption" aria-hidden="true">В корзине</span></label><button type="button" data-quantity-step="1" aria-label="Увеличить количество">${plus}</button></div></div><button type="submit" class="quantity-fallback">Обновить</button>`
+}
+
 function contents(scope) {
   const rows = Object.entries(items).filter(([id]) => products.has(id))
   if (!rows.length)
@@ -53,7 +65,7 @@ function contents(scope) {
     .map(([id, quantity]) => {
       const product = products.get(id)
       const inputId = `${scope}-quantity-${id}`
-      return `<article class="cart-item" data-item-id="${id}"><a class="cart-item-name" href="${escape(product.url)}">${escape(product.name)}</a><div class="cart-item-image"><img src="${escape(product.image)}" alt="" width="96" height="96"></div><div class="cart-item-info"><p class="cart-sku">${escape(product.sku)}</p><p>${money(product.price)} / шт.</p></div><div class="cart-remove"><button type="button" class="icon-button" data-demo-remove="${id}" aria-label="Удалить ${escape(product.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><form class="cart-item-quantity" data-demo-quantity="${id}"><label for="${inputId}">Количество</label><input type="number" id="${inputId}" name="quantity" min="1" max="${product.stock}" value="${quantity}" required inputmode="numeric"><button type="submit" class="shop-link">Обновить</button></form><strong class="cart-line-total">${money(product.price * quantity)}</strong></article>`
+      return `<article class="cart-item" data-item-id="${id}"><a class="cart-item-name" href="${escape(product.url)}">${escape(product.name)}</a><div class="cart-item-image"><img src="${escape(product.image)}" alt="" width="96" height="96"></div><div class="cart-item-info"><p class="cart-sku">${escape(product.sku)}</p><p>${money(product.price)} / шт.</p></div><div class="cart-remove"><button type="button" class="icon-button" data-demo-remove="${id}" aria-label="Удалить ${escape(product.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><form class="cart-item-quantity" data-quantity-form data-demo-quantity="${id}" data-quantity="${quantity}">${quantityControl(inputId, quantity, product.stock)}</form><strong class="cart-line-total">${money(product.price * quantity)}</strong></article>`
     })
     .join('')}</div></div>`
 }
@@ -67,6 +79,7 @@ export function refreshCart() {
   document.querySelectorAll('[data-cart-count]').forEach((node) => {
     node.textContent = count
   })
+  syncProductQuantities(items)
   window.shopShell?.sizeCart()
   syncQuantityFeedback()
 }
@@ -77,7 +90,7 @@ export function installDemoCart() {
   })
   read()
   refreshCart()
-  document.querySelectorAll('[data-demo-add] button').forEach((button) => {
+  document.querySelectorAll('[data-demo-quantity] button').forEach((button) => {
     button.disabled = false
   })
   document.addEventListener('submit', (event) => {
@@ -90,7 +103,7 @@ export function installDemoCart() {
     const quantity = Number(input.value)
     read()
     const next = form.hasAttribute('data-demo-add') ? (items[id] || 0) + quantity : quantity
-    if (!product || !Number.isInteger(next) || next < 1 || next > product.stock) {
+    if (!product || !Number.isInteger(next) || next < 0 || next > Math.min(product.stock, 999)) {
       input.setCustomValidity('Недоступно выбранное количество. Уменьшите количество или измените корзину.')
       input.reportValidity()
       quantityRequestFailed(form)
@@ -98,11 +111,11 @@ export function installDemoCart() {
       return
     }
     input.setCustomValidity('')
-    items[id] = next
+    if (next) items[id] = next
+    else delete items[id]
     save()
     refreshCart()
-    if (form.hasAttribute('data-demo-add')) window.shopShell.showCart(form.querySelector('button'))
-    else document.getElementById(input.id)?.focus({ preventScroll: true })
+    if (input.id) document.getElementById(input.id)?.focus({ preventScroll: true })
     announce('Демонстрационная корзина обновлена')
   })
   document.addEventListener('input', (event) => {

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import redirect
 from django.views.decorators.http import require_GET, require_POST
 from apps.core.http import is_partial, render_page
-from .forms import QuantityForm
+from .forms import QuantityForm, SetQuantityForm
 from .services import cart_context, get_cart, mutate_cart
 
 
@@ -20,7 +20,13 @@ def response_for_cart(request, cart, error="", status=200):
     response = render_page(request, "shop/cart.html", partial, context, status=status)
     response["X-Cart-Version"] = str(context["cart_version"])
     response["HX-Trigger"] = json.dumps(
-        {"cart-updated": {"count": context["cart_count"], "version": context["cart_version"]}}
+        {
+            "cart-updated": {
+                "count": context["cart_count"],
+                "version": context["cart_version"],
+                "quantities": {str(row["product"].pk): row["quantity"] for row in context["cart_items"]},
+            }
+        }
     )
     return response
 
@@ -33,10 +39,14 @@ def detail(request):
 @require_POST
 def mutation(request, operation, product_id=None, item_id=None):
     cart = get_cart(request, create=True)
-    form = QuantityForm(request.POST)
+    form = (SetQuantityForm if operation == "set" else QuantityForm)(request.POST)
     error = ""
     if operation != "remove" and not form.is_valid():
-        error = "Укажите целое количество от 1 до 999."
+        error = (
+            "Укажите целое количество от 0 до 999."
+            if operation == "set"
+            else "Укажите целое количество от 1 до 999."
+        )
     else:
         try:
             cart = mutate_cart(

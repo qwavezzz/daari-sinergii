@@ -35,6 +35,8 @@ test('mixed cart is quoted as one measured parcel and reaches trial payment', as
   for (const number of [19, 20]) {
     await page.goto(`/products/test-product-${number}/`)
     await page.getByRole('button', { name: 'Добавить в корзину' }).click()
+    await expect(page.locator('#cart-dialog')).not.toBeVisible()
+    await page.locator('#cart-toggle').click()
     await expect(page.getByRole('dialog', { name: 'Корзина' })).toBeVisible()
   }
   await page.getByRole('dialog', { name: 'Корзина' }).getByRole('link', { name: 'Оформить заказ' }).click()
@@ -51,7 +53,8 @@ test('mixed cart is quoted as one measured parcel and reaches trial payment', as
   expect(quote.shipping.packing.measurements_confirmed).toBe(true)
   expect(quote.shipping.packing.parcels[0].contents).toHaveLength(2)
   await expect(page.locator('[data-order-total]')).toHaveText('2 896,00 ₽')
-  await page.getByLabel('Имя получателя').fill('Тест упаковки')
+  await page.getByLabel('Имя', { exact: true }).fill('Тест упаковки')
+  await page.getByLabel('Фамилия', { exact: true }).fill('Покупатель')
   await page.getByLabel('Телефон', { exact: true }).fill('+79000000000')
   await page.getByLabel('Email', { exact: true }).fill('packing@example.invalid')
   await page.locator('[name=accept_terms]').check()

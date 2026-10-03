@@ -32,6 +32,8 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   await page.goto('/products/test-product-1/')
   await expect(page.locator('.product-title .product-category')).toBeVisible()
   await page.getByRole('button', { name: 'Добавить в корзину' }).click()
+  await expect(page.locator('#cart-dialog')).not.toBeVisible()
+  await page.locator('#cart-toggle').click()
   const drawer = page.getByRole('dialog', { name: 'Корзина' })
   await expect(drawer).toBeVisible()
   await expect(drawer.locator('.cart-item')).toHaveCount(1)
@@ -56,7 +58,7 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   await expect(page.locator('#cart-toggle [data-cart-count]')).toHaveText('3')
   await page.keyboard.press('Escape')
   await expect(drawer).not.toBeVisible()
-  await expect(page.getByRole('button', { name: 'Добавить в корзину' })).toBeFocused()
+  await expect(page.locator('#cart-toggle')).toBeFocused()
   const second = await context.newPage()
   await second.goto('/cart/')
   await expect(second.locator('.cart-total strong')).toHaveText('3 871,50 ₽')
@@ -65,12 +67,13 @@ test('cart drawer, server mutation, focus, cross-tab persistence and safe checko
   await drawer.getByRole('link', { name: 'Оформить заказ' }).click()
   await expect(page).toHaveURL(/checkout/)
   await expect(drawer).not.toBeVisible()
-  await page.getByLabel('Имя получателя').fill('Тестовый покупатель')
+  await page.getByLabel('Имя', { exact: true }).fill('Тестовый покупатель')
+  await page.getByLabel('Фамилия', { exact: true }).fill('Покупатель')
   await page.getByLabel('Телефон', { exact: true }).fill('+79000000000')
   await page.getByLabel('Email', { exact: true }).fill('qa@example.invalid')
   await page.getByLabel('Способ получения').selectOption({ label: 'Тестовая доставка' })
   await expect(page.locator('.checkout-total dd')).toHaveText('4 221,50 ₽')
-  await expect(page.getByLabel('Имя получателя')).toHaveValue('Тестовый покупатель')
+  await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тестовый покупатель')
   await page.getByLabel('Адрес', { exact: false }).fill('Тестовый адрес')
   await page.locator('[name=accept_terms]').check()
   await page.getByRole('button', { name: /Перейти к пробной оплате/ }).click()
@@ -90,6 +93,8 @@ test('automatic quantity updates keep the layout stable, reject invalid input an
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/products/test-product-1/')
   await page.getByRole('button', { name: 'Добавить в корзину' }).click()
+  await expect(page.locator('#cart-dialog')).not.toBeVisible()
+  await page.locator('#cart-toggle').click()
   const drawer = page.getByRole('dialog', { name: 'Корзина' })
   await expect(drawer.locator('.cart-item')).toHaveCount(1)
   await page.keyboard.press('Escape')
@@ -97,6 +102,7 @@ test('automatic quantity updates keep the layout stable, reject invalid input an
   const cart = page.locator('.cart-page')
   await expect(cart.getByRole('button', { name: 'Обновить', exact: true })).toBeHidden()
   const summaryBox = await cart.locator('.cart-summary').boundingBox()
+  const summaryDocumentY = summaryBox.y + (await page.evaluate(() => scrollY))
   let release
   const responseGate = new Promise((resolve) => {
     release = resolve
@@ -113,7 +119,7 @@ test('automatic quantity updates keep the layout stable, reject invalid input an
   await expect(cart.locator('[data-quantity-status]')).toBeHidden()
   const pendingBox = await cart.locator('.cart-summary').boundingBox()
   expect(Math.abs(pendingBox.height - summaryBox.height)).toBeLessThan(1)
-  expect(Math.abs(pendingBox.y - summaryBox.y)).toBeLessThan(1)
+  expect(Math.abs(pendingBox.y + (await page.evaluate(() => scrollY)) - summaryDocumentY)).toBeLessThan(1)
   await expect(cart.locator('.cart-total strong')).toHaveText('1 290,50 ₽')
   await expect(cart.locator('.checkout-link')).toHaveAttribute('aria-disabled', 'true')
   expect(mutations).toBe(1)
@@ -250,7 +256,7 @@ test('twenty cart lines remain reachable with fixed summary, short viewport and 
   for (let index = 1; index <= 20; index++) {
     const productResponse = await page.request.get(`/products/test-product-${index}/`)
     expect(productResponse.ok()).toBe(true)
-    const addUrl = (await productResponse.text()).match(/action="(\/cart\/add\/\d+\/)"/)[1]
+    const addUrl = (await productResponse.text()).match(/action="(\/cart\/set\/\d+\/)"/)[1]
     const added = await page.request.post(addUrl, {
       form: { quantity: '1', csrfmiddlewaretoken: token },
       headers: { Referer: 'http://shop.localhost:8001/' },
