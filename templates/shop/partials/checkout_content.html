@@ -20,7 +20,7 @@
 {% if cdek_selected %}<div class="cdek-picker" data-cdek-picker data-ready="{% if cdek_ready %}1{% else %}0{% endif %}" data-tile-url="{{ cdek_map.tile_url }}" data-attribution="{{ cdek_map.attribution }}" data-points-url="{% url 'orders:cdek_map_points' %}" data-default-city="{{ cdek_default_city }}" data-quoted-at="{{ shipping.quoted_at|default:'' }}" data-quote-ttl="{{ cdek_quote_ttl }}">
 {{ form.pvz_code }}
 {% if cdek_unavailable %}<p class="shop-warning">{{ cdek_unavailable }}</p>{% else %}
-{% if cdek_test_mode %}<p class="shop-warning">Пункты, стоимость и срок — из тестовой среды СДЭК. Отправление не создаётся.</p>{% endif %}
+{% if cdek_demo_quotes %}<p class="shop-warning">Учебная доставка — {{ cdek_demo_price|money }} ₽ за весь заказ, это не тариф СДЭК. Пункты — из тестовой среды СДЭК. Срок доставки не рассчитывается. Деньги не списываются, отправление не создаётся.</p>{% elif cdek_test_mode %}<p class="shop-warning">Пункты, стоимость и срок — из тестовой среды СДЭК. Отправление не создаётся.</p>{% endif %}
 <div data-cdek-search hidden>
 <div class="form-field"><label for="cdek-city-query">Город или адрес</label><div class="cdek-search-row"><input id="cdek-city-query" type="search" maxlength="100" placeholder="Например, Тольятти, Ленина" autocomplete="address-level2" data-cdek-city-query><button type="button" class="shop-button secondary" data-cdek-city-search>Найти</button></div></div>
 <div class="cdek-location"><button type="button" class="shop-button secondary" data-cdek-locate><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></svg>Рядом со мной</button><p class="field-help">Местоположение — только с вашего разрешения.</p></div>
@@ -35,7 +35,7 @@
 <noscript><p class="shop-muted">Для выбора пункта выдачи включите JavaScript в браузере.</p></noscript>
 <button type="button" class="shop-button secondary" data-cdek-calculate hidden>Повторить расчёт доставки</button>
 {% endif %}
-<p class="cdek-status" role="status" aria-live="polite" data-cdek-status>{% if shipping %}ПВЗ {{ shipping.pickup.code }}: {{ shipping.pickup.city }}, {{ shipping.pickup.address }}. Ориентировочный срок: {{ shipping.period_min }}–{{ shipping.period_max }} дн.{% elif cdek_ready %}Выберите пункт выдачи, чтобы узнать стоимость и срок.{% endif %}</p>
+<p class="cdek-status" role="status" aria-live="polite" data-cdek-status>{% if shipping %}ПВЗ {{ shipping.pickup.code }}: {{ shipping.pickup.city }}, {{ shipping.pickup.address }}. {% if shipping.price_source == 'demo' %}Учебная доставка — {{ shipping.price|money }} ₽, это не тариф СДЭК. Срок доставки не рассчитывается.{% else %}Ориентировочный срок: {{ shipping.period_min }}–{{ shipping.period_max }} дн.{% endif %}{% elif cdek_ready %}{% if cdek_demo_quotes %}Выберите пункт выдачи для пробного заказа.{% else %}Выберите пункт выдачи, чтобы узнать стоимость и срок.{% endif %}{% endif %}</p>
 </div>{% endif %}</fieldset>
 {% include 'shop/partials/form_field.html' with field=form.comment %}
 <div class="checkout-consent">{{ form.accept_terms }}<label for="{{ form.accept_terms.id_for_label }}">Принимаю <a href="{% url 'catalog:legal' slug='terms' %}" target="_blank" hx-boost="false">условия покупки</a>.</label>{{ form.accept_terms.errors }}</div>

@@ -231,16 +231,20 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.display(description="Тариф СДЭК")
     def cdek_tariff(self, obj):
+        if obj.is_demo_delivery:
+            return "Учебная доставка — не тариф СДЭК"
         return obj.delivery_snapshot.get("tariff_code", "—")
 
     @admin.display(description="Объявленная стоимость для накладной СДЭК")
     def cdek_declared_value(self, obj):
+        if obj.is_demo_delivery:
+            return "Учебная доставка — страховой сбор не рассчитывался"
         value = obj.delivery_snapshot.get("declared_value")
         return f"{value} ₽ — стоимость товаров; сбор включён в расчёт доставки" if value else "—"
 
     @admin.display(description="Накладная СДЭК")
     def cdek_waybill(self, obj):
-        if getattr(obj, "trial_payment", None):
+        if obj.is_demo_delivery or getattr(obj, "trial_payment", None):
             return "Пробный заказ — отправка не требуется"
         return "Оформить вручную после подтверждения оплаты" if obj.delivery_type == "cdek_pvz" else "—"
 

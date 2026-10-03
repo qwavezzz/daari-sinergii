@@ -3,6 +3,7 @@
   <h1>{% if trial.state == 'succeeded' %}Проба завершена{% elif trial.state == 'canceled' %}Проба отменена{% else %}Пробная оплата{% endif %}</h1>
   <p class="order-lead"><strong>Деньги не списываются.</strong> Данные карты не нужны. Это проверка оформления, без банковского платежа, кассового чека и отправки заказа.</p>
   <p class="shop-muted">Заказ {{ order.public_id }}</p>
+  {% include 'shop/partials/demo_delivery_notice.html' %}
   {% if error %}<p class="shop-error" role="alert">{{ error }}</p>{% endif %}
   <div class="order-layout">
     <div>

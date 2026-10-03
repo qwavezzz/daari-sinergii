@@ -12,6 +12,8 @@
 {% endfor %}
 Товары: {{ order.subtotal|money }} ₽
 Получение: {{ order.delivery_price|money }} ₽
+{% if order.is_demo_delivery %}Учебная доставка — это не тариф СДЭК. Срок не рассчитывается, отправки товаров нет.
+{% endif %}
 Стоимость заказа: {{ order.total|money }} ₽
 
 Способ получения: {{ order.delivery_method }}

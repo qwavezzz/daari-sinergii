@@ -1,0 +1,1 @@
+{% load shop_tags %}{% if order.is_demo_delivery %}<p class="shop-warning">Учебная доставка — {{ order.delivery_price|money }} ₽ за весь заказ, это не тариф СДЭК. Срок доставки не рассчитывается. Деньги не списываются, отправки товаров нет.</p>{% endif %}

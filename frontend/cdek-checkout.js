@@ -95,7 +95,11 @@ export function installCheckout(form, htmx) {
       find('[data-delivery-price]').textContent = money(data.shipping.price)
       find('[data-order-total]').textContent = money(data.total)
       label.textContent = `${form.dataset.paymentLabel || 'Перейти к оплате'} — ${money(data.total)}`
-      status.textContent = `ПВЗ ${data.shipping.pickup.code}: ${data.shipping.pickup.city}, ${data.shipping.pickup.address}. Ориентировочный срок: ${data.shipping.period_min}–${data.shipping.period_max} дн.`
+      const deliveryDetails =
+        data.shipping.price_source === 'demo'
+          ? `Учебная доставка — ${money(data.shipping.price)}, это не тариф СДЭК. Срок доставки не рассчитывается.`
+          : `Ориентировочный срок: ${data.shipping.period_min}–${data.shipping.period_max} дн.`
+      status.textContent = `ПВЗ ${data.shipping.pickup.code}: ${data.shipping.pickup.city}, ${data.shipping.pickup.address}. ${deliveryDetails}`
       calculate.hidden = true
       submit.disabled = false
       expireIn(data.expires_in * 1000)

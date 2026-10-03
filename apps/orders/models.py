@@ -153,6 +153,12 @@ class Order(TimeStampedModel):
     def delivery_method_name(self):
         return self.delivery_method
 
+    @property
+    def is_demo_delivery(self):
+        return (
+            isinstance(self.delivery_snapshot, dict) and self.delivery_snapshot.get("price_source") == "demo"
+        )
+
     def __str__(self):
         return f"Заказ № {self.pk}" if self.pk else "Новый заказ"
 

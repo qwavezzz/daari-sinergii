@@ -2,6 +2,9 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests/browser',
+  ...(process.env.BROWSER_TEST_DEMO_QUOTES === '1'
+    ? { testMatch: '**/demo-delivery.spec.js' }
+    : { testIgnore: '**/demo-delivery.spec.js' }),
   outputDir: './var/test-results',
   fullyParallel: false,
   workers: 1,

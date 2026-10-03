@@ -14,6 +14,19 @@ from .packing import MAX_PACKING_OPTIONS, PreparedPacking, package_key, packing_
 # Old quotes do not attest to the measured packing plan.
 QUOTE_SALT = "cdek-delivery-quote-v4-compared-packing"
 COMPARISON_SECONDS = 20
+DEMO_DELIVERY_PRICE = Decimal("500.00")
+
+
+def demo_quotes_enabled():
+    enabled = getattr(settings, "CDEK_DEMO_QUOTES_ENABLED", False)
+    if enabled and (
+        not settings.CDEK_TEST_MODE or not settings.PAYMENT_STUB_ENABLED or settings.ALFABANK_ENABLED
+    ):
+        raise DeliveryUnavailable(
+            "Учебная доставка доступна только с пробной оплатой, "
+            "выключенным Альфа-Банком и тестовой средой СДЭК."
+        )
+    return enabled
 
 
 def shipment_identity():
@@ -21,6 +34,7 @@ def shipment_identity():
         getattr(settings, "CDEK_TEST_MODE", True),
         getattr(settings, "CDEK_FROM_CITY_CODE", 0),
         hashlib.sha256(getattr(settings, "CDEK_CLIENT_ID", "").encode()).hexdigest(),
+        "demo:" + str(DEMO_DELIVERY_PRICE) if demo_quotes_enabled() else "cdek",
     ]
 
 
@@ -32,6 +46,7 @@ def quote_delivery(cart, method, code, session_key):
     from .services import checkout_snapshot, quote_data, QuoteChanged
 
     deadline = monotonic() + COMPARISON_SECONDS
+    demo = demo_quotes_enabled()
     if not configured():
         raise DeliveryUnavailable("Расчёт СДЭК пока не подключён. Товары сохранятся в корзине.")
     if cart.session_key != session_key or method.type != "cdek_pvz" or not method.active:
@@ -70,8 +85,12 @@ def quote_delivery(cart, method, code, session_key):
         seen.add(key)
         attempted += 1
         try:
-            quoted = client.calculate(
-                method.cdek_tariff_code, pickup, candidate["packages"], declared_value=subtotal
+            quoted = (
+                {"price": str(DEMO_DELIVERY_PRICE), "period_min": None, "period_max": None}
+                if demo
+                else client.calculate(
+                    method.cdek_tariff_code, pickup, candidate["packages"], declared_value=subtotal
+                )
             )
         except TariffUnavailable:
             rejected += 1
@@ -104,6 +123,7 @@ def quote_delivery(cart, method, code, session_key):
     now = timezone.now()
     snapshot = {
         "provider": "cdek",
+        "price_source": "demo" if demo else "cdek",
         "method_id": method.pk,
         "tariff_code": method.cdek_tariff_code,
         "pickup": pickup,
@@ -115,14 +135,14 @@ def quote_delivery(cart, method, code, session_key):
             "successful": successful,
             "rejected": rejected,
             "finished": attempted == len(options),
-            "scope": "bounded_measured_options",
+            "scope": "demo_fixed_price" if demo else "bounded_measured_options",
         },
         "origin_city_code": settings.CDEK_FROM_CITY_CODE,
         "test_mode": settings.CDEK_TEST_MODE,
-        "waybill": "manual",
+        "waybill": "none" if demo else "manual",
         "currency": "RUB",
         "declared_value": str(subtotal),
-        "services": [{"code": "INSURANCE", "parameter": str(subtotal)}],
+        "services": [] if demo else [{"code": "INSURANCE", "parameter": str(subtotal)}],
         "quoted_at": now.isoformat(),
         **result,
     }

@@ -150,6 +150,10 @@ def payment_payload(order, key=None):
 def start_payment(order_id, client=None):
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
+        if order.is_demo_delivery:
+            raise PaymentUnavailable(
+                "Заказ с учебной доставкой нельзя оплатить в банке. Оформите новый заказ."
+            )
         if TrialPayment.objects.filter(order=order).exists():
             raise PaymentUnavailable("Пробный заказ нельзя оплатить в банке. Оформите новый заказ.")
         client = client or AlfaBankClient()
@@ -198,7 +202,8 @@ def start_payment(order_id, client=None):
 
 def verify_context(attempt):
     if (
-        TrialPayment.objects.filter(order_id=attempt.order_id).exists()
+        attempt.order.is_demo_delivery
+        or TrialPayment.objects.filter(order_id=attempt.order_id).exists()
         or attempt.provider != "alfabank"
         or attempt.account_id != settings.ALFABANK_USERNAME
         or attempt.test_mode is not settings.ALFABANK_TEST_MODE

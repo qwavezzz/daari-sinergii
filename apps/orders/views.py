@@ -22,7 +22,7 @@ from .services import QuoteChanged, checkout_is_enabled, checkout_snapshot, crea
 def checkout_context(cart, context, form, method):
     from .cdek import configured, DeliveryUnavailable
     from .map_config import map_config
-    from .shipping import packages_for, verified_delivery
+    from .shipping import DEMO_DELIVERY_PRICE, demo_quotes_enabled, packages_for, verified_delivery
 
     delivery_price = context["delivery_quotes"].get(method.pk) if method else None
     context["delivery_requires_address"] = bool(
@@ -33,10 +33,13 @@ def checkout_context(cart, context, form, method):
     context["cdek_ready"] = configured()
     context["cdek_map"] = map_config() if configured() else {}
     context["cdek_test_mode"] = getattr(settings, "CDEK_TEST_MODE", True)
+    context["cdek_demo_quotes"] = getattr(settings, "CDEK_DEMO_QUOTES_ENABLED", False)
+    context["cdek_demo_price"] = DEMO_DELIVERY_PRICE
     context["cdek_quote_ttl"] = getattr(settings, "CDEK_QUOTE_TTL_SECONDS", 900)
     context["cdek_default_city"] = settings.CDEK_FROM_CITY_CODE
     if context["cdek_selected"]:
         try:
+            demo_quotes_enabled()
             if not configured():
                 raise DeliveryUnavailable("Расчёт СДЭК пока не подключён. Товары сохранятся в корзине.")
             if not method.cdek_tariff_code:
@@ -248,6 +251,7 @@ def detail(request, public_id):
             "trial_payment": trial,
             "page_title": "Ваш заказ — Дары Синергии",
             "payment_enabled": settings.ALFABANK_ENABLED
+            and not order.is_demo_delivery
             and not trial
             and order.financial_status in {"unpaid", "pending"}
             and order.status != "canceled"

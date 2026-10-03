@@ -7,6 +7,7 @@
 <h1 style="font-size:24px;line-height:1.3;margin:0 0 12px">{{ title }}</h1>
 <p style="font-size:12px;overflow-wrap:anywhere;margin:0 0 20px;color:#526477">Заказ № {{ order.public_id }}</p>
 <p>{{ description }}</p>
+{% if order.is_demo_delivery %}<p>Учебная доставка — {{ order.delivery_price|money }} ₽, это не тариф СДЭК. Срок не рассчитывается, отправки товаров нет.</p>{% endif %}
 {% if refund_amount %}<p style="padding:16px;background:#edf6fa"><strong>Возврат по этому уведомлению: {{ refund_amount|money }} ₽</strong><br>Всего подтверждено на момент события: {{ refunded_total|money }} ₽</p>{% endif %}
 <h2 style="font-size:18px;margin:24px 0 12px">Состав заказа</h2>
 <table style="width:100%;border-collapse:collapse;text-align:left">

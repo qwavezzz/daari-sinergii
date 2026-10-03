@@ -36,6 +36,7 @@ settings.PAYMENT_STUB_ENABLED = True
 # Explicit test-only CDEK adapter. This file always uses a disposable SQLite database.
 settings.CDEK_ENABLED = True
 settings.CDEK_TEST_MODE = True
+settings.CDEK_DEMO_QUOTES_ENABLED = os.environ.get("BROWSER_TEST_DEMO_QUOTES") == "1"
 settings.CDEK_CLIENT_ID = "browser-fixture"
 settings.CDEK_CLIENT_SECRET = "browser-fixture-not-a-credential"
 settings.CDEK_FROM_CITY_CODE = 99999

@@ -75,6 +75,7 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm run test:browser
+          BROWSER_TEST_DEMO_QUOTES=1 npm run test:browser
 
   pages:
     needs: test

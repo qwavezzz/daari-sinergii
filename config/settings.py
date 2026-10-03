@@ -151,6 +151,7 @@ ALFABANK_TAX_SYSTEM = (
 )
 CDEK_ENABLED = os.environ.get("CDEK_ENABLED", "false").lower() == "true"
 CDEK_TEST_MODE = os.environ.get("CDEK_TEST_MODE", "true").lower() == "true"
+CDEK_DEMO_QUOTES_ENABLED = os.environ.get("CDEK_DEMO_QUOTES_ENABLED", "false").lower() == "true"
 CDEK_CLIENT_ID = os.environ.get("CDEK_CLIENT_ID", "")
 CDEK_CLIENT_SECRET = os.environ.get("CDEK_CLIENT_SECRET", "")
 # Use the CDEK directory code for the actual sender city; never infer it from a name.
