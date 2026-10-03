@@ -1,11 +1,13 @@
 from decimal import Decimal
 from io import StringIO
 from pathlib import Path
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 from django.test import TestCase, override_settings
 
 from apps.cart.models import Cart, CartItem
@@ -17,6 +19,9 @@ from .packing import packing_plan
 
 
 @override_settings(DEBUG=True, CDEK_TEST_MODE=True, PAYMENT_STUB_ENABLED=True, ALFABANK_ENABLED=False)
+@skipUnless(
+    connection.vendor == "sqlite", "Local demo commands require SQLite; covered in the SQLite CI step."
+)
 class DemoShippingCommandTests(TestCase):
     def setUp(self):
         self.categories = {

@@ -59,6 +59,12 @@ jobs:
           .venv/bin/python manage.py migrate --noinput
           .venv/bin/python manage.py import_legacy_content
           .venv/bin/python manage.py collectstatic --noinput
+      - name: Local rehearsal commands (SQLite)
+        env:
+          DATABASE_URL: ''
+        run: >-
+          .venv/bin/python manage.py test --noinput
+          apps.orders.test_demo_shipping apps.orders.test_working_checkout
       - name: Production configuration
         env:
           DJANGO_SETTINGS_MODULE: config.settings
