@@ -24,12 +24,13 @@ export function installPhoneInput(form) {
   const selected = () => country.selectedOptions[0]
   const digitsOf = (value) => value.replace(/[^0-9]/g, '')
   const max = () => Number(selected().dataset.length)
+  const example = () => formatNational('9991234567'.slice(0, max()), max()).replaceAll('-', ' ')
   const explain = (message = '') => {
     form.querySelector('[data-phone-country-value]').textContent = selected().textContent.split(' — ')[0]
     country.title = selected().textContent
+    input.placeholder = example()
     input.setCustomValidity(message)
-    help.textContent =
-      message || `Формат: +${selected().dataset.code} ${formatNational('9170124278'.slice(0, max()), max())}`
+    help.textContent = message || `Формат: +${selected().dataset.code} ${example()}`
     help.classList.toggle('shop-error', Boolean(message))
   }
   const setDigits = (digits, caretDigits = digits.length) => {
@@ -126,7 +127,6 @@ export function installPhoneInput(form) {
     () => {
       const digits = digitsOf(input.value)
       // Changing a country must not silently discard digits from an entered number.
-      input.placeholder = formatNational('9170124278'.slice(0, max()), max())
       if (digits.length > max()) explain(`Для этой страны нужно ${max()} цифр. Исправьте номер.`)
       else setDigits(digits)
     },

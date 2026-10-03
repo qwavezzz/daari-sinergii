@@ -48,6 +48,15 @@ def _provider_failure(path, status, result):
     elif status in (401, 403) or path == "oauth/token":
         code = "cdek_authentication"
         message = "Магазину не удалось подключиться к СДЭК. Сообщите об этом менеджеру — товары сохранены."
+    elif path == "calculator/tariff" and "v2_sender_location_not_recognized" in codes:
+        code = "cdek_sender_location"
+        message = (
+            "СДЭК не распознал город отправления магазина. "
+            "Повторите расчёт позднее или свяжитесь с нами — менять пункт выдачи не нужно."
+        )
+    elif path == "calculator/tariff" and "v2_recipient_location_not_recognized" in codes:
+        code = "cdek_recipient_location"
+        message = "СДЭК не распознал город получения. Выберите другой пункт или свяжитесь с магазином."
     elif (
         path == "calculator/tariff"
         and (200 <= status < 300 or status in (400, 422))
@@ -241,38 +250,6 @@ class CdekClient:
             raise DeliveryUnavailable("Не удалось получить пункты СДЭК. Повторите поиск позже.")
         return result
 
-    def cities(self, query):
-        # Official API /location/cities uses city + country_codes (plural).
-        result = self._request(
-            "location/cities",
-            params={"country_codes": "RU", "city": query, "size": 21, "page": 0, "lang": "rus"},
-            token=self._token(),
-        )
-        if not isinstance(result, list):
-            raise DeliveryUnavailable("Не удалось получить города СДЭК. Повторите поиск.")
-        cities = []
-        for row in result[:20]:
-            if (
-                not isinstance(row, dict)
-                or row.get("country_code") != "RU"
-                or type(row.get("code")) is not int
-                or not 0 < row["code"] < 10_000_000
-                or not isinstance(row.get("city"), str)
-                or not row["city"].strip()
-            ):
-                continue
-            cities.append(
-                {
-                    "code": row["code"],
-                    "city": row["city"][:200],
-                    "region": row.get("region", "")[:200] if isinstance(row.get("region"), str) else "",
-                }
-            )
-        return {"cities": cities, "has_more": len(result) > 20}
-
-    def office_choices(self, city_code, page):
-        return self._office_page({"city_code": city_code}, page, 50)
-
     def map_points(self, page):
         # Load the carrier directory in bounded pages independently of city/geocoding APIs.
         return self._office_page({}, page, 500)
@@ -322,41 +299,6 @@ class CdekClient:
         # Some environments omit the pagination header. A full page permits one more request.
         has_more = (page + 1) * size < int(count) if count else len(result) >= size
         return {"offices": offices, "next_page": page + 1 if has_more and page < 199 else None}
-
-    def city_at(self, latitude, longitude):
-        latitude, longitude = coordinates(latitude, longitude)
-        result = self._request(
-            "location/coordinates",
-            params={"latitude": latitude, "longitude": longitude},
-            token=self._token(),
-        )
-        if (
-            not isinstance(result, dict)
-            or type(result.get("code")) is not int
-            or not 0 < result["code"] < 10_000_000
-            or not isinstance(result.get("city"), str)
-            or not result["city"].strip()
-        ):
-            raise DeliveryUnavailable("СДЭК не определил город. Введите его название вручную.")
-        # Coordinates lookup may return a foreign city without a country. Verify
-        # the code against the Russian directory before offering its pickup points.
-        rows = self._request(
-            "location/cities",
-            params={"code": result["code"], "country_codes": "RU", "size": 1, "lang": "rus"},
-            token=self._token(),
-        )
-        if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
-            raise DeliveryUnavailable("СДЭК не определил город в России. Введите город вручную.")
-        city = rows[0]
-        if city.get("code") != result["code"] or city.get("country_code") != "RU":
-            raise DeliveryUnavailable("Выберите город в России — доставка пока доступна только по России.")
-        return {
-            "city": {
-                "code": result["code"],
-                "city": result["city"][:200],
-                "region": str(city.get("region") or "")[:200],
-            }
-        }
 
     def pickup(self, code):
         code = safe_code(code)

@@ -13,19 +13,12 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIRS = {
     "apps",
     "assets",
-    "cart",
-    "catalog",
     "config",
-    "content",
-    "core",
     "deploy",
+    "docs",
     "frontend",
-    "orders",
-    "payments",
     "public",
-    "reviews",
     "scripts",
-    "src",
     "templates",
     "tests",
 }
@@ -34,7 +27,6 @@ ROOT_FILES = {
     ".gitignore",
     ".prettierrc.json",
     "README.md",
-    "index.html",
     "manage.py",
     "package.json",
     "package-lock.json",
@@ -43,38 +35,6 @@ ROOT_FILES = {
     "requirements.txt",
     "requirements-dev.txt",
     "vite.config.js",
-}
-# Never glob untracked files: this checkout also contains private handoff files.
-ADDITIONS = {
-    "apps/core/test_https.py",
-    "deploy/HTTPS-AND-MONITORING.md",
-    "deploy/INSTALL-HTTPS-20260921.md",
-    "apps/content/seo.py",
-    "apps/content/templatetags/__init__.py",
-    "apps/content/templatetags/seo.py",
-    "apps/content/test_seo.py",
-    "apps/content/data/seo_20260921.json",
-    "apps/content/management/commands/apply_seo_content.py",
-    "tests/browser/seo.spec.js",
-    "deploy/INSTALL-SEO-20260921.md",
-    "docs/SEO-AUDIT-2026-09-21.md",
-    "docs/SEO-FIXES-2026-09-21.md",
-    "docs/CONTINUE-AT-HOME.md",
-    "apps/core/seo.py",
-    "deploy/audit-vps.sh",
-    "deploy/FIREWALL.md",
-    "deploy/DNS-PERSISTENCE.md",
-    "deploy/INSTALL-READINESS-20260918.md",
-    "deploy/systemd-networkd/90-dari-dns.conf",
-    "deploy/RELEASE-READINESS.md",
-    "deploy/SSH-ACCESS.md",
-    "docs/READINESS-AUDIT-2026-09-18.md",
-    "docs/CLIENT-ACCESS.template.md",
-    "docs/OWNER-GUIDE.md",
-    "docs/SEO-SETUP.md",
-    "scripts/audit-public-site.py",
-    "scripts/audit-live-browser.mjs",
-    "scripts/package-release.py",
 }
 
 
@@ -117,16 +77,25 @@ def add_file(archive, name, data):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("name", help="Archive name without .tar.gz")
+    parser.add_argument(
+        "--include",
+        action="append",
+        default=[],
+        help="Explicitly reviewed untracked file; repeat for each addition.",
+    )
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,79}", args.name):
         parser.error("Use lowercase letters, numbers and hyphens for the archive name.")
 
     tracked = set(filter(None, git("ls-files", "-z").split("\0")))
     additions = set(filter(None, git("ls-files", "--others", "--exclude-standard", "-z").split("\0")))
-    unexpected = {name for name in additions if eligible(name)} - ADDITIONS
+    approved = set(args.include)
+    if approved - additions or any(not eligible(name) for name in approved):
+        raise ValueError("Each --include path must be an eligible untracked application file.")
+    unexpected = {name for name in additions if eligible(name)} - approved
     if unexpected:
         raise ValueError(f"Review untracked application files before packaging: {sorted(unexpected)}")
-    names = sorted({name for name in tracked if eligible(name)} | ADDITIONS)
+    names = sorted({name for name in tracked if eligible(name) and (ROOT / name).is_file()} | approved)
     # Validate all inputs before creating the archive.
     contents = {name: payload(name) for name in names}
     manifest = {
@@ -141,7 +110,7 @@ def main():
         f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in contents.items()
     ).encode("utf-8")
 
-    destination = ROOT / "artifacts" / "releases"
+    destination = ROOT / "var" / "releases"
     destination.mkdir(parents=True, exist_ok=True)
     target = destination / f"{args.name}.tar.gz"
     checksum_path = destination / f"{target.name}.sha256"

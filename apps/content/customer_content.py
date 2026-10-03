@@ -10,7 +10,8 @@ from .models import SiteSettings
 
 CUSTOMER_PAGES = {
     "privacy": ("Политика обработки персональных данных", "/legal/privacy/", "privacy_text"),
-    "terms": ("Условия покупки", "/legal/terms/", "terms_text"),
+    "cookies": ("Использование cookie", "/legal/cookies/", ""),
+    "terms": ("Публичная оферта", "/legal/terms/", "terms_text"),
     "delivery": ("Доставка и оплата", "/delivery-and-payment/", "delivery_text"),
     "returns": ("Возврат и отмена заказа", "/returns/", "returns_text"),
     "contacts": ("Контакты и реквизиты", "/contacts/", "contacts_text"),
@@ -72,11 +73,13 @@ def render_customer_text(text, values=None):
 
 def text_blocks(text):
     blocks = []
+    section = 0
     for paragraph in re.split(r"\n\s*\n", text.strip()):
         if paragraph:
             if paragraph.startswith("## "):
+                section += 1
                 heading, _, body = paragraph.partition("\n")
-                blocks.append({"kind": "heading", "text": heading[3:].strip()})
+                blocks.append({"kind": "heading", "text": heading[3:].strip(), "id": f"section-{section}"})
                 if body.strip():
                     blocks.append({"kind": "paragraph", "text": body.strip()})
             else:

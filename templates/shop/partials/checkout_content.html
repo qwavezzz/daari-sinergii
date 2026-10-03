@@ -14,7 +14,7 @@
 <div class="phone-control"><div class="phone-country"><label class="sr-only" for="{{ form.phone_country.id_for_label }}">Код страны</label>{{ form.phone_country }}<span data-phone-country-value aria-hidden="true"></span></div>{{ form.phone }}</div>
 <p class="field-help" id="phone-help">Номер без кода страны — до 10 цифр.</p>{{ form.phone_country.errors }}{{ form.phone.errors }}
 </div>
-{% include 'shop/partials/form_field.html' with field=form.email %}</fieldset>
+<div class="form-field{% if form.email.errors %} has-error{% endif %}"><label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>{{ form.email }}{{ form.email.errors }}<p id="email-error" class="field-help shop-error" data-email-error aria-live="polite" hidden></p></div></fieldset>
 <fieldset><legend>Способ получения</legend>{% include 'shop/partials/form_field.html' with field=form.delivery_method %}<button type="submit" name="requote" value="1" formnovalidate class="shop-button secondary delivery-update">Обновить способ получения</button>
 {% if delivery_requires_address %}{% include 'shop/partials/form_field.html' with field=form.address %}{% endif %}
 {% if cdek_selected %}<div class="cdek-picker" data-cdek-picker data-ready="{% if cdek_ready %}1{% else %}0{% endif %}" data-tile-url="{{ cdek_map.tile_url }}" data-attribution="{{ cdek_map.attribution }}" data-points-url="{% url 'orders:cdek_map_points' %}" data-default-city="{{ cdek_default_city }}" data-quoted-at="{{ shipping.quoted_at|default:'' }}" data-quote-ttl="{{ cdek_quote_ttl }}">

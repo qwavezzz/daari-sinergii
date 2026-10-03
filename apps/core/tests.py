@@ -76,19 +76,19 @@ class LocalIntegrationSettingsTests(SimpleTestCase):
                 os.environ,
                 {
                     "DJANGO_SETTINGS_MODULE": "config.settings_dev",
-                    "YOOKASSA_SECRET_KEY": "environment-fixture",
+                    "ALFABANK_PASSWORD": "environment-fixture",
                 },
                 clear=True,
             ),
             patch("config.local_environment.Path.is_file", return_value=True),
             patch(
                 "config.local_environment.Path.read_text",
-                return_value='{"YOOKASSA_SECRET_KEY":"file-fixture","YOOKASSA_TEST_MODE":true}',
+                return_value='{"ALFABANK_PASSWORD":"file-fixture","ALFABANK_TEST_MODE":true}',
             ),
         ):
             load_local_environment()
-            self.assertEqual(os.environ["YOOKASSA_SECRET_KEY"], "environment-fixture")
-            self.assertEqual(os.environ["YOOKASSA_TEST_MODE"], "true")
+            self.assertEqual(os.environ["ALFABANK_PASSWORD"], "environment-fixture")
+            self.assertEqual(os.environ["ALFABANK_TEST_MODE"], "true")
 
 
 class HostAndRoleTests(TestCase):

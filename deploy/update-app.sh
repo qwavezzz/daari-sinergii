@@ -51,6 +51,7 @@ test "$(systemctl show dari-backup.service -p ExecMainStatus --value)" = 0
 stage=migrations
 run_app manage.py migrate --noinput
 run_app manage.py setup_roles
+run_app manage.py setup_customer_pages --refresh-defaults
 run_app manage.py collectstatic --noinput
 
 stage=switch

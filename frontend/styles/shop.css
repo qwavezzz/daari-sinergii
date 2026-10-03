@@ -221,13 +221,6 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
 }
-.cdek-manual {
-  margin-block: 16px;
-}
-.cdek-manual summary {
-  cursor: pointer;
-  padding-block: 12px;
-}
 .checkout-final dd {
   overflow-wrap: anywhere;
 }

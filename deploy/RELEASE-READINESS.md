@@ -74,7 +74,7 @@ sudo systemctl show dari-backup.service --no-pager -p Result -p ExecMainStatus
 .venv/Scripts/python.exe scripts/package-release.py dari-readiness-20260918
 ```
 
-Результат — `artifacts/releases/dari-readiness-20260918.tar.gz` и файл `.sha256`
+Результат — `var/releases/dari-readiness-20260918.tar.gz` и файл `.sha256`
 рядом. Состав задаётся списком отслеживаемых исходников и явным перечнем новых
 файлов в скрипте; локальные секреты, БД, резервные копии, заполненный паспорт
 доступов и инструменты агента не включаются. Shell-скрипты упаковываются с LF.
@@ -122,7 +122,7 @@ sha256sum -c dari-readiness-20260918.tar.gz.sha256
    SHOP_INDEXING_ENABLED=false
    ```
 
-   Сохранить `CHECKOUT_ENABLED=false`, `YOOKASSA_ENABLED=false`, текущие SMTP-секреты
+   Сохранить `CHECKOUT_ENABLED=false`, `ALFABANK_ENABLED=false`, текущие SMTP-секреты
    и все прочие действующие значения. Не заменять файл окружения шаблоном.
 4. По подтверждённой проверке HTTPS всех поддоменов сначала установить небольшой
    `HSTS_SECONDS=300`, проверить, затем увеличить до согласованного срока.

@@ -9,10 +9,6 @@ from django.core.exceptions import ImproperlyConfigured
 
 LOCAL_KEYS = {
     "CHECKOUT_ENABLED",
-    "YOOKASSA_ENABLED",
-    "YOOKASSA_SHOP_ID",
-    "YOOKASSA_SECRET_KEY",
-    "YOOKASSA_TEST_MODE",
     "ALFABANK_ENABLED",
     "ALFABANK_USERNAME",
     "ALFABANK_PASSWORD",
@@ -27,7 +23,6 @@ LOCAL_KEYS = {
     "CDEK_TEST_MODE",
     "CDEK_PUBLIC_SANDBOX",
     "CDEK_FROM_CITY_CODE",
-    "CDEK_YANDEX_API_KEY",  # Accept existing local files; the retired widget key is unused.
     "CDEK_MAP_TILE_URL",
     "CDEK_MAP_ATTRIBUTION",
     "EMAIL_BACKEND",
@@ -56,7 +51,7 @@ def load_local_environment():
             raise ValueError
     except (OSError, ValueError) as exc:
         raise ImproperlyConfigured(
-            "Проверьте формат var/local-settings.json по docs/INTEGRATIONS.md."
+            "Проверьте формат var/local-settings.json и допустимые ключи в config/local_environment.py."
         ) from exc
     for key, value in values.items():
         os.environ.setdefault(key, str(value).lower() if isinstance(value, bool) else str(value))

@@ -2,6 +2,7 @@
 /node_modules/
 /.venv/
 /var/
+/artifacts/
 __pycache__/
 *.py[cod]
 .ruff_cache/

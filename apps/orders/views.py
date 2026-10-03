@@ -192,41 +192,6 @@ def cdek_quote(request):
 
 
 @require_GET
-def cdek_cities(request):
-    query = request.GET.get("q", "").strip()
-    if not 2 <= len(query) <= 80 or not re.fullmatch(r"[\w .,'’()\-]+", query):
-        return JsonResponse({"message": "Введите название города: от 2 до 80 символов."}, status=400)
-    return cdek_directory(request, "cities", query)
-
-
-@require_GET
-def cdek_offices(request):
-    city = request.GET.get("city_code", "")
-    page = request.GET.get("page", "0")
-    if (
-        not re.fullmatch(r"[0-9]{1,7}", city)
-        or int(city) == 0
-        or not re.fullmatch(r"[0-9]{1,3}", page)
-        or int(page) > 199
-    ):
-        return JsonResponse({"message": "Выберите город из результатов поиска."}, status=400)
-    return cdek_directory(request, "office_choices", int(city), int(page))
-
-
-@require_POST
-def cdek_locate(request):
-    from .cdek import coordinates, DeliveryUnavailable
-
-    try:
-        latitude, longitude = coordinates(request.POST.get("latitude"), request.POST.get("longitude"))
-    except DeliveryUnavailable as exc:
-        return JsonResponse({"message": " ".join(exc.messages)}, status=400)
-    # City-level precision is sufficient; coordinates stay out of URLs/access logs
-    # and never become customer or order data.
-    return cdek_directory(request, "city_at", round(latitude, 2), round(longitude, 2))
-
-
-@require_GET
 def cdek_map_points(request):
     page = request.GET.get("page", "0")
     if not re.fullmatch(r"[0-9]{1,3}", page) or int(page) > 199:
@@ -257,58 +222,6 @@ def cdek_directory(request, operation, *args):
         return JsonResponse({"message": " ".join(exc.messages)}, status=503)
     response = JsonResponse(result)
     response["Cache-Control"] = "no-store"
-    return response
-
-
-@require_GET
-def cdek_widget(request):
-    from .cdek import CdekClient
-
-    # v3 service contract, selection-only: no browser calculator or arbitrary API route.
-    if not get_cart(request) or not checkout_is_enabled():
-        return JsonResponse({"message": "Откройте оформление заказа из корзины."}, status=403)
-    if not allow_request(request, "cdek-widget", 120, 60):
-        return JsonResponse({"message": "Повторите поиск через минуту."}, status=429)
-    if request.GET.get("action") != "offices":
-        return JsonResponse({"message": "Действие недоступно."}, status=400)
-    filters = {}
-    for key in ("city_code", "region_code"):
-        value = request.GET.get(key)
-        if value:
-            if not re.fullmatch(r"[0-9]{1,7}", value) or not 0 < int(value) < 10000000:
-                return JsonResponse({"message": "Проверьте город поиска."}, status=400)
-            filters[key] = int(value)
-    # Official v3 first asks size=1 and then parallel pages of 500 using X-Total-Elements.
-    for key, default, maximum in (("page", "0", 10000), ("size", "500", 500)):
-        value = request.GET.get(key) or default
-        if (
-            not re.fullmatch(r"[0-9]{1,5}", value)
-            or not 0 <= int(value) <= maximum
-            or key == "size"
-            and int(value) == 0
-        ):
-            return JsonResponse({"message": "Проверьте параметры поиска."}, status=400)
-        filters[key] = int(value)
-    from .shipping import shipment_identity
-
-    cache_key = "cdek-offices:" + salted_hmac("cdek-offices", str([shipment_identity(), filters])).hexdigest()
-    cached = cache.get(cache_key)
-    upstream_headers = {}
-    try:
-        if cached:
-            offices, upstream_headers = cached
-        else:
-            offices = CdekClient().offices(filters, response_headers=upstream_headers)
-            if "X-Total-Elements" not in upstream_headers:
-                # A server without the pagination contract must not silently show a partial list.
-                raise ValidationError("Карта пока недоступна. Выберите город и пункт из списка.")
-            cache.set(cache_key, (offices, upstream_headers), 300)
-    except ValidationError as exc:
-        return JsonResponse({"message": " ".join(exc.messages)}, status=503)
-    response = JsonResponse(offices, safe=False)
-    response["X-Service-Version"] = "3.11.1"
-    response["X-Total-Elements"] = upstream_headers["X-Total-Elements"]
-    response["Cache-Control"] = "private, max-age=300"
     return response
 
 

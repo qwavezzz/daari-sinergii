@@ -40,7 +40,16 @@ def page(request, slug):
         ),
         "customer_base": "shop/base.html" if getattr(request, "is_shop", False) else "site/base.html",
     }
-    if slug == "documents":
+    context["customer_is_legal"] = slug in {"terms", "privacy", "returns", "delivery"}
+    context["customer_sections"] = [
+        block for block in context["customer_blocks"] if block["kind"] == "heading"
+    ]
+    if slug == "cookies":
+        context["session_cookie_name"] = settings.SESSION_COOKIE_NAME
+        context["session_cookie_days"] = settings.SESSION_COOKIE_AGE / 86400
+        context["csrf_cookie_name"] = settings.CSRF_COOKIE_NAME
+        context["csrf_cookie_days"] = settings.CSRF_COOKIE_AGE / 86400
+    elif slug == "documents":
         context["declarations"] = Document.objects.published().filter(is_declaration=True)
     elif slug == "faq":
         context["faq_entries"] = [

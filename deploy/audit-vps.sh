@@ -49,15 +49,15 @@ systemd-run --quiet --wait --pipe --collect \
 import json
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from catalog.models import Product
-from orders.models import Notification, StoreSettings
-from orders.services import checkout_is_enabled
+from apps.catalog.models import Product
+from apps.orders.models import Notification, StoreSettings
+from apps.orders.services import checkout_is_enabled
 from django.utils import timezone
 store = StoreSettings.objects.first()
 data = {
     "debug": settings.DEBUG,
     "checkout_enabled": checkout_is_enabled(),
-    "payment_enabled": settings.YOOKASSA_ENABLED,
+    "payment_enabled": settings.ALFABANK_ENABLED,
     "hsts_seconds": settings.SECURE_HSTS_SECONDS,
     "site_indexing_gate": getattr(settings, "SITE_INDEXING_ENABLED", "not deployed"),
     "shop_indexing_gate": getattr(settings, "SHOP_INDEXING_ENABLED", "not deployed"),

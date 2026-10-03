@@ -28,9 +28,9 @@ class RecipientTests(TestCase):
 
     def test_phone_normalizes_national_and_full_numbers(self):
         cases = [
-            ("RU", "(917) 012-42-78", "+79170124278"),
-            ("RU", "+7 (917) 012-42-78", "+79170124278"),
-            ("RU", "8 (917) 012-42-78", "+79170124278"),
+            ("RU", "(999) 123-45-67", "+79991234567"),
+            ("RU", "+7 (999) 123-45-67", "+79991234567"),
+            ("RU", "8 (999) 123-45-67", "+79991234567"),
             ("KZ", "7012345678", "+77012345678"),
             ("BY", "29 123-45-67", "+375291234567"),
             ("AM", "77123456", "+37477123456"),
@@ -43,13 +43,13 @@ class RecipientTests(TestCase):
 
     def test_cannot_bypass_phone_limits_or_country_with_direct_post(self):
         for country, phone in [
-            ("RU", "91701242789"),
-            ("RU", "917012427"),
+            ("RU", "99912345679"),
+            ("RU", "999123456"),
             ("RU", "+375291234567"),
             ("BY", "2912345678"),
-            ("RU", "9170124278 доб. 12"),
-            ("RU", "٩١٧٠١٢٤٢٧٨"),
-            ("XX", "9170124278"),
+            ("RU", "9991234567 доб. 12"),
+            ("RU", "٩٩٩١٢٣٤٥٦٧"),
+            ("XX", "9991234567"),
         ]:
             with self.subTest(country=country, phone=phone):
                 self.assertFalse(self.form(phone_country=country, phone=phone).is_valid())

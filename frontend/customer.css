@@ -95,6 +95,27 @@
 .customer-copy > h2:first-child {
   margin-top: 0;
 }
+.customer-copy h2[id] {
+  scroll-margin-top: 120px;
+}
+.customer-toc {
+  padding-block: 20px;
+  margin-bottom: 40px;
+  border-block: 1px solid var(--customer-line);
+  font-size: 15px;
+}
+.customer-toc p {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.customer-toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.customer-toc li + li {
+  margin-top: 10px;
+}
 .customer-copy a,
 .customer-footer a {
   text-decoration: underline;
@@ -189,6 +210,35 @@
 .shop-footer .customer-links {
   max-width: 800px;
   font-size: 14px;
+}
+@media print {
+  .shop-header, .shop-footer, .materials-header, .customer-footer,
+  .customer-directory, .customer-breadcrumbs, .customer-toc,
+  .cookie-notice, #cart-dialog {
+    display: none !important;
+  }
+  .customer-shell {
+    background: white;
+    color: black;
+  }
+  .customer-page {
+    max-width: none;
+    padding: 0;
+  }
+  .customer-layout {
+    display: block;
+  }
+  .customer-copy {
+    max-width: none;
+    font-size: 11pt;
+  }
+  .customer-copy h2 {
+    break-after: avoid;
+  }
+  .customer-copy p {
+    orphans: 3;
+    widows: 3;
+  }
 }
 .cart-summary .cart-cost-line {
   display: flex;

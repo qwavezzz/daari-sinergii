@@ -7,12 +7,14 @@
 <article id="customer-content" class="customer-page">
 <nav class="customer-breadcrumbs" aria-label="Хлебные крошки"><a href="/">{% if customer_is_shop %}Магазин{% else %}Главная{% endif %}</a><span aria-hidden="true">/</span><span aria-current="page">{{ customer_title }}</span></nav>
 <h1>{{ customer_title }}</h1>
-{% if payment_stub_enabled %}<p class="customer-status">Пробная оплата: карта не нужна, деньги не списываются.</p>{% endif %}
+{% if payment_stub_enabled and not customer_is_shop %}<p class="customer-status">Пробная оплата: карта не нужна, деньги не списываются.</p>{% endif %}
 {% if customer_updated_at and customer_page == 'privacy' or customer_updated_at and customer_page == 'terms' or customer_updated_at and customer_page == 'returns' %}<p class="customer-meta">Обновлено {{ customer_updated_at|date:'d.m.Y' }}</p>{% endif %}
 <div class="customer-layout">
 <aside class="customer-directory">{% include 'customer/links.html' %}</aside>
 <div class="customer-copy">
-{% for block in customer_blocks %}{% if block.kind == 'heading' %}<h2>{{ block.text }}</h2>{% else %}<p>{{ block.text|urlize|linebreaksbr }}</p>{% endif %}{% endfor %}
+{% if customer_is_legal and customer_sections %}<nav class="customer-toc" aria-label="Содержание документа"><p>Содержание</p><ol>{% for section in customer_sections %}<li><a href="#{{ section.id }}" hx-boost="false">{{ section.text }}</a></li>{% endfor %}</ol></nav>{% endif %}
+{% if customer_page == 'cookies' %}{% include 'customer/cookies.html' %}{% endif %}
+{% for block in customer_blocks %}{% if block.kind == 'heading' %}<h2 id="{{ block.id }}">{{ block.text }}</h2>{% else %}<p>{{ block.text|urlize|linebreaksbr }}</p>{% endif %}{% endfor %}
 {% if customer_page == 'delivery' %}
 <section class="customer-delivery" aria-labelledby="delivery-methods-title"><h2 id="delivery-methods-title">Стоимость доставки</h2>
 {% for method in delivery_methods %}<div class="customer-delivery-row"><span>{{ method.name }}</span><strong>{% if method.type == 'cdek_pvz' %}Расчёт после выбора пункта выдачи{% else %}{{ method.price|money }} ₽ за заказ{% endif %}</strong></div>{% empty %}<p>Расчёт доставки сейчас недоступен. Попробуйте позднее или свяжитесь с нами через страницу контактов.</p>{% endfor %}

@@ -11,4 +11,5 @@
 </head><body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML show:top" hx-history="false">
 <div id="main-content" hx-history-elt>{% block content %}{% endblock %}</div>
 <div id="request-feedback" class="site-request-feedback" role="alert" hidden><span></span><button type="button" data-retry-request>Повторить</button><button type="button" data-dismiss-feedback aria-label="Закрыть сообщение">×</button></div>
+{% include 'shared/cookie_notice.html' %}
 </body></html>

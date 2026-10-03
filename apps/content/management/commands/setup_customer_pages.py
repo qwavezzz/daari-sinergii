@@ -14,7 +14,7 @@ from apps.orders.models import StoreSettings, DeliveryMethod
 def load_customer_copy():
     data_dir = Path(__file__).resolve().parents[2] / "data"
     return (
-        json.loads((data_dir / "customer_pages_20260930.json").read_text(encoding="utf-8")),
+        json.loads((data_dir / "customer_pages.json").read_text(encoding="utf-8")),
         json.loads((data_dir / "customer_pages_previous_hashes.json").read_text(encoding="utf-8")),
     )
 

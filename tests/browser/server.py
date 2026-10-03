@@ -2,6 +2,7 @@
 
 import os
 import sys
+import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +18,14 @@ settings.DATABASES["default"] = {
 (ROOT / "var").mkdir(exist_ok=True)
 settings.PRIVATE_MEDIA_ROOT = ROOT / "var" / "browser-private-media"
 settings.MEDIA_ROOT = ROOT / "var" / "browser-media"
+# These directories belong exclusively to this disposable test database. Keeping
+# previous imports used to accumulate a fresh copy of every PDF on each run.
+for fixture_dir in (settings.PRIVATE_MEDIA_ROOT, settings.MEDIA_ROOT):
+    if fixture_dir.is_symlink() or fixture_dir.resolve() != ROOT / "var" / fixture_dir.name:
+        raise RuntimeError("Unsafe browser fixture directory")
+    if fixture_dir.exists():
+        shutil.rmtree(fixture_dir)
+    fixture_dir.mkdir(parents=True)
 settings.CONTENT_VIDEO_PROVIDERS = ("youtube",)
 settings.MAIN_ORIGIN = "http://localhost:8001"
 settings.SHOP_ORIGIN = "http://shop.localhost:8001"
@@ -40,6 +49,7 @@ django.setup()
 from django.core.management import call_command
 from apps.catalog.models import Category, Product, ProductImage, ProductAttribute
 from apps.orders.models import DeliveryMethod, StoreSettings
+from apps.content.management.commands.setup_customer_pages import load_customer_copy
 from django.core.files.base import ContentFile
 from apps.content.models import Document, Video
 from apps.reviews.models import Review
@@ -108,9 +118,7 @@ Product.objects.create(
 )
 StoreSettings.objects.create(
     checkout_enabled=True,
-    terms_text="Тестовые условия, только для автотестов.",
-    privacy_text="Тестовый документ, только для автотестов.",
-    delivery_text="Тестовые условия получения, только для автотестов.",
+    **load_customer_copy()[0]["pages"],
 )
 DeliveryMethod.objects.create(
     name="Тестовый самовывоз", slug="test-pickup", price="0", address_required=False, active=True
@@ -212,15 +220,6 @@ class BrowserCdekClient:
     """Deterministic network-free fixture; never imported by application runtime."""
 
     token_key = "browser-fixture-cdek"
-
-    def city_at(self, latitude, longitude):
-        return {"city": {"code": 44, "city": "Тестовый город", "region": "Тестовая область"}}
-
-    def cities(self, query):
-        return {
-            "cities": [{"code": 44, "city": "Тестовый город", "region": "Тестовая область"}],
-            "has_more": False,
-        }
 
     def office_choices(self, city_code, page):
         return {

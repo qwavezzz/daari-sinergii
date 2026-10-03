@@ -40,12 +40,15 @@ class CheckoutForm(forms.Form):
                 "autocomplete": "tel-national",
                 "type": "tel",
                 "inputmode": "tel",
-                "placeholder": "(917) 012-42-78",
+                "placeholder": "(999) 123 45 67",
                 "aria-describedby": "phone-help",
             }
         ),
     )
-    email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"autocomplete": "email", "aria-describedby": "email-error"}),
+    )
     delivery_method = forms.ModelChoiceField(
         label="Способ получения",
         queryset=DeliveryMethod.objects.filter(active=True),

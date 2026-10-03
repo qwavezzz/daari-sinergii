@@ -245,27 +245,6 @@ class CdekCheckoutTests(TestCase):
         self.assertEqual(response.context["form"]["first_name"].value(), data["first_name"])
         self.assertFalse(Order.objects.exists())
 
-    def test_widget_proxy_only_reads_offices_with_fixed_filter_and_no_secret(self):
-        self.browser()
-        with patch("apps.orders.cdek.CdekClient") as client:
-
-            def offices(filters, *, response_headers):
-                response_headers["X-Total-Elements"] = "0"
-                return []
-
-            client.return_value.offices.side_effect = offices
-            response = self.client.get(
-                "/checkout/cdek/widget/?action=offices&city_code=123&url=https://evil.test&client_secret=evil",
-                HTTP_HOST="shop.localhost",
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(
-                client.return_value.offices.call_args.args[0], {"city_code": 123, "page": 0, "size": 500}
-            )
-            self.assertEqual(response["X-Service-Version"], "3.11.1")
-            response = self.client.get("/checkout/cdek/widget/?action=calculate", HTTP_HOST="shop.localhost")
-            self.assertEqual(response.status_code, 400)
-
     def test_ajax_quote_rejects_prices_changed_since_page_was_displayed(self):
         values = self.browser()
         Product.objects.filter(pk=self.product.pk).update(price="101.00")

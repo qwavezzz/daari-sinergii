@@ -57,6 +57,13 @@ class CdekHttpErrorTests(SimpleTestCase):
                 self.assertNotIn("не ответил", str(failure))
                 self.response.read.assert_called_once_with(8_000_001 if status == 200 else 64_001)
 
+    def test_sender_directory_failure_is_not_a_packing_rejection(self):
+        self.response_body(400, {"errors": [{"code": "v2_sender_location_not_recognized"}]})
+        failure = self.request_failure()
+        self.assertNotIsInstance(failure, TariffUnavailable)
+        self.assertEqual(failure.code, "cdek_sender_location")
+        self.assertIn("менять пункт выдачи не нужно", str(failure))
+
     def test_http_auth_throttling_server_and_redirect_failures_never_try_more_plans(self):
         for status, code in (
             (401, "cdek_authentication"),

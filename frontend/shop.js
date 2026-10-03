@@ -5,8 +5,10 @@ import Alpine from '@alpinejs/csp'
 import { htmx, installNavigation, syncMetadata } from './shared/navigation.js'
 import { registerContentUI } from './shared/content-ui.js'
 import './customer.css'
+import './shared/cookie-notice.js'
 import { installCheckout } from './cdek-checkout.js'
 import { installPhoneInput } from './shared/phone-input.js'
+import { installEmailInput } from './shared/email-input.js'
 import {
   hasQuantityChanges,
   installQuantityUpdates,
@@ -176,7 +178,9 @@ Alpine.data('checkoutForm', () => ({
   init() {
     const disposeCheckout = installCheckout(this.$el, htmx)
     const disposePhone = installPhoneInput(this.$el)
+    const disposeEmail = installEmailInput(this.$el)
     this.disposeCheckout = () => {
+      disposeEmail()
       disposePhone()
       disposeCheckout?.()
     }

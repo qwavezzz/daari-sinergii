@@ -20,14 +20,14 @@ class MapDirectoryTests(TestCase):
         page = {"offices": [{"code": "TLT2", "latitude": 53.5, "longitude": 49.4}], "next_page": 1}
         with (
             patch.object(CdekClient, "map_points", return_value=page) as fetch,
-            patch.object(CdekClient, "cities") as cities,
+            patch.object(CdekClient, "_request") as network,
         ):
             for _ in range(2):
                 response = self.client.get("/checkout/cdek/map-points/?page=0", HTTP_HOST="shop.localhost")
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), page)
             fetch.assert_called_once_with(0)
-            cities.assert_not_called()
+            network.assert_not_called()
         self.assertEqual(
             self.client.get("/checkout/cdek/map-points/?page=200", HTTP_HOST="shop.localhost").status_code,
             400,

@@ -1,0 +1,12 @@
+# Verification
+
+- Production failure reproduced on shop.dari-sinergii.ru without creating an order/payment/shipment.
+- CDEK sandbox API checked directly: city directory empty; sender location rejected (HTTP 400). Follow-up check remained unavailable.
+- Full browser suite: 42 passed, including shop, checkout, CDEK, payments, admin, cookie notice, email and legal documents.
+- Pages build: 60 pages, 16 products. Pages verification: desktop 1440, mobile 390 and embedded Android passed.
+- Ruff check/format, JavaScript syntax and four JS unit tests passed. No model migrations required.
+- Full Django suite: 353 tests, 352 passed and one PostgreSQL row-lock test skipped on SQLite. Final rerun passed after updating the assertion for the single persistent trial notice.
+- Screenshots and tool logs: ignored `var/maintenance/`.
+- Cleanup evidence: each of 792 browser-media files matched assets/public by SHA256; both release snapshots matched recorded Git commits plus disposable caches/build outputs. Clean Pages worktree removed via Git without force.
+
+User explicitly requested leaving seller/return addresses empty. Remaining: recovery of external CDEK sandbox; deployment of source changes to VPS. Local preview is running on port 8000.

@@ -43,50 +43,11 @@ def product(request, slug):
         "product": item,
         "page_title": f"{item.name} — Дары Синергии",
         "page_description": item.short_description,
-        "documents": item.documents.published(),
-        "reviews": item.reviews.published(),
         "product_documents": item.documents.published(),
         "product_reviews": item.reviews.published(),
         "product_videos": item.videos.published(),
     }
     return render_page(request, "shop/product.html", "shop/partials/product_content.html", context)
-
-
-@require_GET
-def conditions(request):
-    from apps.orders.models import StoreSettings, DeliveryMethod
-
-    return render_page(
-        request,
-        "shop/conditions.html",
-        "shop/partials/conditions_content.html",
-        {
-            "store_settings": StoreSettings.objects.filter(pk=1).first(),
-            "delivery_methods": DeliveryMethod.objects.filter(active=True),
-            "page_title": "Получение и оплата — Дары Синергии",
-        },
-    )
-
-
-@require_GET
-def legal(request, slug):
-    from django.http import Http404
-    from apps.orders.models import StoreSettings
-
-    if slug not in {"terms", "privacy"}:
-        raise Http404
-    store = StoreSettings.objects.filter(pk=1).first()
-    title = "Условия продажи" if slug == "terms" else "Политика обработки персональных данных"
-    return render_page(
-        request,
-        "shop/legal.html",
-        "shop/partials/legal_content.html",
-        {
-            "legal_title": title,
-            "legal_text": getattr(store, "terms_text" if slug == "terms" else "privacy_text", ""),
-            "page_title": title + " — Дары Синергии",
-        },
-    )
 
 
 @require_GET

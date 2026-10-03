@@ -12,6 +12,7 @@ import { initLanding, destroyLanding } from './landing/loader.js'
 import './styles/landing-fallbacks.css'
 import './styles/site.css'
 import './customer.css'
+import './shared/cookie-notice.js'
 
 const legacy = location.hash.match(/^#\/materials(?:\/([a-z0-9-]+))?\/?$/)
 if (legacy)

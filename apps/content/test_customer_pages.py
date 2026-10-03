@@ -17,6 +17,19 @@ class CustomerPagesTests(TestCase):
     def setUp(self):
         call_command("setup_customer_pages", stdout=StringIO())
 
+    def test_formal_documents_have_numbered_sections_and_current_business_terms(self):
+        for path in ("/legal/terms/", "/legal/privacy/", "/returns/", "/delivery-and-payment/"):
+            response = self.client.get(path, HTTP_HOST="shop.localhost")
+            self.assertContains(response, 'aria-label="Содержание документа"')
+            self.assertContains(response, 'id="section-1"')
+            self.assertContains(response, "1.1.")
+        terms = self.client.get("/legal/terms/", HTTP_HOST="shop.localhost")
+        self.assertContains(terms, "Публичная оферта")
+        self.assertContains(terms, "1–3 рабочих дней")
+        privacy = self.client.get("/legal/privacy/", HTTP_HOST="shop.localhost")
+        self.assertContains(privacy, "OpenStreetMap")
+        self.assertNotContains(privacy, "Яндекс Карт")
+
     def test_all_seven_pages_are_html_on_both_hosts_and_have_shared_links(self):
         for host in ("localhost", "shop.localhost"):
             for title, path, field in CUSTOMER_PAGES.values():
@@ -175,7 +188,7 @@ class CustomerPagesTests(TestCase):
         DeliveryMethod.objects.update(active=True)
         response = self.client.get("/legal/terms/", HTTP_HOST="shop.localhost")
         self.assertTrue(response.context["customer_sales_available"])
-        self.assertContains(response, "Пробная оплата: карта не нужна, деньги не списываются")
+        self.assertContains(response, "Пробная оплата без списания денег.", count=1)
         self.assertNotContains(response, "Онлайн-покупка пока недоступна")
         self.assertNotContains(response, "после запуска")
 
