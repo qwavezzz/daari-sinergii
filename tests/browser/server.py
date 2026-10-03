@@ -40,6 +40,7 @@ settings.CDEK_DEMO_QUOTES_ENABLED = os.environ.get("BROWSER_TEST_DEMO_QUOTES") =
 settings.CDEK_CLIENT_ID = "browser-fixture"
 settings.CDEK_CLIENT_SECRET = "browser-fixture-not-a-credential"
 settings.CDEK_FROM_CITY_CODE = 99999
+settings.CDEK_FROM_PVZ_CODE = ""
 settings.TEMPLATES[0]["APP_DIRS"] = False
 settings.TEMPLATES[0]["OPTIONS"]["loaders"] = [
     "django.template.loaders.filesystem.Loader",

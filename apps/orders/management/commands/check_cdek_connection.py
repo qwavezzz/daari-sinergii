@@ -19,11 +19,18 @@ class Command(BaseCommand):
         self.stdout.write(f"Отправление из города {settings.CDEK_FROM_CITY_CODE}; тариф {options['tariff']}.")
         try:
             client = CdekClient()
+            sender = client.shipment_point()
+            if sender:
+                self.stdout.write(
+                    f"Отправление из ПВЗ {sender['code']}: {sender['city']}, {sender['address']}"
+                )
             point = client.pickup(options["pvz"])
             quote = client.calculate(
                 options["tariff"], point, [{"weight": 400, "length": 20, "width": 10, "height": 10}]
             )
         except ValidationError as exc:
+            if getattr(exc, "status_code", None):
+                self.stderr.write(f"HTTP-статус СДЭК: {exc.status_code}")
             codes = getattr(exc, "provider_codes", ())
             if codes:
                 self.stderr.write("Коды ответа СДЭК: " + ", ".join(codes))

@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core import signing
 from django.utils import timezone
 
-from .cdek import CdekClient, DeliveryUnavailable, TariffUnavailable, configured, safe_code
+from .cdek import CdekClient, DeliveryUnavailable, TariffUnavailable, _weight_limits, configured, safe_code
 from .packing import MAX_PACKING_OPTIONS, PreparedPacking, package_key, packing_plan
 
 # Old quotes do not attest to the measured packing plan.
@@ -33,6 +33,7 @@ def shipment_identity():
     return [
         getattr(settings, "CDEK_TEST_MODE", True),
         getattr(settings, "CDEK_FROM_CITY_CODE", 0),
+        getattr(settings, "CDEK_FROM_PVZ_CODE", ""),
         hashlib.sha256(getattr(settings, "CDEK_CLIENT_ID", "").encode()).hexdigest(),
         "demo:" + str(DEMO_DELIVERY_PRICE) if demo_quotes_enabled() else "cdek",
     ]
@@ -71,8 +72,19 @@ def quote_delivery(cart, method, code, session_key):
     client = CdekClient()
     client.deadline = deadline
     pickup = client.pickup(safe_code(code))
+    sender = client.shipment_point() if getattr(settings, "CDEK_FROM_PVZ_CODE", "") else None
+    limits = pickup
+    if sender:
+        recipient_limits = _weight_limits(pickup.get("weight_min_g"), pickup.get("weight_max_g"))
+        sender_limits = _weight_limits(sender.get("weight_min_g"), sender.get("weight_max_g"))
+        maximums = [value for value in (recipient_limits[1], sender_limits[1]) if value]
+        limits = {
+            **pickup,
+            "weight_min_g": str(max(recipient_limits[0], sender_limits[0])),
+            "weight_max_g": str(min(maximums) if maximums else 0),
+        }
     # Reuse the validated input when PVZ restrictions alter admissible plans.
-    options = prepared.options(pickup=pickup, limit=MAX_PACKING_OPTIONS)
+    options = prepared.options(pickup=limits, limit=MAX_PACKING_OPTIONS)
     best = None
     seen = set()
     attempted = successful = rejected = 0
@@ -127,6 +139,7 @@ def quote_delivery(cart, method, code, session_key):
         "method_id": method.pk,
         "tariff_code": method.cdek_tariff_code,
         "pickup": pickup,
+        "sender": sender,
         "packages": packages,
         "packing": plan,
         "packing_comparison": {

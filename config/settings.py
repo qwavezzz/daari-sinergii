@@ -156,6 +156,7 @@ CDEK_CLIENT_ID = os.environ.get("CDEK_CLIENT_ID", "")
 CDEK_CLIENT_SECRET = os.environ.get("CDEK_CLIENT_SECRET", "")
 # Use the CDEK directory code for the actual sender city; never infer it from a name.
 CDEK_FROM_CITY_CODE = int(os.environ.get("CDEK_FROM_CITY_CODE") or "0")
+CDEK_FROM_PVZ_CODE = os.environ.get("CDEK_FROM_PVZ_CODE", "").strip().upper()
 CDEK_MAP_TILE_URL = os.environ.get("CDEK_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
 CDEK_MAP_ATTRIBUTION = os.environ.get("CDEK_MAP_ATTRIBUTION", "")
 CDEK_QUOTE_TTL_SECONDS = int(os.environ.get("CDEK_QUOTE_TTL_SECONDS", "900"))

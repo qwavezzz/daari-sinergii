@@ -180,6 +180,7 @@ class OrderAdmin(admin.ModelAdmin):
                     "delivery_method",
                     "address",
                     "cdek_pickup",
+                    "cdek_sender",
                     "cdek_tariff",
                     "cdek_declared_value",
                     "cdek_waybill",
@@ -210,6 +211,7 @@ class OrderAdmin(admin.ModelAdmin):
         "work_status",
         "payment_mode",
         "cdek_pickup",
+        "cdek_sender",
         "cdek_tariff",
         "cdek_declared_value",
         "cdek_waybill",
@@ -234,6 +236,13 @@ class OrderAdmin(admin.ModelAdmin):
         if obj.is_demo_delivery:
             return "Учебная доставка — не тариф СДЭК"
         return obj.delivery_snapshot.get("tariff_code", "—")
+
+    @admin.display(description="Отправление из ПВЗ СДЭК")
+    def cdek_sender(self, obj):
+        point = obj.delivery_snapshot.get("sender") or {}
+        if point:
+            return f"{point['code']} · {point['city']}, {point['address']}"
+        return "Пункт отправления не был указан при расчёте"
 
     @admin.display(description="Объявленная стоимость для накладной СДЭК")
     def cdek_declared_value(self, obj):

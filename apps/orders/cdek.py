@@ -129,6 +129,7 @@ class CdekClient:
         if not configured():
             raise DeliveryUnavailable("Расчёт СДЭК пока не подключён. Товары сохранятся в корзине.")
         self.deadline = deadline
+        self._sender = None
         self.base = "https://api.edu.cdek.ru/v2" if settings.CDEK_TEST_MODE else "https://api.cdek.ru/v2"
         identity = f"{self.base}:{settings.CDEK_CLIENT_ID}:{settings.CDEK_CLIENT_SECRET}"
         self.token_key = "cdek-oauth:" + hashlib.sha256(identity.encode()).hexdigest()
@@ -243,6 +244,7 @@ class CdekClient:
     def offices(self, filters=None, *, response_headers=None):
         params = {"country_code": "RU", "type": "PVZ", "is_handout": "true"}
         params.update(filters or {})
+        params = {key: value for key, value in params.items() if value is not None}
         result = self._request(
             "deliverypoints", params=params, token=self._token(), response_headers=response_headers
         )
@@ -301,14 +303,38 @@ class CdekClient:
         return {"offices": offices, "next_page": page + 1 if has_more and page < 199 else None}
 
     def pickup(self, code):
+        return self._point(code, sender=False)
+
+    def shipment_point(self):
+        code = getattr(settings, "CDEK_FROM_PVZ_CODE", "")
+        if not code:
+            return None
         code = safe_code(code)
-        offices = self.offices({"code": code})
+        identity = (code, settings.CDEK_FROM_CITY_CODE)
+        if self._sender and self._sender[0] == identity:
+            return self._sender[1]
+        point = self._point(code, sender=True)
+        if point["city_code"] != settings.CDEK_FROM_CITY_CODE:
+            raise DeliveryUnavailable(
+                "Пункт отправления СДЭК не совпадает с городом магазина. Сообщите об этом менеджеру."
+            )
+        # Reuse only within this client/request while comparing packing plans.
+        self._sender = (identity, point)
+        return point
+
+    def _point(self, code, *, sender):
+        code = safe_code(code)
+        filters = {"code": code}
+        if sender:
+            filters.update(is_handout=None, is_reception="true")
+        offices = self.offices(filters)
         for office in offices:
             location = office.get("location") or {}
             if (
                 office.get("code") == code
                 and office.get("type") == "PVZ"
-                and office.get("is_handout") is True
+                and office.get("is_reception" if sender else "is_handout") is True
+                and office.get("status", "ACTIVE") == "ACTIVE"
                 and isinstance(location, dict)
                 and location.get("country_code") == "RU"
             ):
@@ -336,6 +362,10 @@ class CdekClient:
                     "weight_min_g": str(limits[0]),
                     "weight_max_g": str(limits[1]),
                 }
+        if sender:
+            raise DeliveryUnavailable(
+                "Пункт отправления СДЭК не принимает посылки. Сообщите об этом менеджеру."
+            )
         raise DeliveryUnavailable("Этот пункт СДЭК недоступен для выдачи. Выберите другой пункт.")
 
     def calculate(self, tariff, pickup, packages, *, declared_value=None):
@@ -362,6 +392,7 @@ class CdekClient:
             "tariff_code": tariff,
             "from_location": {"code": settings.CDEK_FROM_CITY_CODE},
             "to_location": {"code": pickup["city_code"]},
+            "delivery_point": safe_code(pickup["code"]),
             "packages": packages,
         }
         if declared_value is not None:
@@ -384,6 +415,18 @@ class CdekClient:
             # SDK uses a JSON number; bounded two-decimal amounts retain their cents
             # in Python's JSON float serialization. Arithmetic above stays Decimal.
             payload["services"] = [{"code": "INSURANCE", "parameter": float(value)}]
+        sender = self.shipment_point()
+        if sender:
+            minimum, maximum = _weight_limits(sender.get("weight_min_g"), sender.get("weight_max_g"))
+            if any(p["weight"] < minimum or maximum and p["weight"] > maximum for p in packages):
+                raise TariffUnavailable("Пункт отправления СДЭК не принимает эту упаковку по весу.")
+            payload["shipment_point"] = sender["code"]
+            payload["from_location"] = {
+                "code": sender["city_code"],
+                "country_code": "RU",
+                "city": sender["city"],
+                "address": sender["address"],
+            }
         result = self._request("calculator/tariff", token=self._token(), payload=payload)
         try:
             # total_sum includes VAT and services; delivery_sum alone can undercharge.

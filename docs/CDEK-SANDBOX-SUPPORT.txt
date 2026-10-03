@@ -1,5 +1,5 @@
 Кому: integrator@cdek.ru
-Тема: Тестовый API v2: город 431 найден в suggest, но калькулятор его не распознаёт
+Тема: Тестовый API v2: alltariffs возвращает 500, расчёт — location_not_recognized
 
 Здравствуйте!
 
@@ -8,6 +8,27 @@
 Используем общедоступную тестовую учётную запись из официальной документации
 СДЭК (также опубликована в cdek-it/wordpress, src/Config.php).
 Заказы и накладные в ходе проверки не создаём.
+
+Повторная проверка 03.10.2026: аккаунт и адрес тестового хоста совпадают с
+текущим разделом подключения на https://apidoc.cdek.ru/.
+Авторизация возвращает HTTP 200 с access_token.
+
+Особенно показателен запрос без города отправления, адреса и упаковок:
+GET https://api.edu.cdek.ru/v2/calculator/alltariffs
+Authorization: Bearer <полученный токен>
+Accept: application/json
+
+Ответ HTTP 500:
+{"errors":[{"code":"v2_internal_error","additional_code":"0xBC236B02","message":"Internal Error"}]}
+
+Также воспроизведены параметры официального примера
+https://github.com/cdek-it/sdk2.0/blob/master/tests/Actions/CalculatorTest.php:
+from_location: code=137, country_code=RU, address=Кутузовский проспект 1-1;
+to_location: code=270, country_code=RU, postal_code=630004, address=Ленина 23-1;
+два места: 1000 г / 30×20×10 см и 2000 г / 10×15×30 см;
+type=1, currency=1, lang=rus, date=текущая дата, tariff_code=139.
+/calculator/tariff и /calculator/tarifflist (без tariff_code) возвращают
+HTTP 400, v2_sender_location_not_recognized.
 
 Авторизация и deliverypoints работают. GET /location/suggest/cities
 с name=Тольятти и country_code=RU возвращает code=431 и
@@ -33,6 +54,15 @@ city_uuid=df967e09-c0d0-4a40-9289-0f84b5bafb85.
 v2_recipient_location_not_recognized.
 Если дополнительно добавить "delivery_point": "MOS4", получаем HTTP 500:
 v2_internal_error, additional_code=0xBC236B02.
+
+Владелец уточнил фактический пункт отправления: TLT3, Тольятти,
+ул. 70 лет Октября, 31а, 105. Справочник подтвердил city_code=431,
+status=ACTIVE, is_reception=true, postal_code=445030.
+Повторили запрос с этим полным адресом, shipment_point=TLT3 и
+delivery_point=MOS4/TLT2/SPB1 (три независимых направления).
+Во всех случаях — HTTP 500, v2_internal_error, 0xBC236B02.
+Без delivery_point, но с shipment_point=TLT3 ошибка меняется с
+sender_location_not_recognized на recipient_location_not_recognized.
 
 Те же результаты получены через /calculator/tarifflist и
 /calculator/tariffAndService (без tariff_code в запросе этих двух методов).
