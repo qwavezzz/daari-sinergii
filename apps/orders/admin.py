@@ -17,20 +17,13 @@ from .models import (
     StoreSettings,
 )
 from apps.payments.models import PaymentAttempt
-from .services import TRANSITIONS, transition_order
+from .services import TRANSITIONS, set_tracking_number, transition_order
 
 
 @admin.register(StoreSettings)
 class StoreSettingsAdmin(admin.ModelAdmin):
     readonly_fields = ("updated_at",)
     fieldsets = [
-        (
-            "Уведомления о заказах",
-            {
-                "fields": ["manager_email"],
-                "description": "Укажите почту сотрудника, который собирает заказы. Если поле пустое, используется адрес из серверной настройки, если он задан.",
-            },
-        ),
         (
             "Приём заказов",
             {
@@ -179,6 +172,7 @@ class OrderAdmin(admin.ModelAdmin):
                     "email",
                     "delivery_method",
                     "address",
+                    "tracking_number",
                     "cdek_pickup",
                     "cdek_sender",
                     "cdek_tariff",
@@ -296,11 +290,32 @@ class OrderAdmin(admin.ModelAdmin):
     def get_urls(self):
         return [
             path(
+                "<int:object_id>/tracking/",
+                self.admin_site.admin_view(self.tracking),
+                name="orders_order_tracking",
+            ),
+            path(
                 "<int:object_id>/workflow/",
                 self.admin_site.admin_view(self.workflow),
                 name="orders_order_workflow",
-            )
+            ),
         ] + super().get_urls()
+
+    @method_decorator(require_POST)
+    def tracking(self, request, object_id):
+        order = self.get_object(request, str(object_id))
+        if not order:
+            raise Http404
+        if not self.has_change_permission(request, order):
+            raise PermissionDenied
+        try:
+            set_tracking_number(order.pk, request.POST.get("tracking_number", ""), request.user.pk)
+        except ValidationError as exc:
+            self.message_user(request, " ".join(exc.messages), messages.ERROR)
+        else:
+            self.log_change(request, order, "Обновлён трек-номер.")
+            self.message_user(request, "Трек-номер сохранён. Письмо добавлено в очередь.", messages.SUCCESS)
+        return HttpResponseRedirect(reverse("admin:orders_order_change", args=[order.pk]))
 
     @method_decorator(require_POST)
     def workflow(self, request, object_id):
@@ -345,6 +360,15 @@ class OrderAdmin(admin.ModelAdmin):
             {
                 **(extra_context or {}),
                 "workflow_actions": transitions,
+                "can_set_tracking": bool(
+                    order
+                    and self.has_change_permission(request, order)
+                    and order.financial_status == "paid"
+                    and not order.needs_attention
+                    and order.status != "canceled"
+                    and not order.is_demo_delivery
+                    and not hasattr(order, "trial_payment")
+                ),
                 "title": f"Заказ № {order.pk}" if order else "Заказ",
                 "subtitle": None,
                 "show_save": False,
@@ -397,6 +421,12 @@ class NotificationAdmin(admin.ModelAdmin):
 
     @admin.display(description="Событие", ordering="event")
     def event_label(self, obj):
+        from .notifications import EVENTS
+
+        if obj.event.startswith("tracking-"):
+            return "Трек-номер заказа"
+        if obj.event in EVENTS:
+            return EVENTS[obj.event][0]
         return {
             "created": "Заказ оформлен",
             "paid": "Оплата подтверждена",

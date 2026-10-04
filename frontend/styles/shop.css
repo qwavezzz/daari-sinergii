@@ -1432,6 +1432,9 @@ html:has(body.shop) {
   gap: 16px;
   margin-top: 32px;
 }
+.order-tracking {
+  overflow-wrap: anywhere;
+}
 .legal-page {
   max-width: 900px;
   min-height: 50vh;

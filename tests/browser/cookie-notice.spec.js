@@ -1,3 +1,4 @@
+import { mainOrigin, shopOrigin } from './origins.js'
 import { test, expect } from '@playwright/test'
 
 test('notice survives navigation, then remembers dismissal without a tracking consent', async ({ page }) => {
@@ -31,8 +32,8 @@ test('blocked storage still allows closing the notice', async ({ page }) => {
 test('cookie information is accessible without JavaScript on both hosts', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false })
   const page = await context.newPage()
-  for (const host of ['localhost', 'shop.localhost']) {
-    await page.goto(`http://${host}:8001/legal/cookies/`)
+  for (const origin of [mainOrigin, shopOrigin]) {
+    await page.goto(`${origin}/legal/cookies/`)
     await expect(page.getByRole('heading', { name: 'Использование cookie', exact: true })).toBeVisible()
     await expect(page.locator('[data-cookie-notice]')).toHaveCSS('position', 'static')
     await expect(page.locator('[data-cookie-notice] button')).toBeHidden()

@@ -9,17 +9,13 @@ from django.core.validators import validate_email
 from django.template.loader import render_to_string
 from django.urls import reverse
 
-from .models import Notification, NotificationSettings, StoreSettings
+from .access import make_access_token
+from .models import Notification, NotificationSettings
 
 
 def manager_email():
     config = NotificationSettings.objects.filter(pk=1).first()
-    store = StoreSettings.objects.filter(pk=1).first()
-    return (
-        (config.manager_email if config else "")
-        or (store.manager_email if store else "")
-        or settings.MANAGER_EMAIL
-    ).strip()
+    return ((config.manager_email if config else "") or settings.MANAGER_EMAIL).strip()
 
 
 def reply_to_email():
@@ -89,6 +85,9 @@ def build_notification_email(notice):
     if notice.event.startswith("refund-"):
         title = "Частичный возврат подтверждён"
         description = "Подтверждён возврат части средств. Срок зачисления зависит от банка."
+    if notice.event.startswith("tracking-"):
+        title = "Трек-номер заказа"
+        description = "Сохраните трек-номер для проверки отправления на сайте перевозчика."
     if is_manager:
         description = "Откройте заказ в админке для просмотра актуального состояния и дальнейшей обработки."
         if notice.event == "paid":
@@ -101,7 +100,9 @@ def build_notification_email(notice):
     order_url = settings.SHOP_ORIGIN.rstrip("/") + (
         reverse("admin:orders_order_change", args=[order.pk], urlconf="config.shop_urls")
         if is_manager
-        else order.get_absolute_url()
+        else reverse("orders:access", args=[order.public_id], urlconf="config.shop_urls")
+        + "?token="
+        + make_access_token(order)
     )
     reply_to = reply_to_email()
     context = {
@@ -115,6 +116,8 @@ def build_notification_email(notice):
         "reply_to": reply_to,
         "refund_amount": notice.payload.get("refund_amount"),
         "refunded_total": notice.payload.get("refunded_total"),
+        "tracking_number": notice.payload.get("tracking_number", order.tracking_number),
+        "link_days": max(1, settings.ORDER_EMAIL_LINK_MAX_AGE // 86400),
     }
     email = EmailMultiAlternatives(
         subject=f"{'[ТЕСТ] ' if order.test_mode else ''}{title} · {str(order.public_id)[:8].upper()} — Дары Синергии",

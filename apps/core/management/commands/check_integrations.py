@@ -4,8 +4,7 @@ from django.conf import settings
 from django.core.mail import EmailMessage, get_connection
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.orders.models import StoreSettings
-from apps.orders.notifications import smtp_configuration_error
+from apps.orders.notifications import manager_email, smtp_configuration_error
 from apps.payments.provider import AlfaBankClient, PaymentError, PaymentNotFound
 
 
@@ -36,10 +35,9 @@ class Command(BaseCommand):
                     )
         if options["only"] != "payments":
             error = smtp_configuration_error()
-            store = StoreSettings.objects.filter(pk=1).first()
-            recipient = (store.manager_email if store else "") or settings.MANAGER_EMAIL
+            recipient = manager_email()
             if options["send_test_email"] and not recipient:
-                error = "Укажите почту менеджера в настройках магазина."
+                error = "Укажите почту менеджера в разделе «Почтовые уведомления»."
             if error:
                 failures.append("Почта: " + error)
             else:

@@ -43,6 +43,19 @@ stage=configuration-check
 run_app -c 'import os; assert os.environ.get("DJANGO_SETTINGS_MODULE") == "config.settings", "Expected production DJANGO_SETTINGS_MODULE=config.settings"'
 run_app manage.py check --deploy --fail-level ERROR
 
+stage=maintenance
+# A schema-changing release must not overlap requests or background writers.
+# Remember the existing timer state; commissioning new integrations is separate.
+active_timers=()
+for unit in dari-notifications.timer dari-reconcile.timer dari-monitor.timer dari-backup.timer; do
+    if systemctl is-active --quiet "$unit"; then active_timers+=("$unit"); fi
+done
+if [ "${#active_timers[@]}" -gt 0 ]; then systemctl stop "${active_timers[@]}"; fi
+for unit in dari-notifications.service dari-reconcile.service dari-monitor.service; do
+    if systemctl is-active --quiet "$unit"; then systemctl stop "$unit"; fi
+done
+systemctl stop dari.service
+
 stage=backup
 systemctl start dari-backup.service
 test "$(systemctl show dari-backup.service -p Result --value)" = success
@@ -60,6 +73,7 @@ ln -sfn "$release_path" /srv/dari/current.next
 mv -Tf /srv/dari/current.next /srv/dari/current
 systemctl restart dari.service
 systemctl is-active --quiet dari.service
+if [ "${#active_timers[@]}" -gt 0 ]; then systemctl start "${active_timers[@]}"; fi
 
 stage=http-verification
 for host in dari-sinergii.ru shop.dari-sinergii.ru; do

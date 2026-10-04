@@ -8,16 +8,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings_dev")
+PORT = int(os.environ.get("BROWSER_TEST_PORT", "8001"))
+if not 1024 <= PORT <= 65535:
+    raise RuntimeError("Invalid browser test port")
+
 import django
 from django.conf import settings
 
 settings.DATABASES["default"] = {
     "ENGINE": "django.db.backends.sqlite3",
-    "NAME": ROOT / "var" / "browser-tests.sqlite3",
+    "NAME": ROOT / "var" / f"browser-tests-{PORT}.sqlite3",
 }
 (ROOT / "var").mkdir(exist_ok=True)
-settings.PRIVATE_MEDIA_ROOT = ROOT / "var" / "browser-private-media"
-settings.MEDIA_ROOT = ROOT / "var" / "browser-media"
+settings.PRIVATE_MEDIA_ROOT = ROOT / "var" / f"browser-private-media-{PORT}"
+settings.MEDIA_ROOT = ROOT / "var" / f"browser-media-{PORT}"
 # These directories belong exclusively to this disposable test database. Keeping
 # previous imports used to accumulate a fresh copy of every PDF on each run.
 for fixture_dir in (settings.PRIVATE_MEDIA_ROOT, settings.MEDIA_ROOT):
@@ -27,12 +31,24 @@ for fixture_dir in (settings.PRIVATE_MEDIA_ROOT, settings.MEDIA_ROOT):
         shutil.rmtree(fixture_dir)
     fixture_dir.mkdir(parents=True)
 settings.CONTENT_VIDEO_PROVIDERS = ("youtube",)
-settings.MAIN_ORIGIN = "http://localhost:8001"
-settings.SHOP_ORIGIN = "http://shop.localhost:8001"
+settings.MAIN_ORIGIN = f"http://localhost:{PORT}"
+settings.MAIN_HOST = "localhost"
+settings.SHOP_HOST = "127.0.0.1"
+settings.ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
+settings.SHOP_ORIGIN = f"http://127.0.0.1:{PORT}"
 settings.CSRF_TRUSTED_ORIGINS = [settings.MAIN_ORIGIN, settings.SHOP_ORIGIN]
+settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+settings.DEFAULT_FROM_EMAIL = "shop@example.test"
+settings.MANAGER_EMAIL = "manager@example.test"
 settings.CHECKOUT_ENABLED = True
 settings.ALFABANK_ENABLED = False
 settings.PAYMENT_STUB_ENABLED = True
+if os.environ.get("BROWSER_TEST_BANK") == "1":
+    settings.ALFABANK_ENABLED = True
+    settings.ALFABANK_TEST_MODE = True
+    settings.PAYMENT_STUB_ENABLED = False
+    settings.ALFABANK_USERNAME = "browser-fixture"
+    settings.ALFABANK_PASSWORD = "browser-fixture-not-a-credential"
 # Explicit test-only CDEK adapter. This file always uses a disposable SQLite database.
 settings.CDEK_ENABLED = True
 settings.CDEK_TEST_MODE = True
@@ -50,7 +66,7 @@ django.setup()
 
 from django.core.management import call_command
 from apps.catalog.models import Category, Product, ProductImage, ProductAttribute
-from apps.orders.models import DeliveryMethod, StoreSettings
+from apps.orders.models import DeliveryMethod, NotificationSettings, StoreSettings
 from apps.content.management.commands.setup_customer_pages import load_customer_copy
 from django.core.files.base import ContentFile
 from apps.content.models import Document, Video
@@ -138,7 +154,7 @@ from apps.orders.models import Order, OrderItem
 call_command("setup_roles", verbosity=0)
 owner = get_user_model().objects.create_user("browser-owner", password="browser-fixture-only", is_staff=True)
 owner.groups.add(Group.objects.get(name="Владелец магазина"))
-StoreSettings.objects.filter(pk=1).update(manager_email="manager@example.test")
+NotificationSettings.objects.update_or_create(pk=1, defaults={"manager_email": "manager@example.test"})
 sample = Order.objects.create(
     checkout_key=uuid.uuid4(),
     session_key="browser-admin-fixture",
@@ -160,6 +176,12 @@ OrderItem.objects.create(
     sku="TEST-001",
     unit_price="1290.50",
     quantity=1,
+)
+from apps.orders.access import make_access_token
+import json
+
+(ROOT / "var" / f"browser-order-{PORT}.json").write_text(
+    json.dumps({"path": sample.get_absolute_url(), "token": make_access_token(sample)}), encoding="utf-8"
 )
 
 DeliveryMethod.objects.create(
@@ -287,4 +309,9 @@ class BrowserCdekClient:
 
 shipping.CdekClient = BrowserCdekClient
 cdek.CdekClient = BrowserCdekClient
-call_command("runserver", "127.0.0.1:8001", use_reloader=False)
+if os.environ.get("BROWSER_TEST_BANK") == "1":
+    # Only the disposable server installs this transport. No network bank calls.
+    from tests.browser.bank_fixture import install_bank_fixture
+
+    install_bank_fixture()
+call_command("runserver", f"127.0.0.1:{PORT}", use_reloader=False)

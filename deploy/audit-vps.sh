@@ -79,3 +79,9 @@ data = {
 print(json.dumps(data, ensure_ascii=False, indent=2))
 '
 echo '== Finished. Errors above mean a check is incomplete, not that the server passed. =='
+for check in check_store_readiness check_store_operations; do
+    systemd-run --quiet --wait --pipe --collect \
+        --uid=dari --gid=www-data -p SupplementaryGroups=dari \
+        --working-directory=/srv/dari/current -p EnvironmentFile=/etc/dari/dari.env \
+        /srv/dari/current/.venv/bin/python manage.py "$check" --json --strict
+done

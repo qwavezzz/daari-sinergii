@@ -1,0 +1,16 @@
+[Unit]
+Description=Check store queues and background workers
+After=postgresql.service network-online.target
+[Service]
+Type=oneshot
+User=dari
+Group=www-data
+SupplementaryGroups=dari
+WorkingDirectory=/srv/dari/current
+EnvironmentFile=/etc/dari/dari.env
+ExecStart=/usr/bin/flock -n /srv/dari/shared/monitor.lock /srv/dari/current/.venv/bin/python manage.py check_store_operations --strict --notify
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/dari/shared

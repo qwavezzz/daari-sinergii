@@ -26,8 +26,8 @@ class BusinessAdminSite(AdminSite):
 
     def index(self, request, extra_context=None):
         from django.conf import settings
-        from apps.orders.models import Notification, Order, StoreSettings
-        from apps.orders.notifications import smtp_configuration_error
+        from apps.orders.models import Notification, NotificationSettings, Order
+        from apps.orders.notifications import manager_email, smtp_configuration_error
 
         context = dict(extra_context or {})
         tasks = []
@@ -55,14 +55,14 @@ class BusinessAdminSite(AdminSite):
             ]
             context["recent_orders"] = Order.objects.order_by("-created_at")[:8]
         context["order_tasks"] = tasks
-        if request.user.has_perm("orders.view_storesettings"):
-            store = StoreSettings.objects.filter(pk=1).first()
+        if request.user.has_perm("orders.view_notificationsettings"):
+            config = NotificationSettings.objects.filter(pk=1).first()
             context["store_settings_url"] = (
-                reverse("admin:orders_storesettings_change", args=[1])
-                if store
-                else reverse("admin:orders_storesettings_add")
+                reverse("admin:orders_notificationsettings_change", args=[1])
+                if config
+                else reverse("admin:orders_notificationsettings_add")
             )
-            context["manager_email"] = (store.manager_email if store else "") or settings.MANAGER_EMAIL
+            context["manager_email"] = manager_email()
             context["mail_configuration"] = (
                 smtp_configuration_error() or "SMTP настроен. Доставку проверяйте в журнале писем."
             )
@@ -80,5 +80,7 @@ class BusinessAdminSite(AdminSite):
                 else "Оплата не подключена. Настройку выполняет разработчик."
             )
         if request.user.has_perm("orders.view_notification"):
-            context["unsent_count"] = Notification.objects.filter(sent_at__isnull=True).count()
+            context["unsent_count"] = Notification.objects.filter(
+                sent_at__isnull=True, skipped_at__isnull=True
+            ).count()
         return super().index(request, context)

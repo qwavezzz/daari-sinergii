@@ -32,6 +32,10 @@ class PaymentNotFound(PaymentUnavailable):
     """The authenticated status API explicitly returned errorCode 6."""
 
 
+def payment_origin(test):
+    return "https://alfa.rbsuat.com" if test else "https://pay.alfabank.ru"
+
+
 def safe_provider_id(value):
     if not isinstance(value, str) or not re.fullmatch(r"[a-zA-Z0-9-]{1,64}", value):
         raise InvalidPayment("Неверный идентификатор платёжного сервиса.")
@@ -61,7 +65,7 @@ def protocol_integer(value):
 def safe_confirmation_url(value, test, provider_id):
     try:
         url = urlparse(value)
-        host = "alfa.rbsuat.com" if test else "pay.alfabank.ru"
+        host = urlparse(payment_origin(test)).hostname
         if (
             not isinstance(value, str)
             or any(ord(char) < 32 for char in value)
@@ -184,8 +188,7 @@ class AlfaBankClient:
             raise PaymentUnavailable(
                 "Рабочая оплата требует согласованной схемы чеков и подтверждения запуска."
             )
-        host = "alfa.rbsuat.com" if self.test else "pay.alfabank.ru"
-        self.base_url = f"https://{host}/payment/rest/"
+        self.base_url = payment_origin(self.test) + "/payment/rest/"
         self.opener = build_opener(NoRedirect())
 
     def request(self, method, payload):

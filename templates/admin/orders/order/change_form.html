@@ -2,4 +2,12 @@
 {% block content %}
 {% if workflow_actions %}<section aria-label="Следующее действие с заказом"><p>Состав заказа указан ниже. Отмечайте этапы по мере выполнения.</p><form method="post" action="{% url 'admin:orders_order_workflow' original.pk %}" class="order-workflow">{% csrf_token %}{% for action in workflow_actions %}<button type="submit" name="target" value="{{ action.value }}">{{ action.label }}</button>{% endfor %}</form></section>{% endif %}
 {{ block.super }}
+{% if can_set_tracking %}
+<section aria-label="Отправление"><h2>Трек-номер отправления</h2>
+<form method="post" action="{% url 'admin:orders_order_tracking' original.pk %}">{% csrf_token %}
+<p><label for="tracking-number">Трек-номер:</label> <input id="tracking-number" name="tracking_number" type="text" value="{{ original.tracking_number }}" required minlength="4" maxlength="80" pattern="[A-Za-z0-9-]{4,80}" aria-describedby="tracking-help"></p>
+<p id="tracking-help">Латинские буквы, цифры и дефисы. Покупатель получит письмо с этим номером.</p>
+<button type="submit">Сохранить и уведомить</button>
+</form></section>
+{% endif %}
 {% endblock %}

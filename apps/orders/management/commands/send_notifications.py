@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from apps.orders.models import Notification
 from apps.orders.notifications import build_notification_email, manager_email, validate_configuration
+from apps.core.operations import worker_finished
 
 
 class Command(BaseCommand):
@@ -82,3 +83,4 @@ class Command(BaseCommand):
                     update_fields=["recipient", "attempts", "sent_at", "last_error", "next_attempt_at"]
                 )
         self.stdout.write(f"Отправлено: {sent}; отложено после ошибки: {failed}.")
+        worker_finished("notifications", failed)

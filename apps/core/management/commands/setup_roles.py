@@ -48,7 +48,14 @@ class Command(BaseCommand):
             content_type__model="storesettings",
             codename__in=["view_storesettings", "change_storesettings", "add_storesettings"],
         )
-        owner.permissions.set((editor.permissions.all() | permissions | settings_permissions).distinct())
+        acceptance_permissions = Permission.objects.filter(
+            content_type__app_label="core", content_type__model="storeacceptance"
+        )
+        owner.permissions.set(
+            (
+                editor.permissions.all() | permissions | settings_permissions | acceptance_permissions
+            ).distinct()
+        )
         self.stdout.write(
             self.style.SUCCESS(
                 "Роли редактора, менеджера и владельца созданы. Для входа отметьте пользователю «Статус персонала» и назначьте нужную группу."

@@ -65,6 +65,20 @@ jobs:
         run: >-
           .venv/bin/python manage.py test --noinput
           apps.orders.test_demo_shipping apps.orders.test_working_checkout
+      - name: Isolated PostgreSQL backup restore
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: dari_ci
+          PGPASSWORD: ci-only-password
+          PGDATABASE: dari_ci
+        run: |
+          mkdir -p var/backup-check/media var/backup-check/private-media
+          pg_dump --format=custom --file=var/backup-check/database.dump
+          tar -czf var/backup-check/media.tar.gz -C var/backup-check media private-media
+          (cd var/backup-check && sha256sum database.dump media.tar.gz > SHA256SUMS)
+          printf '[dari-restore-check]\nhost=127.0.0.1\nport=5432\nuser=dari_ci\ndbname=dari_ci\n' > var/restore-pg-service.conf
+          PGSERVICEFILE="$PWD/var/restore-pg-service.conf" PGSERVICE=dari-restore-check bash deploy/verify-backup.sh var/backup-check
       - name: Production configuration
         env:
           DJANGO_SETTINGS_MODULE: config.settings
@@ -76,6 +90,7 @@ jobs:
           npx playwright install --with-deps chromium
           npm run test:browser
           BROWSER_TEST_DEMO_QUOTES=1 npm run test:browser
+          BROWSER_TEST_BANK=1 npm run test:browser
 
   pages:
     needs: test

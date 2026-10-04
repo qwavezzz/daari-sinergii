@@ -1,3 +1,4 @@
+import { shopOrigin } from './origins.js'
 import { test, expect } from '@playwright/test'
 
 for (const javaScriptEnabled of [true, false]) {
@@ -9,7 +10,7 @@ for (const javaScriptEnabled of [true, false]) {
       viewport: { width: 390, height: 844 },
     })
     const page = await context.newPage()
-    await page.goto('http://shop.localhost:8001/products/test-product-2/')
+    await page.goto(`${shopOrigin}/products/test-product-2/`)
     await Promise.all([
       page.waitForResponse(
         (response) => response.url().includes('/cart/set/') && response.request().method() === 'POST',
@@ -20,7 +21,7 @@ for (const javaScriptEnabled of [true, false]) {
       await expect(page.locator('#cart-dialog')).not.toBeVisible()
       await expect(page.locator('#cart-toggle [data-cart-count]')).toHaveText('1')
     }
-    await page.goto('http://shop.localhost:8001/checkout/')
+    await page.goto(`${shopOrigin}/checkout/`)
     await page.getByLabel('Имя', { exact: true }).fill('Проверка пути покупки')
     await page.getByLabel('Фамилия', { exact: true }).fill('Покупатель')
     await page.getByLabel('Телефон', { exact: true }).fill('+79000000000')

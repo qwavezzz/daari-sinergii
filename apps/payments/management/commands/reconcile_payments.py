@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -9,6 +9,7 @@ from apps.orders.services import queue_notification, release_reservations
 from apps.payments.models import PaymentAttempt
 from apps.payments.provider import PaymentError
 from apps.payments.services import reconcile_attempt
+from apps.core.operations import worker_finished
 
 
 class Command(BaseCommand):
@@ -24,6 +25,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if options["limit"] < 1 or options["refund_days"] < 0:
+            raise CommandError("--limit должен быть положительным, --refund-days — неотрицательным.")
         # Timer uses flock; all state transitions remain safe if two workers overlap.
         # Canceled attempts are still checked: a late capture must remain visible.
         # Archive rows are never sent to the new bank, even if their IDs look valid.
@@ -75,3 +78,4 @@ class Command(BaseCommand):
                 order.save(update_fields=["status", "updated_at"])
                 released += 1
         self.stdout.write(f"Проверено: {checked}; отложено: {failed}; освобождено: {released}.")
+        worker_finished("payments", failed)

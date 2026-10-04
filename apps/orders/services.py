@@ -1,6 +1,7 @@
 from datetime import timedelta
 import hashlib
 import json
+import re
 from decimal import Decimal
 from django.conf import settings
 from django.core import signing
@@ -277,6 +278,34 @@ TRANSITIONS = {
     "completed": set(),
     "canceled": set(),
 }
+
+
+@transaction.atomic
+def set_tracking_number(order_id, number, actor_id=None):
+    number = number.strip()
+    if not re.fullmatch(r"[A-Za-z0-9-]{4,80}", number):
+        raise ValidationError("Трек-номер: от 4 до 80 латинских букв, цифр или дефисов.")
+    order = Order.objects.select_for_update().get(pk=order_id)
+    if (
+        order.financial_status != Order.FinancialStatus.PAID
+        or order.needs_attention
+        or order.status == Order.Status.CANCELED
+        or order.is_demo_delivery
+        or hasattr(order, "trial_payment")
+    ):
+        raise ValidationError("Трек-номер можно отправить после подтверждения оплаты и проверки заказа.")
+    if order.tracking_number == number:
+        return order
+    order.tracking_number = number
+    order.save(update_fields=["tracking_number", "updated_at"])
+    # Each change is an event, even A -> B -> A. Retries of the same POST are harmless.
+    event = AuditEntry.objects.create(
+        kind="order.tracking",
+        object_id=str(order.public_id),
+        message=f"Трек-номер обновлён; сотрудник {actor_id}.",
+    )
+    queue_notification(order, f"tracking-{event.pk}", {"tracking_number": number})
+    return order
 
 
 @transaction.atomic

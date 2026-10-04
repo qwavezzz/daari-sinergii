@@ -1,60 +1,139 @@
-# Эксплуатация магазина: Альфа-Банк и СДЭК
+# Развёртывание и эксплуатация
 
-Уточнённый пункт отправления магазина: `CDEK_FROM_CITY_CODE=431`, `CDEK_FROM_PVZ_CODE=TLT3` (Тольятти, ул. 70 лет Октября, 31а, 105). Эти параметры задаются в `/etc/dari/dari.env` после установки выпуска с поддержкой `CDEK_FROM_PVZ_CODE`; затем нужен перезапуск `dari.service`. Для настоящих запросов калькулятора установите `CDEK_DEMO_QUOTES_ENABLED=false`. Проверка: `manage.py check_cdek_connection --pvz MOS4` с тем же EnvironmentFile, что у приложения. [Результаты проверки и правила упаковки](../docs/PACKING-AND-CDEK.md).
+Актуальный порядок для Ubuntu 24.04, Python 3.12, Node.js 22 и PostgreSQL 16.
+Функциональная приёмка магазина: [STORE-LAUNCH.md](../docs/STORE-LAUNCH.md).
+Датированные отчёты прошлых выпусков находятся в [архиве](../archive/README.md);
+они не подтверждают сегодняшнее состояние VPS.
 
-Изменения подготовлены локально. Договоры/API ещё подключаются; продавец и касса пока не определены. Демо-товары сохранены, реальные операции по умолчанию выключены. Список оставшихся данных: [подготовка к запуску](../docs/ALFA-CDEK-READINESS.md).
+## Окружение
 
-## Окружение и установка
+Рабочий файл — `/etc/dari/dari.env`, владелец `root:dari`, права `0640`.
+Использовать имена из [.env.example](../.env.example), задать
+`DJANGO_SETTINGS_MODULE=config.settings` и постоянный случайный `DJANGO_SECRET_KEY`.
+Корневой `.env` автоматически не загружается. Не помещать секреты в Git, аргументы
+команд, журналы или архив приложения. `EnvironmentFile` не исполняет shell-подстановки.
 
-Рабочая среда: PostgreSQL, Django/Gunicorn за Nginx и HTTPS. Node нужен для сборки. Настройки берутся из окружения; `.env` автоматически не загружается. Заполненный EnvironmentFile хранится вне кода/статики с ограниченными правами, значения секретов не публикуются.
+Для ручных management-команд использовать окружение systemd:
 
-1. Prepare a VPS with SSH, a restricted deployment account, backups, monitoring and DNS for the main and shop hosts. Run `sudo bash deploy/bootstrap.sh`. Install a verified Node.js 22 distribution. Create a dedicated PostgreSQL role/database with no superuser or database-creation rights. Bind PostgreSQL to loopback; close external port 5432.
-2. Fill `/etc/dari/dari.env` from `.env.example`. Keep `DJANGO_SETTINGS_MODULE=config.settings` explicit: management commands without a settings selection default to local development. Generate a random Django secret. Keep the file `root:dari`, mode `0640`, outside releases and static directories. `EnvironmentFile` does not execute shell substitutions; use proper systemd quoting for JSON. Never commit the completed file.
-3. Configure PostgreSQL backup access through `PGSERVICE`, `PGSERVICEFILE` and a private `PGPASSFILE` (mode `0600`). The service file identifies the same database as `DATABASE_URL`. Set these environment variables for `dari-backup.service` in the env file. Credentials are not passed as shell command arguments.
-   All application units and transient management commands use `SupplementaryGroups=dari` in addition to `Group=www-data`. This grants traversal of `/etc/dari` (`root:dari`, `0750`) and access to its service file (`root:dari`, `0640`), while preserving Nginx access to the Gunicorn socket. The password file must belong to `dari` with mode `0600`. For manual `systemd-run --uid=dari --gid=www-data` commands, include `-p SupplementaryGroups=dari` as well.
-4. Obtain a Let's Encrypt certificate for all three configured names (main, www, shop). Use a temporary HTTP-only ACME virtual host before installing the final TLS config. Disable Ubuntu's example default server so there is exactly one `default_server` per listening address/port. The supplied configuration uses `listen 443 ssl http2`, compatible with Ubuntu's Nginx 1.24.
-5. Prepare an immutable checkout in `/srv/dari/releases/<release-id>`, then run `sudo bash deploy/release.sh /srv/dari/releases/<release-id>`. The script creates the venv, installs locked dependencies, builds assets, checks production settings, backs up an existing installation, migrates, installs roles, collects static files, switches the release and verifies both hosts. Do not run migration procedures concurrently.
-6. On the initial release run `manage.py import_legacy_content` with the production environment to import original content and protected documents, then create a superuser. Both commands must run under the `dari` account and the same environment (`systemd-run` pattern in `release.sh`). Do not place admin/session cookies on a shared parent domain.
+```bash
+sudo systemd-run --quiet --wait --pipe --collect \
+  --uid=dari --gid=www-data -p SupplementaryGroups=dari \
+  --working-directory=/srv/dari/current \
+  -p EnvironmentFile=/etc/dari/dari.env \
+  /srv/dari/current/.venv/bin/python manage.py check_store_readiness --stage review --strict
+```
 
-Перед выпуском проверьте резервную копию и возможность восстановления в отдельную БД. Выполните сборку `npm run build`, `manage.py check`, миграции и `collectstatic` под рабочим окружением, затем проверьте оба домена. Не запускайте `scripts/browser_server.py` на рабочей базе: это отдельный стенд, который очищает только свою тестовую базу. Сохраняйте существующие файлы окружения и пользовательские загрузки.
+Менять последнюю команду по задаче; не запускать production-команды с настройками
+`settings_dev`. PostgreSQL слушает loopback; прикладной пользователь не является
+superuser и не имеет права создавать базы. Данные и загрузки лежат в `/srv/dari/shared`,
+выпуски — `/srv/dari/releases/<уникальный-id>`, текущий код — `/srv/dari/current`.
 
-В репозитории остались конфигурации `nginx.conf`, `dari-proxy.conf` и systemd units. Старые bootstrap/release/backup shell-скрипты отсутствуют; перед эксплуатацией проверьте пути ExecStart у установленных служб, в частности резервного копирования. Этот раздел не запускает публикацию или изменение сервера.
+## Первый выпуск
 
-## Подключение оплаты
+1. Подготовить DNS, SSH, firewall; запустить `sudo bash deploy/bootstrap.sh`.
+   Установить Node.js 22 из проверенного источника. Создать прикладную БД и пользователя.
+2. Заполнить env, настроить резервное подключение через `PGSERVICE`, `PGSERVICEFILE`
+   и `PGPASSFILE` (файл пароля `dari`, `0600`). Они должны указывать ту же БД, что
+   `DATABASE_URL`, без раскрытия пароля в argv.
+3. Получить сертификат для основного домена, `www` и `shop`. На первом этапе нужен
+   временный HTTP-vhost для ACME; затем использовать поставляемый TLS-конфиг.
+   Проверить `certbot renew --dry-run`. Не включать HSTS preload/includeSubDomains
+   до проверки всех поддоменов; после приёмки продления увеличить `HSTS_SECONDS`.
+4. Подготовить каталог выпуска и выполнить `sudo bash deploy/release.sh /srv/dari/releases/<id>`.
+   Скрипт предназначен только для новой установки. Он собирает ресурсы, применяет
+   миграции, устанавливает systemd/Nginx и проверяет оба домена.
+5. Через systemd-окружение выполнить `import_legacy_content`, `setup_roles`,
+   `setup_customer_pages --dry-run`, затем согласованное заполнение и `createsuperuser`.
+   Не публиковать демотовары для подачи в банк.
 
-1. Получите тестовые реквизиты прямого REST-эквайринга Альфа-Банка. Укажите `ALFABANK_USERNAME`, `ALFABANK_PASSWORD`; оставьте `ALFABANK_TEST_MODE=true`, включите `ALFABANK_ENABLED` только на тестовом стенде.
-2. Согласуйте callback `https://shop.dari-sinergii.ru/payments/alfabank/webhook/`. Уведомление лишь запускает авторизованную сверку. Возврат браузера сам по себе не доказывает оплату.
-3. Банк получает сохранённый итог заказа в копейках: товары плюс доставка. Стабильный `orderNumber` соответствует сохранённой попытке. После таймаута статус запрашивается по номеру, новая независимая операция не создаётся.
-4. Проверьте успешную/отменённую оплату, потерю ответа, повтор нажатия, поздний callback, частичный и полный возврат. `getOrderStatusExtended.do` должен возвращать версию ответа 03 с `paymentAmountInfo`, включая списанную и возвращённую сумму.
-5. Настройте и проверьте кассовые чеки. `ALFABANK_RECEIPT_MODE=bank` формирует банковскую корзину с товарами и доставкой; нужны согласованные ставки и `ALFABANK_TAX_SYSTEM`. `external` означает отдельно работающую и согласованную кассу, этот проект её не подключает. Факт включения флага не подтверждает отправку чека.
-6. После приёмки переключите учётные данные и режим, подтвердите `ALFABANK_LIVE_APPROVED`. Нельзя проводить реальные платежи за демо-товары. Старые платёжные попытки сохраняются как `legacy` и не направляются в новый банк.
+## Обновление существующего VPS
 
-Возвраты выполняются в кабинете Альфа-Банка. Сверка импортирует подтверждённую накопленную сумму возвратов. Администратор не может вручную объявить заказ оплаченным. Физический возврат товара на склад — отдельное действие.
+1. Проверить чистоту состава выпуска, резервную копию и результаты тестов.
+   `scripts/package-release.py` включает только разрешённые пути; новые незакоммиченные
+   файлы требуют явного `--include`. Обычный `git archive HEAD` не содержит текущих правок.
+2. Подготовить новый уникальный каталог выпуска. Команда:
+   `sudo bash deploy/update-app.sh /srv/dari/releases/<id>`.
+3. Скрипт сначала собирает код; затем останавливает приложение и фоновых писателей,
+   делает резервную копию, применяет миграции и переключает symlink. В этот короткий
+   период сайт недоступен. Таймеры, активные перед обновлением, запускаются снова.
+   При ошибке после остановки скрипт оставляет службы остановленными для разбора:
+   не запускайте старый код поверх неизвестного состояния схемы.
+4. Миграция `orders.0009` переносит действующий адрес уведомлений и удаляет старое
+   поле. Перед откатом старого кода остановить службы и вернуть совместимую схему
+   миграцией или восстановлением согласованной копии. Сам переключатель symlink
+   не откатывает БД. Обратная миграция переносит текущий адрес в старое поле.
+5. `update-app.sh` сохраняет конфигурацию Nginx и unit-файлы. **Для этого выпуска
+   отдельно установить изменения приватности журналов и мониторинга**: сравнить
+   `deploy/nginx.conf`, `config/gunicorn.py`, `deploy/systemd/dari.service` с VPS,
+   перенести необходимые изменения, выполнить `nginx -t`, `systemctl daemon-reload`,
+   перезапустить Gunicorn и перезагрузить Nginx. Иначе токен email-ссылки может попасть
+   в старый access log. Не включать журналы тел запросов или заголовка Referer.
 
-## Подключение СДЭК
+Выпуск не должен менять содержимое лендинга. Не запускать разовые архивные команды
+обновления контента. Проверить HTTPS, статику и оформление после переключения.
 
-Отправка — Тольятти. Укажите `CDEK_CLIENT_ID`, `CDEK_CLIENT_SECRET`, `CDEK_FROM_CITY_CODE` из справочника СДЭК. Карта использует OpenStreetMap; ключ Яндекс Карт не нужен. Для рабочего договора нужен `CDEK_TEST_MODE=false`; до проверки оставьте `CDEK_ENABLED=false`.
+## Фоновые задачи и оповещения
 
-В Admin добавьте способ типа `cdek_pvz`, выберите тариф для фактической передачи перевозчику (сдача в ПВЗ или забор курьером) и налоговую ставку доставки. Подтвердите замеры товаров, коробок и проверенных комбинаций упаковки. Расчёт сравнивает допустимые варианты грузовых мест с учётом ограничений ПВЗ. Правила подготовки данных — в [PACKING-AND-CDEK.md](../docs/PACKING-AND-CDEK.md).
+`dari-notifications.timer` отправляет очередь; `dari-reconcile.timer` сверяет платежи,
+возвраты и резервы. Они записывают время окончания и количество ошибок в БД.
+Сверка не создаёт новых банковских платежей за покупателя.
 
-Карта Leaflet/OpenStreetMap выбирает ПВЗ; собственный сервер получает данные пункта и рассчитывает цену. Клиентская цена не принимается. Цена и срок действуют ограниченное время (`CDEK_QUOTE_TTL_SECONDS`, по умолчанию 900 секунд) и связаны с составом корзины, упаковками, тарифом и ПВЗ. При ошибке нельзя подставлять бесплатную доставку.
+Перед включением `dari-monitor.timer` задать `OPERATIONS_EMAIL`, проверить реальное
+получение аварийного письма. Установить два новых файла `dari-monitor.service` и
+`dari-monitor.timer` в `/etc/systemd/system/`, затем:
 
-Накладная оформляется **вручную после подтверждённой оплаты** по снимку доставки в заказе. Проверьте вес/места, тариф, получателя и код ПВЗ. Если доставка оплачена в составе заказа, не назначайте повторную оплату доставки или наложенный платёж покупателю. Передайте трек-номер покупателю, затем переведите заказ в передачу в доставку.
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now dari-notifications.timer dari-reconcile.timer dari-monitor.timer dari-backup.timer
+sudo systemctl list-timers --all 'dari-*'
+sudo systemctl show dari-notifications.service dari-reconcile.service dari-monitor.service -p Result -p ExecMainExitTimestamp
+```
 
-## Документы и проверка готовности
+В том же окружении выполнить `check_store_operations --strict --json`. Проверяются
+давность обработчиков, неотправленные письма, зависшие/непроверенные платежи,
+заказы с проблемами и частые ошибки расчёта СДЭК. Пороги задаются переменными
+`STORE_*_MAX_AGE_SECONDS`. Монитор запускается каждые 5 минут, аварийное письмо
+отправляется не чаще раза в 30 минут. `--notify` действительно отправляет письмо;
+без него команда только читает состояние.
 
-`manage.py setup_customer_pages --dry-run --refresh-defaults` показывает безопасное обновление стандартных текстов. Уберите `--dry-run` после просмотра; редакторские правки требуют ручной актуализации. Существующие реквизиты нужно подтвердить: заполненное поле не доказывает актуальность продавца.
+Нужен независимый внешний монитор HTTPS и `/health/`, состояния timer/service,
+диска и давности резервных копий. Письмо через тот же SMTP не обнаружит само по
+себе недоступность VPS или почты. `/health/` намеренно не раскрывает очереди и
+сведения о покупателях. Включение таймеров не равно проверке доставки писем.
 
-`manage.py check_store_readiness` — проверка заполнения, без сети и изменений. `--strict` даёт ненулевой код при пробелах. Она не заменяет проверку юридических текстов, договоров, налогов, чеков и решение банка.
+## Резервные копии и проверка восстановления
 
-Для заказов требуются `CHECKOUT_ENABLED=true` и включение в Admin. До повторной заявки нужны реальные описания и ассортимент, реквизиты продавца, доставка со сроком передачи перевозчику и сроком в пути, порядок оплаты/возвратов, политика и применимые документы продукции. Демо-каталог подходит для тренировки.
+`backup.sh` создаёт PostgreSQL custom dump, архив загрузок и относительные SHA256.
+Каталог `/srv/dari/backups` сам по себе не защищает от потери VPS.
 
-## Регулярные задачи
+Для автоматической внешней копии установить `restic`, отдельно создать зашифрованный
+репозиторий и задать `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE` и необходимые
+учётные данные хранилища в закрытом EnvironmentFile службы резервирования.
+Настроить `RESTIC_CACHE_DIR` внутри разрешённого `/srv/dari/backups` или использовать
+drop-in `CacheDirectory`; домашний каталог защищён unit-файлом. Проверить права
+пользователя `dari`. Перед продажами задать `BACKUP_REQUIRE_OFFSITE=true`:
+отсутствие внешней копии тогда делает запуск backup неуспешным.
 
-`dari-reconcile.timer` запускает `reconcile_payments`: авторизованная сверка платежей/возвратов и освобождение резервов без неопределённых платежей. Сверка не создаёт платёж за покупателя. Неопределённая попытка удерживает резерв и требует выяснения результата; не создавайте замену до проверки.
+После выгрузки выполняется `restic check`. Маркеры `last-local-success` и
+`last-offsite-success` позволяют внешнему монитору проверить давность. Политику
+сроков хранения настроить отдельно: автоматического удаления архивов этот выпуск
+не делает. Защитить ключ репозитория и отозвать ненужные доступы.
 
-`dari-notifications.timer` отправляет устойчивую очередь уведомлений. Настройте SMTP/адрес отправителя в окружении; менеджера и Reply-To можно задать в Admin. `manage.py send_notifications --check` проверяет заполнение без отправки. Обычный SMTP не гарантирует отсутствие дубликата при потере ответа.
+На **отдельном хосте восстановления** скачать снимок. Сервис libpq для проверки
+должен использовать отдельного пользователя с правом создания тестовой БД:
 
-Проверяйте HTTPS и продление сертификата, состояние служб/timers, дисковое место, резервные копии, заказы «требует внимания» и неотправленные уведомления. В логах не должны появляться реквизиты карт, секреты API или полные тела запросов с персональными данными. Обработка и хранение данных должны соответствовать опубликованным условиям.
+```bash
+PGSERVICE=dari-restore-check bash deploy/verify-backup.sh /path/to/downloaded/backup
+```
 
-Источники: [подключение и требования Альфа-Банка](https://alfabank.ru/sme/payservice/internet-acquiring/docs/process/), [REST API](https://alfabank.ru/sme/payservice/internet-acquiring/docs/connection-options/api/rest/), [официальный виджет СДЭК](https://github.com/cdek-it/widget), [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/).
+Скрипт проверяет SHA256 и читаемость архива загрузок, восстанавливает БД в новый
+`dari_restore_<время>_<pid>`, проверяет таблицы и удаляет только созданную им БД.
+Дополнительно развернуть приложение на восстановленной копии и проверить чтение
+реальных загрузок и документов: просмотр tar сам по себе не проверяет страницы.
+До подтверждения этого сценария протокол `operations` не считать завершённым.
+
+## Границы готовности
+
+Автоматические проверки не подтверждают фактический счёт СДЭК, получение письма,
+чека и одобрение банка. Кассовый сервис не указан; `external` не является интеграцией.
+Не включать продажи, пока не завершены этапы из [STORE-LAUNCH.md](../docs/STORE-LAUNCH.md).

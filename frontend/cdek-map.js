@@ -186,10 +186,11 @@ export function createPickupMap(root, { tileUrl, attribution, onChoose, onTileSt
     )
     render()
   }
-  map.on('moveend', () => {
+  const onMoveEnd = () => {
     render()
     onViewChange?.(viewBounds())
-  })
+  }
+  map.on('moveend', onMoveEnd)
   return {
     setPoints(value, { selectedCode = '' } = {}) {
       points = value
@@ -226,6 +227,11 @@ export function createPickupMap(root, { tileUrl, attribution, onChoose, onTileSt
     },
     destroy() {
       clearTimeout(tileTimer)
+      // A pending popup pan / zoom can emit moveend after HTMX removes the map.
+      // Detach our bounds reader before Leaflet destroys its pane.
+      map.off('moveend', onMoveEnd)
+      tiles.off('loading load tileerror')
+      map.stop()
       map.remove()
     },
   }

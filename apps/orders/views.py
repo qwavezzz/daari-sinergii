@@ -7,8 +7,8 @@ from django.contrib import messages
 from django.core import signing
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.crypto import salted_hmac
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from apps.cart.services import cart_context, get_cart
@@ -16,6 +16,7 @@ from apps.core.http import navigation_redirect, render_page
 from apps.core.ratelimit import allow_request
 from .forms import CheckoutForm
 from .models import Order, DeliveryMethod
+from .access import grant_email_access, has_email_access, valid_access_token
 from .services import QuoteChanged, checkout_is_enabled, checkout_snapshot, create_order
 
 
@@ -188,6 +189,11 @@ def cdek_quote(request):
     try:
         result = quote_delivery(cart, method, request.POST.get("pvz_code", ""), request.session.session_key)
     except ValidationError as exc:
+        from apps.core.models import AuditEntry
+        from .cdek import DeliveryUnavailable
+
+        if isinstance(exc, DeliveryUnavailable):
+            AuditEntry.objects.create(kind="cdek.quote_failed", object_id="", message=type(exc).__name__)
         return JsonResponse({"message": " ".join(exc.messages)}, status=422)
     response = JsonResponse(result)
     response["Cache-Control"] = "no-store"
@@ -230,11 +236,28 @@ def cdek_directory(request, operation, *args):
 
 def owned_order(request, public_id):
     # An unguessable public UUID supplements, and never replaces, ownership.
-    return get_object_or_404(
+    order = get_object_or_404(
         Order.objects.prefetch_related("items", "payment_attempts"),
         public_id=public_id,
-        session_key=request.session.session_key or "",
     )
+    if not (
+        request.session.session_key and order.session_key == request.session.session_key
+    ) and not has_email_access(request, order):
+        raise Http404
+    return order
+
+
+@require_GET
+def email_access(request, public_id):
+    if not allow_request(request, "order-email-access", 30, 60):
+        return HttpResponse("Слишком много попыток. Повторите через минуту.", status=429)
+    order = Order.objects.filter(public_id=public_id).first()
+    token = request.GET.get("token", "")
+    if not order or not valid_access_token(order, token):
+        return render(request, "shop/order_access_expired.html", status=410)
+    grant_email_access(request, order, token)
+    # Do not leave the bearer token in the final address or in outbound referrers.
+    return redirect(order.get_absolute_url())
 
 
 @require_GET

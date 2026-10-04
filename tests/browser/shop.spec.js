@@ -1,3 +1,4 @@
+import { shopOrigin } from './origins.js'
 import { test, expect } from '@playwright/test'
 
 test('category URLs, pagination and history retain server HTML without a document reload', async ({
@@ -180,7 +181,7 @@ test('catalog, full cart and checkout operate without JavaScript', async ({ brow
     viewport: { width: 390, height: 844 },
   })
   const page = await context.newPage()
-  await page.goto('http://shop.localhost:8001/products/test-product-2/')
+  await page.goto(`${shopOrigin}/products/test-product-2/`)
   await expect(page.getByRole('navigation', { name: 'Навигация магазина' })).toBeVisible()
   await expect(
     page
@@ -259,7 +260,7 @@ test('twenty cart lines remain reachable with fixed summary, short viewport and 
     const addUrl = (await productResponse.text()).match(/action="(\/cart\/set\/\d+\/)"/)[1]
     const added = await page.request.post(addUrl, {
       form: { quantity: '1', csrfmiddlewaretoken: token },
-      headers: { Referer: 'http://shop.localhost:8001/' },
+      headers: { Referer: `${shopOrigin}/` },
       maxRedirects: 0,
     })
     expect(added.status()).toBe(302)

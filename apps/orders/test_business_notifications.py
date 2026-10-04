@@ -14,7 +14,7 @@ from django.utils import timezone
 from apps.payments.models import PaymentAttempt
 from apps.payments.provider import AlfaBankClient, PaymentUnavailable
 from apps.payments.services import reconcile_attempt, start_payment
-from .models import StoreSettings
+from .models import NotificationSettings
 from .notifications import build_notification
 from .services import create_order, queue_notification
 from .test_support import checkout_data, fixture_cart
@@ -29,7 +29,7 @@ from .test_support import checkout_data, fixture_cart
 class NotificationFlowTests(TestCase):
     def setUp(self):
         cart, self.product, method = fixture_cart()
-        StoreSettings.objects.filter(pk=1).update(manager_email="sales@example.test")
+        NotificationSettings.objects.update_or_create(pk=1, defaults={"manager_email": "sales@example.test"})
         self.order = create_order(cart, checkout_data(cart, method), cart.session_key)
 
     def payment(self, status="pending"):
@@ -108,7 +108,7 @@ class NotificationFlowTests(TestCase):
                     request.assert_not_called()
 
     def test_changing_manager_affects_new_events_without_duplicate_mail(self):
-        StoreSettings.objects.filter(pk=1).update(manager_email=self.order.email)
+        NotificationSettings.objects.filter(pk=1).update(manager_email=self.order.email)
         queue_notification(self.order, "paid")
         queue_notification(self.order, "paid")
         notices = self.order.notifications.filter(event="paid")
@@ -167,7 +167,8 @@ class BusinessAdminTests(TestCase):
         self.assertContains(response, "Настройки магазина")
         self.assertNotContains(response, "/admin/auth/user/")
         self.assertEqual(self.client.get("/admin/auth/user/").status_code, 403)
-        url = reverse("admin:orders_storesettings_change", args=[1], urlconf="config.shop_urls")
+        NotificationSettings.objects.get_or_create(pk=1)
+        url = reverse("admin:orders_notificationsettings_change", args=[1], urlconf="config.shop_urls")
         self.client.get(url)
         response = self.client.post(
             url,
@@ -181,7 +182,7 @@ class BusinessAdminTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(StoreSettings.objects.get().manager_email, "new-manager@example.test")
+        self.assertEqual(NotificationSettings.objects.get().manager_email, "new-manager@example.test")
 
     def test_workflow_requires_post_csrf_permissions_and_verified_payment(self):
         self.order.financial_status = "paid"

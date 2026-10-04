@@ -1,6 +1,7 @@
+import { mainOrigin, shopOrigin } from './origins.js'
 import { test, expect } from '@playwright/test'
 
-const main = 'http://localhost:8001'
+const main = mainOrigin
 const schema = (page) =>
   page.locator('#page-structured-data').evaluate((node) => JSON.parse(node.textContent))
 
@@ -61,7 +62,7 @@ test('schema and material text are available without JavaScript; shop remains no
   await page.goto(main + '/materials/water-systems/')
   expect((await schema(page)).itemListElement).toHaveLength(3)
   await expect(page.getByRole('heading', { name: 'Что подготовить для консультации' })).toBeVisible()
-  await page.goto('http://shop.localhost:8001/')
+  await page.goto(`${shopOrigin}/`)
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0)
   await context.close()

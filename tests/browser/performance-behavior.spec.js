@@ -1,3 +1,4 @@
+import { mainOrigin } from './origins.js'
 import { test, expect } from '@playwright/test'
 
 test('mobile header keeps its geometry while the application module is delayed', async ({ page }) => {
@@ -41,7 +42,7 @@ for (const preference of ['reduce', 'save-data']) {
     page.on('request', (request) => {
       if (request.resourceType() === 'media') media.push(request.url())
     })
-    await page.goto('http://localhost:8001/', { waitUntil: 'networkidle' })
+    await page.goto(`${mainOrigin}/`, { waitUntil: 'networkidle' })
     await expect(page.locator('html')).toHaveClass(/\bjs\b/)
     await expect(page.locator('#hero-title')).toBeVisible()
     expect(await page.locator('.hero-video').evaluate((video) => video.paused && !video.currentSrc)).toBe(
@@ -58,7 +59,7 @@ for (const preference of ['reduce', 'save-data']) {
 test('leaving during deferred scene preparation cleans up the departed landing', async ({ page }) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
-  await page.goto('http://localhost:8001/', { waitUntil: 'domcontentloaded' })
+  await page.goto(`${mainOrigin}/`, { waitUntil: 'domcontentloaded' })
   await page.locator('.desktop-nav a[href="/materials/"]').click()
   await expect(page.locator('[data-page=materials]')).toBeVisible()
   await page.waitForTimeout(600)
@@ -83,7 +84,7 @@ test('video starts while motion is downloading and a departed page is not initia
     await route.continue()
   })
   try {
-    await page.goto('http://localhost:8001/', { waitUntil: 'domcontentloaded' })
+    await page.goto(`${mainOrigin}/`, { waitUntil: 'domcontentloaded' })
     await expect
       .poll(() => page.locator('.hero-video').evaluate((video) => video.currentTime))
       .toBeGreaterThan(0)

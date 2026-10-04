@@ -47,6 +47,16 @@ class ResponsePolicyMiddleware:
         patch_vary_headers(response, ["HX-Request", "HX-History-Restore-Request"])
         response["X-Request-ID"] = getattr(request, "request_id", "")
         image_origin = settings.MAIN_ORIGIN if getattr(request, "is_shop", False) else ""
+        payment_source = ""
+        if (
+            getattr(request, "is_shop", False)
+            and (request.path == "/checkout/" or request.path.startswith("/orders/"))
+            and settings.ALFABANK_ENABLED
+            and not settings.PAYMENT_STUB_ENABLED
+        ):
+            from apps.payments.provider import payment_origin
+
+            payment_source = " " + payment_origin(settings.ALFABANK_TEST_MODE)
         map_sources = ""
         map_checkout = (
             settings.CDEK_ENABLED and getattr(request, "is_shop", False) and request.path == "/checkout/"
@@ -68,7 +78,7 @@ class ResponsePolicyMiddleware:
                 f"img-src 'self' data: {image_origin}{map_sources}; "
                 "media-src 'self'; font-src 'self'; "
                 "connect-src 'self'; frame-src 'none'; object-src 'none'; "
-                "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+                f"base-uri 'self'; frame-ancestors 'none'; form-action 'self'{payment_source}"
             ),
         )
         response.setdefault(
@@ -81,4 +91,11 @@ class ResponsePolicyMiddleware:
             response["Cache-Control"] = "no-store, private"
         elif response.get("Content-Type", "").startswith("text/html"):
             response["Cache-Control"] = "no-cache, private"
+        if request.path.startswith("/orders/"):
+            # no-referrer on a form document can produce Origin: null for native
+            # POSTs, breaking Django CSRF. Keep same-origin form provenance while
+            # withholding it from external hosts. Bearer-link endpoints have no forms.
+            response["Referrer-Policy"] = (
+                "no-referrer" if request.path.endswith("/access/") else "same-origin"
+            )
         return response

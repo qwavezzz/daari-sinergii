@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+test "$(id -u)" -eq 0
+# Existing installations must use the maintenance/backup migration path.
+if [ -L /srv/dari/current ]; then
+    echo 'Use deploy/update-app.sh for an existing installation.' >&2
+    exit 1
+fi
 # Run as root: release.sh <absolute checked-out release directory>.
 # Source must be prepared in /srv/dari/releases by the deployment operator.
 release_path="$(realpath "${1:?Supply the prepared release directory}")"

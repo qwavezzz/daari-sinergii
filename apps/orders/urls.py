@@ -7,6 +7,7 @@ urlpatterns = [
     path("checkout/cdek/quote/", views.cdek_quote, name="cdek_quote"),
     path("checkout/cdek/map-points/", views.cdek_map_points, name="cdek_map_points"),
     path("orders/<uuid:public_id>/", views.detail, name="detail"),
+    path("orders/<uuid:public_id>/access/", views.email_access, name="access"),
     path("orders/<uuid:public_id>/pay/", views.pay, name="pay"),
     path("orders/<uuid:public_id>/refresh/", views.refresh_payment, name="refresh"),
 ]

@@ -7,11 +7,6 @@ from apps.core.models import TimeStampedModel
 
 
 class StoreSettings(models.Model):
-    manager_email = models.EmailField(
-        "Почта менеджера по продажам",
-        blank=True,
-        help_text="На этот адрес приходят новые заказы и подтверждения оплаты. Изменение действует для новых уведомлений.",
-    )
     checkout_enabled = models.BooleanField("Оформление включено", default=False)
     terms_text = models.TextField("Условия продажи / оферта", blank=True)
     privacy_text = models.TextField("Политика обработки персональных данных", blank=True)
@@ -113,6 +108,8 @@ class Order(TimeStampedModel):
     name = models.CharField("Получатель", max_length=160)
     phone = models.CharField("Телефон", max_length=32)
     email = models.EmailField("Email")
+    access_version = models.PositiveIntegerField(default=1, editable=False)
+    tracking_number = models.CharField("Трек-номер", max_length=80, blank=True, editable=False)
     delivery_method = models.CharField("Способ получения", max_length=160)
     delivery_type = models.CharField("Тип доставки", max_length=20, default="static", editable=False)
     delivery_snapshot = models.JSONField("Проверенный расчёт доставки", default=dict, editable=False)

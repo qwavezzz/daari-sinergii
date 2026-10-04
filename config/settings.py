@@ -172,6 +172,11 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")
 EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO", "")
 MANAGER_EMAIL = os.environ.get("MANAGER_EMAIL", "")
+ORDER_EMAIL_LINK_MAX_AGE = int(os.environ.get("ORDER_EMAIL_LINK_MAX_AGE", "2592000"))
+OPERATIONS_EMAIL = os.environ.get("OPERATIONS_EMAIL", "")
+STORE_WORKER_MAX_AGE_SECONDS = int(os.environ.get("STORE_WORKER_MAX_AGE_SECONDS", "600"))
+STORE_MAIL_MAX_AGE_SECONDS = int(os.environ.get("STORE_MAIL_MAX_AGE_SECONDS", "900"))
+STORE_PAYMENT_MAX_AGE_SECONDS = int(os.environ.get("STORE_PAYMENT_MAX_AGE_SECONDS", "1800"))
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

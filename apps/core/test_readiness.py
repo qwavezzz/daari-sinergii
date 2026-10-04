@@ -39,6 +39,24 @@ class ReadinessTests(TestCase):
 
 
 class CheckoutMapPolicyTests(TestCase):
+    @override_settings(ALFABANK_ENABLED=True, PAYMENT_STUB_ENABLED=False)
+    def test_bank_form_action_matches_only_selected_environment_and_private_shop_pages(self):
+        middleware = ResponsePolicyMiddleware(lambda request: HttpResponse())
+        for test_mode, origin in ((True, "https://alfa.rbsuat.com"), (False, "https://pay.alfabank.ru")):
+            with override_settings(ALFABANK_TEST_MODE=test_mode):
+                for path, shop, allowed in (
+                    ("/checkout/", True, True),
+                    ("/orders/example/", True, True),
+                    ("/", True, False),
+                    ("/checkout/", False, False),
+                ):
+                    request = RequestFactory().get(path)
+                    request.is_shop = shop
+                    policy = middleware(request)["Content-Security-Policy"]
+                    self.assertEqual(origin in policy, allowed)
+                    self.assertEqual(policy.count(origin), int(allowed))
+                    self.assertIn("script-src 'self';", policy)
+
     @override_settings(CDEK_ENABLED=True)
     def test_external_map_policy_is_limited_to_checkout_and_has_no_eval_or_card_post(self):
         middleware = ResponsePolicyMiddleware(lambda request: HttpResponse())

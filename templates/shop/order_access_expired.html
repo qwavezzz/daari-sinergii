@@ -1,0 +1,8 @@
+{% extends 'shop/base.html' %}
+{% block content %}
+<section class="shop-container order-page" hx-history="false">
+  <h1>Ссылка на заказ недействительна</h1>
+  <p class="order-lead">Возможно, срок её действия истёк. Откройте самое последнее письмо о заказе или ответьте на него — мы поможем проверить заказ.</p>
+  <a class="shop-button secondary" href="{% url 'catalog:index' %}" hx-boost="false">Вернуться в магазин</a>
+</section>
+{% endblock %}
