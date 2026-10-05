@@ -1,6 +1,6 @@
 # Добавлять цену коробки к доставке
 
-Status: deployed; real prices and positive-charge VPS verification pending
+Status: deployed; positive-charge VPS preview passed; real prices pending
 
 Владелец выбрал платную упаковку после реализации автоподбора. Существующий
 расчёт уже суммировал `packing_price` по местам и добавлял к тарифу перевозчика;
@@ -40,4 +40,22 @@ Status: deployed; real prices and positive-charge VPS verification pending
 не изменяются. Локально проверены синтаксис Bash, встроенный Python и выполнение
 обоих сценариев с подменённым ответом CDEK: доплата 50/100 ₽ на одно/два места,
 записи коробок остались неизменными. Запросов к внешнему API в локальной проверке
-не было; результат этого отдельного запуска на VPS ещё не получен.
+не было.
+
+05.10.2026 владелец прислал успешный повторный запуск на VPS:
+
+```text
+CART_A=1; CART_B=1; BOXES=1
+CDEK_RUB: 475.01 PACKAGING_RUB: 50.00
+TOTAL_RUB: 525.01 DECLARED_RUB: 2580.00
+CART_A=16; CART_B=8; BOXES=2
+CDEK_RUB: 942.08 PACKAGING_RUB: 100.00
+TOTAL_RUB: 1042.08 DECLARED_RUB: 30960.00
+BOX_PRICE_PREVIEW_OK; NO_ORDER_OR_SHIPMENT_CREATED; BOX_RECORDS_UNCHANGED
+```
+
+Проверка ненулевой цены за каждую коробку в предпросмотре на боевом сервере
+пройдена. Первое `No such file or directory` относилось к отсутствию скрипта
+до повторного запуска. 50 ₽ остаются учебной ценой только в памяти, настройки
+карточек не изменились. Фактические цены, реальные замеры и оформление заказа
+с ними через браузер на VPS остаются открытыми.
