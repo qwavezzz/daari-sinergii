@@ -34,6 +34,10 @@ SQLite, 1 проверка видимости из другого PostgreSQL-с�
 заказа: 43 теста, OK, 2 проверки PostgreSQL пропущены на SQLite;
 лог `var/packing-order-acceptance-tests.log`. Ruff check/format и `bash -n` успешны,
 встроенный Python совпадает с исходником и компилируется.
+На коммите `8c8831eff114c63978c959665de424ba411326dd` в GitHub завершились успешно
+PostgreSQL/HTTP и SQLite шаги: проверка отдельного соединения PostgreSQL также
+прошла. [Прогон](https://github.com/qwavezzz/daari-sinergii/actions/runs/37359074742).
+Реальные API, SMTP и создание заказа на VPS этим CI не проверяются.
 
 Самостоятельный файл для передачи оператором: `var/releases/check-packing-order.sh`.
 Он требует текущий VPS-релиз `store-851c7faa8169`, блокирует параллельное обновление,
