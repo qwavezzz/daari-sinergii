@@ -40,6 +40,7 @@ test('mixed cart is quoted as one measured parcel and reaches trial payment', as
     await expect(page.getByRole('dialog', { name: 'Корзина' })).toBeVisible()
   }
   await page.getByRole('dialog', { name: 'Корзина' }).getByRole('link', { name: 'Оформить заказ' }).click()
+  await page.waitForLoadState('load')
   await page.getByLabel('Способ получения').selectOption({ label: 'Тестовый СДЭК до ПВЗ' })
   await expect(page.locator('[data-cdek-search-status]')).toContainText('Выберите удобный адрес')
   await page.getByRole('button', { name: 'ПВЗ TEST1: Тестовый адрес, 10', exact: true }).click()
@@ -78,6 +79,7 @@ test('automatic mixed cart chooses a shared box and discloses packaging price', 
     await expect(page.getByRole('dialog', { name: 'Корзина' })).toBeVisible()
   }
   await page.getByRole('dialog', { name: 'Корзина' }).getByRole('link', { name: 'Оформить заказ' }).click()
+  await page.waitForLoadState('load')
   await page.getByLabel('Способ получения').selectOption({ label: 'Тестовый СДЭК до ПВЗ' })
   await expect(page.locator('[data-cdek-search-status]')).toContainText('Выберите удобный адрес')
   await page.getByRole('button', { name: 'ПВЗ TEST1: Тестовый адрес, 10', exact: true }).click()
