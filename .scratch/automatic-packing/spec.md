@@ -1,6 +1,6 @@
 # Автоматический подбор общей коробки
 
-Status: implemented; VPS acceptance pending
+Status: deployed; physical packing and real-price acceptance pending
 
 Запрос 05.10.2026: заполнить пустые разделы коробок в админке, проверить их и
 автоматически складывать совместимые товары в одну подходящую коробку.
