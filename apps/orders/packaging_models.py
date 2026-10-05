@@ -3,6 +3,7 @@
 import hashlib
 import json
 import math
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -43,17 +44,72 @@ def measurement_signature(payload):
 class PackingBox(TimeStampedModel):
     name = models.CharField("Название коробки", max_length=160)
     code = models.SlugField("Код коробки", unique=True)
-    inner_length_mm = models.PositiveIntegerField("Внутренняя длина, мм", validators=[MinValueValidator(1)])
-    inner_width_mm = models.PositiveIntegerField("Внутренняя ширина, мм", validators=[MinValueValidator(1)])
-    inner_height_mm = models.PositiveIntegerField("Внутренняя высота, мм", validators=[MinValueValidator(1)])
-    outer_length_mm = models.PositiveIntegerField("Внешняя длина, мм", validators=[MinValueValidator(1)])
-    outer_width_mm = models.PositiveIntegerField("Внешняя ширина, мм", validators=[MinValueValidator(1)])
-    outer_height_mm = models.PositiveIntegerField("Внешняя высота, мм", validators=[MinValueValidator(1)])
-    tare_weight_g = models.PositiveIntegerField("Вес пустой коробки, г", validators=[MinValueValidator(1)])
+    inner_length_mm = models.PositiveIntegerField(
+        "Внутренняя длина, мм", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    inner_width_mm = models.PositiveIntegerField(
+        "Внутренняя ширина, мм", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    inner_height_mm = models.PositiveIntegerField(
+        "Внутренняя высота, мм", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    outer_length_mm = models.PositiveIntegerField(
+        "Внешняя длина, мм", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    outer_width_mm = models.PositiveIntegerField(
+        "Внешняя ширина, мм", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    outer_height_mm = models.PositiveIntegerField(
+        "Внешняя высота, мм", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    tare_weight_g = models.PositiveIntegerField(
+        "Вес пустой коробки, г", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
     max_weight_g = models.PositiveIntegerField(
-        "Предельный вес коробки с содержимым, г", validators=[MinValueValidator(1)]
+        "Предельный вес коробки с содержимым, г", null=True, blank=True, validators=[MinValueValidator(1)]
     )
     active = models.BooleanField("Коробка доступна для сборки", default=True)
+    supplier = models.CharField(
+        "Источник коробки",
+        max_length=12,
+        choices=[("cdek", "Покупаем у СДЭК"), ("own", "Другой поставщик"), ("demo", "Учебный пример")],
+        default="own",
+    )
+    source_url = models.URLField("Источник типоразмера", blank=True)
+    reference_note = models.TextField(
+        "Справочные сведения поставщика",
+        blank=True,
+        help_text="Ориентир из каталога. Не заменяет замер внутреннего пространства, внешних размеров и тары.",
+    )
+    auto_enabled = models.BooleanField("Использовать для автоматического подбора", default=False)
+    auto_filler_weight_g = models.PositiveIntegerField(
+        "Вес общих материалов, скотча и наполнителя, г", default=0
+    )
+    auto_padding_mm = models.PositiveIntegerField("Защитный отступ от каждой стенки, мм", default=0)
+    auto_price_mode = models.CharField(
+        "Как учитывать стоимость упаковки",
+        max_length=12,
+        blank=True,
+        default="",
+        choices=[
+            ("", "Выберите способ учёта"),
+            ("included", "Учтена в цене товара"),
+            ("charge", "Добавлять к доставке"),
+        ],
+    )
+    auto_price = models.DecimalField(
+        "Коробка и общие материалы на одно место, ₽",
+        max_digits=9,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    auto_test_only = models.BooleanField("Учебная коробка автоподбора", default=False)
+    auto_measurement_signature = models.CharField(max_length=64, blank=True, editable=False)
+    auto_measured_at = models.DateTimeField(
+        "Параметры автоподбора подтверждены", null=True, blank=True, editable=False
+    )
 
     class Meta:
         ordering = ["name", "pk"]
@@ -80,6 +136,12 @@ class PackingBox(TimeStampedModel):
 
     def clean(self):
         errors = {}
+        if self.active or self.auto_enabled:
+            for field in BOX_PHYSICAL_FIELDS:
+                if type(getattr(self, field)) is not int or getattr(self, field) <= 0:
+                    errors[field] = (
+                        "Для доступной коробки заполните фактические размеры и вес. Черновик сохраните выключенным."
+                    )
         for axis in ("length", "width", "height"):
             inner, outer = getattr(self, f"inner_{axis}_mm"), getattr(self, f"outer_{axis}_mm")
             if inner and outer and inner > outer:
@@ -92,6 +154,23 @@ class PackingBox(TimeStampedModel):
             errors["max_weight_g"] = "Предельный вес должен быть больше веса пустой коробки."
         if errors:
             raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        from .auto_profiles import clear_test_confirmation
+
+        clear_test_confirmation(self, "auto", kwargs)
+        super().save(*args, **kwargs)
+
+    @property
+    def auto_measurements_valid(self):
+        from .auto_profiles import valid
+
+        return valid(self, "box")
+
+    def confirm_auto_measurements(self):
+        from .auto_profiles import confirm
+
+        confirm(self, "box")
 
     def __str__(self):
         return self.name

@@ -124,10 +124,12 @@ def payment_payload(order, key=None):
         for index, item in enumerate(order.items.all(), 1):
             items.append(receipt_item(index, item.name, item.unit_price, item.quantity, item.vat_code))
         if order.delivery_price:
+            packing_price = Decimal(str(order.delivery_snapshot.get("packing_price") or "0"))
+            delivery_label = "Доставка и упаковка: " if packing_price > 0 else "Доставка: "
             items.append(
                 receipt_item(
                     len(items) + 1,
-                    "Доставка: " + order.delivery_method,
+                    delivery_label + order.delivery_method,
                     order.delivery_price,
                     1,
                     order.delivery_vat_code,

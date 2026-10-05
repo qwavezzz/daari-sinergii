@@ -89,7 +89,10 @@ def quote_delivery(cart, method, code, session_key):
     seen = set()
     attempted = successful = rejected = 0
     for candidate in options:
-        key = tuple(sorted(package_key(package) for package in candidate["packages"]))
+        key = (
+            tuple(sorted(package_key(package) for package in candidate["packages"])),
+            candidate["packing_price"],
+        )
         if key in seen:
             continue
         if monotonic() >= deadline:
@@ -110,6 +113,16 @@ def quote_delivery(cart, method, code, session_key):
         # Network/auth/malformed-response failures are not evidence of an
         # infeasible packing. Propagate them rather than silently dropping it.
         successful += 1
+        carrier_price = Decimal(quoted["price"])
+        packing_price = Decimal("0.00") if demo else Decimal(candidate["packing_price"])
+        if carrier_price + packing_price > Decimal("9999999.99"):
+            raise DeliveryUnavailable("Стоимость доставки требует проверки сотрудником магазина.")
+        quoted = {
+            **quoted,
+            "carrier_price": str(carrier_price),
+            "packing_price": str(packing_price),
+            "price": str(carrier_price + packing_price),
+        }
         score = (
             Decimal(quoted["price"]),
             len(candidate["packages"]),
@@ -148,7 +161,9 @@ def quote_delivery(cart, method, code, session_key):
             "successful": successful,
             "rejected": rejected,
             "finished": attempted == len(options),
-            "scope": "demo_fixed_price" if demo else "bounded_measured_options",
+            "scope": "demo_fixed_price"
+            if demo
+            else ("bounded_automatic_options" if prepared.automatic else "bounded_measured_options"),
         },
         "origin_city_code": settings.CDEK_FROM_CITY_CODE,
         "test_mode": settings.CDEK_TEST_MODE,

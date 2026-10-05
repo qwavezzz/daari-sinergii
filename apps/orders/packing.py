@@ -1,4 +1,4 @@
-"""Build parcels from measured arrangements, never from guessed shared dimensions.
+"""Build parcels from measured arrangements or verified automatic packing inputs.
 
 A recipe describes one physically assembled parcel with an exact product count.
 Explicit test-only recipes allow fictional examples only against CDEK's sandbox
@@ -6,9 +6,11 @@ and remain unconfirmed in every stored packing plan.
 Search ranks complete measured plans using parcel count, carrier-rounded volume
 and gross weight. Checkout compares a bounded, diverse set using carrier prices;
 it does not claim a global minimum across every possible packing arrangement.
+Automatic products use explicit non-overlapping placements, not aggregate volume.
 """
 
 from copy import deepcopy
+from decimal import Decimal
 from functools import lru_cache
 
 from django.conf import settings
@@ -18,9 +20,10 @@ from django.db.models import Exists, OuterRef, Q
 from .cdek import DeliveryUnavailable, _weight_limits
 from .models import PackingBox, PackingRecipe, PackingRecipeItem
 from .packaging_models import BOX_PHYSICAL_FIELDS, RECIPE_PHYSICAL_FIELDS, UNIT_PHYSICAL_FIELDS
+from .automatic_packing import AutomaticPacking, cart_configuration
 
 
-PLAN_VERSION = 2
+PLAN_VERSION = 3
 MAX_CART_UNITS = 100
 MAX_SEARCH_STATES = 50_000
 MAX_SEARCH_ATTEMPTS = 250_000
@@ -356,6 +359,9 @@ def _plan(parcels):
         "packages": [_package(parcel) for parcel in parcels],
         "parcels": parcels,
         "measurements_confirmed": all(parcel["measurements_confirmed"] for parcel in parcels),
+        "packing_price": str(
+            sum((Decimal(parcel.get("packing_price", "0.00")) for parcel in parcels), Decimal("0.00"))
+        ),
     }
 
 
@@ -380,11 +386,14 @@ class PreparedPacking:
             )
         self.individual = []
         combined = []
+        automatic = []
         for item in items:
             if item.product.shipping_mode == "individual":
                 self.individual.extend(_individual_parcels(item, test_mode, None))
             elif item.product.shipping_mode == "combined":
                 combined.append(item)
+            elif item.product.shipping_mode == "automatic":
+                automatic.append(item)
             else:
                 raise DeliveryUnavailable(
                     f"Для «{item.product.name}» ещё не настроен способ упаковки. Свяжитесь с магазином."
@@ -394,6 +403,8 @@ class PreparedPacking:
         else:
             self.target, self.candidates = (), []
             self.configuration = _configuration_snapshot([], [])
+        self.automatic = AutomaticPacking(automatic, allow_test=test_mode) if automatic else None
+        self.configuration["automatic"] = self.automatic.configuration if self.automatic else None
 
     def options(self, *, pickup=None, limit=MAX_PACKING_OPTIONS):
         if not _positive_int(limit) or limit > MAX_PACKING_OPTIONS:
@@ -406,7 +417,20 @@ class PreparedPacking:
         if any(not _fits_weight(parcel["weight_g"], limits) for parcel in self.individual):
             raise DeliveryUnavailable(PICKUP_WEIGHT_MESSAGE)
         combined = _combined_solutions(self.target, self.candidates, limits, limit) if self.target else [[]]
-        return [_plan(deepcopy(self.individual) + parcels) for parcels in combined]
+        automatic = self.automatic.options(limits=limits, limit=limit) if self.automatic else [[]]
+        plans = [
+            _plan(deepcopy(self.individual) + parcels + auto) for parcels in combined for auto in automatic
+        ]
+        if self.automatic:
+            minimum = min(len(plan["packages"]) for plan in plans)
+            plans = [plan for plan in plans if len(plan["packages"]) == minimum]
+            plans.sort(
+                key=lambda p: (
+                    sum(k[1] * k[2] * k[3] for k in map(package_key, p["packages"])),
+                    sum(pack["weight"] for pack in p["packages"]),
+                )
+            )
+        return plans[:limit]
 
 
 def packing_options(cart, *, test_mode=None, pickup=None, limit=MAX_PACKING_OPTIONS):
@@ -491,7 +515,10 @@ def packing_configuration(cart=None):
             # A sentinel lets checkout display that actionable error, while
             # bounding fingerprint work and invalidating earlier valid quotes.
             return {"version": PLAN_VERSION, "limit_exceeded": "recipes"}
-        return _configuration_snapshot(combined, recipes)
+        result = _configuration_snapshot(combined, recipes)
+        automatic = [item for item in items if item.product.shipping_mode == "automatic"]
+        result["automatic"] = cart_configuration(automatic, getattr(settings, "CDEK_TEST_MODE", False))
+        return result
     recipes = []
     for recipe in PackingRecipe.objects.order_by("pk").prefetch_related("items__product"):
         row = _model_values(recipe)

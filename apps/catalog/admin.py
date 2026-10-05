@@ -24,6 +24,11 @@ class ProductAdminForm(forms.ModelForm):
         required=False,
         help_text="Отметьте только после реального замера. Сохранение без отметки не подтверждает новые значения.",
     )
+    confirm_auto_measurements = forms.BooleanField(
+        label="Я измерил(а) товар с защитой и проверил(а) допустимое положение и нагрузку",
+        required=False,
+        help_text="Подтверждает параметры для автоматической укладки. Учебные данные подтверждать нельзя.",
+    )
 
     class Meta:
         model = Product
@@ -31,6 +36,8 @@ class ProductAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["unit_stack_limit_g"].required = False
+        self.fields["unit_packing_group"].required = False
         if self.instance.pk:
             self.initial["stock_snapshot"] = signing.dumps(
                 [self.instance.pk, self.instance.stock, self.instance.reserved_stock], salt="admin-stock"
@@ -38,6 +45,20 @@ class ProductAdminForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        if data.get("unit_stack_limit_g") is None:
+            data["unit_stack_limit_g"] = 0
+        if not data.get("unit_packing_group") and data.get("shipping_mode") != "automatic":
+            data["unit_packing_group"] = self.instance.unit_packing_group or "general"
+        if data.get("confirm_auto_measurements"):
+            from apps.orders.auto_profiles import UNIT_FIELDS, validate
+
+            candidate = Product(**{field: data.get(field) for field in UNIT_FIELDS})
+            try:
+                if candidate.unit_test_only:
+                    raise ValidationError("Учебные параметры нельзя подтвердить как реальные замеры.")
+                validate(candidate, "unit")
+            except ValidationError as exc:
+                self.add_error("confirm_auto_measurements", exc)
         if data.get("confirm_package_measurements"):
             candidate = Product(
                 **{
@@ -99,6 +120,8 @@ class ProductAdmin(admin.ModelAdmin):
         "updated_at",
         "package_measurement_status",
         "package_measured_at",
+        "auto_measurement_status",
+        "unit_measured_at",
     ]
     prepopulated_fields = {"slug": ("name",)}
     filter_horizontal = ["categories"]
@@ -123,7 +146,7 @@ class ProductAdmin(admin.ModelAdmin):
             "Упаковка для доставки",
             {
                 "fields": ["shipping_mode"],
-                "description": "Для нескольких товаров в одной коробке выберите общую упаковку и добавьте проверенные схемы в разделе «Схемы упаковки».",
+                "description": "Автоматический подбор объединяет совместимые товары по размерам. Проверенные схемы подходят для особой укладки. Отдельная посылка всегда отправляется отдельно.",
             },
         ),
         (
@@ -131,6 +154,21 @@ class ProductAdmin(admin.ModelAdmin):
             {
                 "fields": ["unit_weight_g", "unit_length_mm", "unit_width_mm", "unit_height_mm"],
                 "description": "Измерьте товар с индивидуальной защитой, без общей транспортной коробки. Вес — в граммах, размеры — в миллиметрах. Для каждого объёма или варианта заведите отдельный товар.",
+            },
+        ),
+        (
+            "Автоматический подбор коробки",
+            {
+                "fields": [
+                    "unit_allow_rotation",
+                    "unit_stack_limit_g",
+                    "unit_packing_group",
+                    "unit_test_only",
+                    "confirm_auto_measurements",
+                    "auto_measurement_status",
+                    "unit_measured_at",
+                ],
+                "description": "Используются размеры товара с индивидуальной защитой из раздела выше. По умолчанию товар остаётся вертикальным, сверху ничего не ставится. Одинаковая группа разрешает общую коробку.",
             },
         ),
         (
@@ -175,6 +213,16 @@ class ProductAdmin(admin.ModelAdmin):
             return "Параметры изменились. Повторите замер и подтвердите новые значения."
         return "Замеры не подтверждены. До реального замера точный расчёт доставки недоступен."
 
+    @admin.display(description="Параметры автоподбора")
+    def auto_measurement_status(self, obj):
+        if obj.unit_test_only:
+            return "Учебные данные: рабочее оформление не разрешено."
+        return (
+            "Подтверждены и актуальны."
+            if obj.auto_measurements_valid
+            else "Нужны замеры и подтверждение текущих параметров."
+        )
+
     def save_model(self, request, obj, form, change):
         with transaction.atomic():
             if change:
@@ -191,6 +239,9 @@ class ProductAdmin(admin.ModelAdmin):
             if form.cleaned_data.get("confirm_package_measurements") is True:
                 obj.confirm_package_measurements()
                 self.log_change(request, obj, "Подтверждены фактические замеры отдельной посылки.")
+            if form.cleaned_data.get("confirm_auto_measurements") is True:
+                obj.confirm_auto_measurements()
+                self.log_change(request, obj, "Подтверждены параметры защищённого товара для автоподбора.")
         if {"price", "status", "stock"}.intersection(form.changed_data):
             AuditEntry.objects.create(
                 kind="catalog.updated",

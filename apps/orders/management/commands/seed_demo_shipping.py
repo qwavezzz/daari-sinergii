@@ -46,10 +46,14 @@ def _require_local_sandbox():
 
 
 def _set_profile(product, profile):
-    if product.package_measurement_signature or (
-        PackingRecipeItem.objects.filter(product=product, recipe__test_only=False)
-        .exclude(recipe__measurement_signature="")
-        .exists()
+    if (
+        product.package_measurement_signature
+        or product.unit_measurement_signature
+        or (
+            PackingRecipeItem.objects.filter(product=product, recipe__test_only=False)
+            .exclude(recipe__measurement_signature="")
+            .exists()
+        )
     ):
         # A combined unit has no individual-package stamp: its measurements
         # are attested by the real recipes containing it. Protect even stale

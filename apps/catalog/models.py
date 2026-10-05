@@ -41,6 +41,7 @@ class Product(TimeStampedModel):
     class ShippingMode(models.TextChoices):
         INDIVIDUAL = "individual", "Отдельная посылка для каждой единицы"
         COMBINED = "combined", "Общая коробка по проверенной схеме"
+        AUTOMATIC = "automatic", "Автоматический подбор общей коробки"
 
     name = models.CharField("Название", max_length=240)
     slug = models.SlugField("Адрес", unique=True, max_length=240)
@@ -95,6 +96,23 @@ class Product(TimeStampedModel):
         blank=True,
         validators=[MinValueValidator(1)],
     )
+    unit_allow_rotation = models.BooleanField("Разрешено переворачивать товар с защитой", default=False)
+    unit_stack_limit_g = models.PositiveIntegerField(
+        "Допустимый вес сверху, г",
+        default=0,
+        help_text="0 — сверху ничего не ставить. Укажите проверенную нагрузку для защищённого товара.",
+    )
+    unit_packing_group = models.SlugField(
+        "Группа совместной упаковки",
+        default="general",
+        max_length=64,
+        help_text="Только товары одной группы объединяются автоматически. Например: cosmetics, equipment.",
+    )
+    unit_test_only = models.BooleanField("Учебные параметры автоподбора", default=False)
+    unit_measurement_signature = models.CharField(max_length=64, blank=True, editable=False)
+    unit_measured_at = models.DateTimeField(
+        "Параметры автоподбора подтверждены", null=True, blank=True, editable=False
+    )
     package_weight_g = models.PositiveIntegerField(
         "Вес одного упакованного товара, г", null=True, blank=True, validators=[MinValueValidator(1)]
     )
@@ -133,6 +151,23 @@ class Product(TimeStampedModel):
     @property
     def available_quantity(self):
         return self.stock - self.reserved_stock
+
+    def save(self, *args, **kwargs):
+        from apps.orders.auto_profiles import clear_test_confirmation
+
+        clear_test_confirmation(self, "unit", kwargs)
+        super().save(*args, **kwargs)
+
+    @property
+    def auto_measurements_valid(self):
+        from apps.orders.auto_profiles import valid
+
+        return valid(self, "unit")
+
+    def confirm_auto_measurements(self):
+        from apps.orders.auto_profiles import confirm
+
+        confirm(self, "unit")
 
     def package_measurement_payload(self):
         return {

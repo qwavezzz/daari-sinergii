@@ -3,7 +3,8 @@
 <div>
   <h3>Посылка {{ forloop.counter }}{% if parcel.box_name %} — {{ parcel.box_name }}{% endif %}</h3>
   {% if parcel.box_code %}<p>Коробка: {{ parcel.box_code }}</p>{% endif %}
-  <p>Вес готовой посылки: {{ parcel.weight_g }} г. Внешние размеры: {{ parcel.dimensions_mm.length }} × {{ parcel.dimensions_mm.width }} × {{ parcel.dimensions_mm.height }} мм.</p>
+  {% if parcel.packing_price and parcel.packing_price != '0.00' %}<p>Упаковка включена в стоимость получения: {{ parcel.packing_price }} ₽.</p>{% endif %}
+  <p>{% if parcel.kind == 'automatic' %}Расчётный полный вес{% else %}Вес готовой посылки{% endif %}: {{ parcel.weight_g }} г. Внешние размеры: {{ parcel.dimensions_mm.length }} × {{ parcel.dimensions_mm.width }} × {{ parcel.dimensions_mm.height }} мм.</p>
   <ul>{% for item in parcel.contents %}<li>{{ item.name }} ({{ item.sku }}) — {{ item.quantity }} шт.</li>{% endfor %}</ul>
   {% if parcel.instructions %}<p>{{ parcel.instructions|linebreaksbr }}</p>{% endif %}
 </div>

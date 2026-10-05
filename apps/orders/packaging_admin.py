@@ -1,11 +1,38 @@
+from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 
 from .models import PackingBox, PackingRecipe, PackingRecipeItem
 
 
+class PackingBoxAdminForm(forms.ModelForm):
+    confirm_auto_measurements = forms.BooleanField(
+        label="Я проверил(а) размеры коробки, вес тары и материалов для автоподбора",
+        required=False,
+    )
+
+    class Meta:
+        model = PackingBox
+        fields = "__all__"
+
+    def clean(self):
+        data = super().clean()
+        if data.get("confirm_auto_measurements"):
+            from .auto_profiles import BOX_FIELDS, validate
+
+            candidate = PackingBox(**{field: data.get(field) for field in BOX_FIELDS})
+            try:
+                if candidate.auto_test_only:
+                    raise ValidationError("Учебную коробку нельзя подтвердить как реальные замеры.")
+                validate(candidate, "box")
+            except ValidationError as exc:
+                self.add_error("confirm_auto_measurements", exc.messages)
+        return data
+
+
 @admin.register(PackingBox)
 class PackingBoxAdmin(admin.ModelAdmin):
+    form = PackingBoxAdminForm
     list_display = [
         "name",
         "code",
@@ -14,12 +41,14 @@ class PackingBoxAdmin(admin.ModelAdmin):
         "tare_weight_g",
         "max_weight_g",
         "active",
+        "auto_enabled",
+        "auto_measurement_status",
     ]
-    list_filter = ["active"]
+    list_filter = ["active", "auto_enabled", "auto_test_only", "supplier"]
     search_fields = ["name", "code"]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at", "auto_measurement_status", "auto_measured_at"]
     fieldsets = [
-        ("Коробка", {"fields": ["name", "code", "active"]}),
+        ("Коробка", {"fields": ["name", "code", "supplier", "source_url", "reference_note", "active"]}),
         (
             "Внутренние размеры",
             {
@@ -41,16 +70,49 @@ class PackingBoxAdmin(admin.ModelAdmin):
                 "description": "Вес пустой коробки без наполнителя и предельный общий вес по данным её изготовителя. Наполнитель учитывается отдельно в схеме упаковки.",
             },
         ),
+        (
+            "Автоматический подбор",
+            {
+                "fields": [
+                    "auto_enabled",
+                    "auto_filler_weight_g",
+                    "auto_padding_mm",
+                    "auto_price_mode",
+                    "auto_price",
+                    "auto_test_only",
+                    "confirm_auto_measurements",
+                    "auto_measurement_status",
+                    "auto_measured_at",
+                ],
+                "description": "Включайте только доступные для покупки/сборки коробки. Укажите достаточный вес всех общих материалов, включая скотч. Отступ вычитается с каждой стороны внутреннего пространства. После изменений параметры нужно подтвердить заново.",
+            },
+        ),
         ("Служебные сведения", {"fields": ["created_at", "updated_at"], "classes": ["collapse"]}),
     ]
 
     @admin.display(description="Внутри, мм")
     def inner_dimensions(self, obj):
+        if not all((obj.inner_length_mm, obj.inner_width_mm, obj.inner_height_mm)):
+            return "Нужен замер"
         return f"{obj.inner_length_mm} × {obj.inner_width_mm} × {obj.inner_height_mm}"
 
     @admin.display(description="Снаружи, мм")
     def outer_dimensions(self, obj):
+        if not all((obj.outer_length_mm, obj.outer_width_mm, obj.outer_height_mm)):
+            return "Нужен замер"
         return f"{obj.outer_length_mm} × {obj.outer_width_mm} × {obj.outer_height_mm}"
+
+    @admin.display(description="Автоподбор: замеры")
+    def auto_measurement_status(self, obj):
+        if obj.auto_test_only:
+            return "Учебная коробка"
+        return "Подтверждены" if obj.auto_measurements_valid else "Нужны замеры"
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if form.cleaned_data.get("confirm_auto_measurements"):
+            obj.confirm_auto_measurements()
+            self.log_change(request, obj, "Подтверждены параметры коробки для автоподбора.")
 
 
 class PackingRecipeItemInline(admin.TabularInline):

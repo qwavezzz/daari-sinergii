@@ -99,7 +99,11 @@ export function installCheckout(form, htmx) {
         data.shipping.price_source === 'demo'
           ? `Учебная доставка — ${money(data.shipping.price)}, это не тариф СДЭК. Срок доставки не рассчитывается.`
           : `Ориентировочный срок: ${data.shipping.period_min}–${data.shipping.period_max} дн.`
-      status.textContent = `ПВЗ ${data.shipping.pickup.code}: ${data.shipping.pickup.city}, ${data.shipping.pickup.address}. ${deliveryDetails}`
+      const packingDetails =
+        Number(data.shipping.packing_price) > 0
+          ? ` В стоимость получения входят доставка СДЭК ${money(data.shipping.carrier_price)} и упаковка ${money(data.shipping.packing_price)}.`
+          : ''
+      status.textContent = `ПВЗ ${data.shipping.pickup.code}: ${data.shipping.pickup.city}, ${data.shipping.pickup.address}. ${deliveryDetails}${packingDetails}`
       calculate.hidden = true
       submit.disabled = false
       expireIn(data.expires_in * 1000)

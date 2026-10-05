@@ -2,6 +2,7 @@
 
 import json
 from datetime import timedelta
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -14,6 +15,7 @@ from apps.core.acceptance import configuration_digest
 from apps.core.models import StoreAcceptance
 from apps.orders.models import DeliveryMethod, PackingRecipe, StoreSettings
 from apps.orders.notifications import validate_configuration
+from apps.orders.automatic_packing import AutomaticPacking
 
 
 def packing_coverage(products):
@@ -32,6 +34,13 @@ def packing_coverage(products):
             and recipe.measurements_valid_for_snapshot(box=recipe.box, rows=rows)
         ):
             covered.add(rows[0].product_id)
+    for product in products:
+        if product.shipping_mode == "automatic":
+            try:
+                AutomaticPacking([SimpleNamespace(product=product, quantity=1)]).options(limit=1)
+            except ValidationError:
+                continue
+            covered.add(product.pk)
     return [
         product
         for product in products
@@ -99,7 +108,7 @@ def readiness_issues(stage="live"):
     if uncovered:
         issues.append(
             f"У {len(uncovered)} товаров не подтверждены вес/размеры транспортной упаковки: "
-            "нужны замеры отдельной посылки либо действующая неучебная схема одной единицы. "
+            "нужны замеры отдельной посылки, проверенная схема одной единицы либо подтверждённый автоподбор. "
             "Товары: " + ", ".join(f"#{p.pk}" for p in uncovered) + "."
         )
     methods = DeliveryMethod.objects.filter(active=True)

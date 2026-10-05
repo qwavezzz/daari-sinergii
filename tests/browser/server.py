@@ -240,6 +240,38 @@ for name, counts, weight, confirmed in (
         recipe.confirm_measurements()
 
 
+# Automatic envelopes and box confirmations are fixtures in this disposable DB only.
+from decimal import Decimal
+
+for index in (17, 18):
+    product = Product.objects.get(sku=f"TEST-{index:03}")
+    product.shipping_mode = "automatic"
+    product.unit_weight_g = 150 if index == 17 else 100
+    product.unit_length_mm = product.unit_width_mm = 60
+    product.unit_height_mm = 120
+    product.confirm_auto_measurements()
+for code, dimensions, tare, price in (
+    ("single", (90, 90, 140), 40, "20.00"),
+    ("shared", (210, 160, 160), 80, "45.50"),
+):
+    box = PackingBox.objects.create(
+        name=f"Автокоробка для браузерной проверки {code}",
+        code=f"browser-auto-{code}",
+        supplier="cdek",
+        active=True,
+        auto_enabled=True,
+        **{f"inner_{axis}_mm": value for axis, value in zip(("length", "width", "height"), dimensions)},
+        **{f"outer_{axis}_mm": value + 10 for axis, value in zip(("length", "width", "height"), dimensions)},
+        tare_weight_g=tare,
+        max_weight_g=5000,
+        auto_filler_weight_g=20,
+        auto_padding_mm=5,
+        auto_price_mode="charge",
+        auto_price=Decimal(price),
+    )
+    box.confirm_auto_measurements()
+
+
 class BrowserCdekClient:
     """Deterministic network-free fixture; never imported by application runtime."""
 
