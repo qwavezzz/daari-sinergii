@@ -37,6 +37,7 @@ class Command(BaseCommand):
                     "supplier": "cdek",
                     "active": False,
                     "auto_enabled": False,
+                    "auto_price_mode": "charge",
                     "source_url": "https://cdek.promo/shop",
                     "reference_note": f"Ориентир каталога cdek.promo на 05.10.2026: {dimensions} мм. "
                     "Проверить конкретную коробку в пункте отправления: наличие, внутренние и внешние размеры, вес тары, допустимую нагрузку. "

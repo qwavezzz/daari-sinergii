@@ -369,6 +369,42 @@ class AutomaticCheckoutTests(AutoFixtures, TestCase):
         with self.assertRaises(QuoteChanged):
             verified_delivery(self.cart_obj, self.method, result["delivery_quote"], "TEST1")
 
+    def test_charge_is_per_box_not_per_product_or_per_order(self):
+        self.cart_obj.items.update(quantity=4)
+        self.box_obj.auto_price_mode = "charge"
+        self.box_obj.auto_price = Decimal("45.50")
+        self.box_obj.confirm_auto_measurements()
+        self.provider.pickup.return_value["weight_max_g"] = 300
+        result = self.quote()
+        self.assertEqual(len(result["shipping"]["packages"]), 2)
+        self.assertEqual(result["shipping"]["packing_price"], "91.00")
+        self.assertEqual(result["shipping"]["price"], "493.21")
+        self.assertEqual(result["total"], "893.21")
+        order = create_order(
+            self.cart_obj,
+            checkout_data(
+                self.cart_obj,
+                self.method,
+                quote_token=result["quote_token"],
+                delivery_quote=result["delivery_quote"],
+                pvz_code="TEST1",
+            ),
+            self.cart_obj.session_key,
+        )
+        self.assertEqual(order.delivery_price, Decimal("493.21"))
+        self.assertEqual(order.delivery_snapshot["packing_price"], "91.00")
+        self.assertEqual(self.provider.calculate.call_args.kwargs["declared_value"], Decimal("400.00"))
+
+    def test_missing_box_price_blocks_quote_instead_of_becoming_free(self):
+        self.box_obj.auto_price_mode = "charge"
+        self.box_obj.auto_price = None
+        self.box_obj.save()
+        with self.assertRaises(ValidationError):
+            self.box_obj.confirm_auto_measurements()
+        with self.assertRaises(DeliveryUnavailable):
+            self.quote()
+        self.provider.calculate.assert_not_called()
+
 
 @override_settings(CDEK_TEST_MODE=False)
 class PackingSetupTests(TestCase):
@@ -378,6 +414,9 @@ class PackingSetupTests(TestCase):
     def test_catalog_drafts_and_demo_are_isolated_and_repeatable(self):
         self.setup_examples()
         self.assertEqual(PackingBox.objects.filter(supplier="cdek", active=False).count(), 5)
+        self.assertEqual(
+            PackingBox.objects.filter(supplier="cdek", auto_price_mode="charge", auto_price=None).count(), 5
+        )
         self.assertEqual(PackingBox.objects.filter(auto_test_only=True).count(), 3)
         self.assertEqual(
             Product.objects.filter(status="draft", purchasable=False, unit_test_only=True).count(), 2
@@ -406,6 +445,29 @@ class PackingSetupTests(TestCase):
         with self.assertRaises(CommandError):
             self.setup_examples()
         self.assertEqual(list(Product.objects.order_by("pk").values()), before)
+
+    def test_policy_upgrade_preserves_prices_and_configured_profiles(self):
+        from importlib import import_module
+        from django.apps import apps
+        from django.db import connection
+
+        self.setup_examples()
+        changed = PackingBox.objects.get(code="cdek-posylochka-xs")
+        changed.auto_price_mode = ""
+        changed.auto_price = Decimal("50.00")
+        changed.save()
+        explicit = PackingBox.objects.get(code="cdek-posylochka-s")
+        explicit.auto_price_mode = "included"
+        explicit.save()
+        untouched = list(PackingBox.objects.exclude(pk=changed.pk).order_by("pk").values())
+        migration = import_module("apps.orders.migrations.0013_charge_for_cdek_boxes")
+        migration.set_cdek_charging(apps, SimpleNamespace(connection=connection))
+        changed.refresh_from_db()
+        self.assertEqual(changed.auto_price_mode, "charge")
+        self.assertEqual(changed.auto_price, Decimal("50.00"))
+        self.assertFalse(changed.active)
+        self.assertFalse(changed.auto_measurements_valid)
+        self.assertEqual(list(PackingBox.objects.exclude(pk=changed.pk).order_by("pk").values()), untouched)
 
     def test_demo_preview_is_explicit_and_does_not_create_cart_or_order(self):
         from .models import Order

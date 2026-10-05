@@ -90,7 +90,7 @@ class PackingBox(TimeStampedModel):
         "Как учитывать стоимость упаковки",
         max_length=12,
         blank=True,
-        default="",
+        default="charge",
         choices=[
             ("", "Выберите способ учёта"),
             ("included", "Учтена в цене товара"),
